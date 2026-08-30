@@ -244,7 +244,7 @@ p strong{ color:var(--fg); font-weight:700; }
 /* Der Abschnitt ist absichtlich hoch: solange man durch ihn scrollt, kommt
    nichts Neues nach, stattdessen blendet erst der Textblock und danach das
    Logo aus. Die Werte dafür setzt main.js als CSS-Variablen auf .hero. */
-.hero{ position:relative; height:320vh; background:var(--bg); }
+.hero{ position:relative; z-index:0; height:320vh; background:var(--bg); }
 .hero__pin{
   position:sticky; top:0; height:100svh; overflow:hidden;
   display:grid; place-items:center;
@@ -377,8 +377,8 @@ p strong{ color:var(--fg); font-weight:700; }
   position:sticky; top:0; height:100svh; overflow:hidden;
   opacity:var(--v-in, 1);
 }
-/* Trailer, Ultimate und alles nach den Karten liegen über der Video-Ebene */
-#trailer, #ultimate{ position:relative; z-index:1; }
+/* Ultimate und alles nach den Karten liegen über der Video-Ebene */
+#ultimate{ position:relative; z-index:1; }
 #charaktere, #leonida, #galerie, .finale, .footer{
   position:relative; z-index:2;
 }
@@ -409,14 +409,29 @@ p strong{ color:var(--fg); font-weight:700; }
    und nicht als schwarze Fläche. */
 .rise-card{
   position:relative; z-index:2;
-  margin:-100svh clamp(12px,2.2vw,34px) 0;
+  width:min(100% - clamp(16px,3vw,48px)*2, var(--wrap));
+  max-width:var(--wrap);
+  margin:calc(var(--rise, 100) * -1svh) auto 0;
+  border-radius:clamp(20px,2.4vw,32px);
+  overflow:hidden;
+  background:transparent;
+}
+/* Eigene Fläche, damit der Hintergrund unabhängig vom Inhalt einblenden kann */
+.rise-card::before{
+  content:""; position:absolute; inset:0; z-index:-1;
   background:var(--bg2);
   border:1px solid rgba(255,255,255,.09);
-  border-radius:clamp(20px,2.4vw,34px);
+  border-radius:inherit;
   box-shadow:0 -26px 70px -18px rgba(0,0,0,.85);
-  overflow:hidden;
+  opacity:var(--card-bg, 1);
 }
-.story{ padding:var(--s7) var(--pad); }
+/* Innenabstand schrumpft mit, weil die Karte schmaler ist als die Seite */
+.rise-card > *{ position:relative; }
+.rise-card.sec--pad{ padding-inline:clamp(20px,3.4vw,56px); }
+/* Karten hinter den Video-Abschnitten starten früher — schon ab rund drei
+   Vierteln des Clips, damit das Video dabei weiterläuft. */
+#story, #news{ --rise:130; }
+.story{ padding:var(--s7) clamp(20px,3.4vw,56px); }
 .story__grid{
   display:grid; gap:var(--s5);
   grid-template-columns:1.05fr .95fr; align-items:center;
@@ -1076,9 +1091,281 @@ p strong{ color:var(--fg); font-weight:700; }
   .scrub__sticky{ position:relative; height:auto; aspect-ratio:16/9; }
   .scrub__frame{ transform:none; }
   .scrub{ margin-top:0; }
-  .rise-card{ margin:0; border-radius:0; border:0; box-shadow:none; background:var(--bg); }
+  .rise-card{ width:auto; margin:0; border-radius:0; background:var(--bg); }
+  .rise-card::before{ display:none; }
   .hero{ height:auto; }
   .hero__pin{ position:relative; height:auto; min-height:100svh; }
   .hero__title, .hero__body, .hero__scroll{ opacity:1 !important; transform:none !important; }
   .hero__fadeout{ display:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBIL & TOUCH
+   ───────────────────────────────────────────────────────────────────────
+   Alles ab hier greift ausschließlich auf schmalen Bildschirmen oder auf
+   Geräten ohne echten Hover. Der Desktop-Zweig darüber bleibt unberührt.
+   Reihenfolge: Hover → Gesten → Effekte → Nav → Hero → Video → Inhalte
+   → Overlays → Querformat.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ══════════ M1 · Hover-Zustände auf Touch abschalten ══════════ */
+/* Android führt beim Tap einen synthetischen Hover aus. Ohne diesen Block
+   bleibt die Karte nach dem Antippen dauerhaft angehoben stehen. */
+@media (hover: none){
+  .tcard:hover, .ccard:hover, .duo__card:hover, .ue-item:hover,
+  .gitem:hover, .nitem:hover, .xrow:hover, .xfeed:hover,
+  .pane__thumbs button:hover, .cm__shots button:hover, .btn:hover{
+    transform:none;
+    box-shadow:none;
+  }
+  .btn--pink:hover{ --btn-bg:var(--pink); box-shadow:none; }
+  .btn--red:hover{ --btn-bg:var(--red); }
+  .btn--ghost:hover{ --btn-bg:rgba(255,255,255,.06); }
+  .tcard:hover .tcard__play{ transform:translate(-50%,-50%); background:rgba(255,255,255,.94); }
+  .duo__card:hover .duo__vid{ transform:none; }
+  .duo__card:hover .duo__more::after{ transform:none; }
+  .nav__logo:hover .vi-mark{ transform:none; fill:#fff; }
+  .nav__links a:hover{ background:none; color:rgba(255,255,255,.80); }
+  .mobile-menu nav a:hover{ color:var(--cream); }
+  .modal__close:hover{ transform:none; background:rgba(255,255,255,.1); color:var(--fg); }
+  .lb__nav:hover{ background:rgba(255,255,255,.09); color:var(--fg); }
+  .ccard:hover .ccard__ring{ background:rgba(11,17,36,.6); color:var(--cream); border-color:var(--line2); }
+  .ptab:hover{ background:rgba(255,255,255,.05); color:var(--fg-mid); }
+  .ptab[aria-selected="true"], .ptab[aria-selected="true"]:hover{
+    background:var(--cream); color:#12121a; border-color:var(--cream);
+  }
+
+  /* Stattdessen eine kurze Rückmeldung beim Antippen */
+  .ccard:active, .duo__card:active, .gitem:active, .ue-item:active,
+  .tcard:active, .nitem:active, .xrow:active, .xfeed:active,
+  .pane__thumbs button:active, .cm__shots button:active, .ptab:active, .btn:active{
+    transform:scale(.975);
+    transition-duration:.09s;
+  }
+
+  a, button, [role="button"], [tabindex]{ -webkit-tap-highlight-color:transparent; }
+}
+
+/* ══════════ M2 · Gesten & Scroll-Verhalten ══════════ */
+/* Die Hülle nimmt waagerechte Wischer für die Drehung, senkrechte gehen
+   weiter an die Seite — ohne das lässt sich über der Hülle nicht scrollen. */
+.case{ touch-action:pan-y; }
+.modal, .lightbox{ overscroll-behavior:contain; }
+.modal__panel{ overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+/* Kein Gummiband am Seitenende, das den gepinnten Hero verschiebt */
+html{ overscroll-behavior-y:none; }
+/* Ohne manipulation wartet Android nach jedem Tap 300 ms auf einen
+   möglichen Doppeltipp — alles fühlt sich träge an. */
+@media (hover: none){
+  a, button, [role="button"]{ touch-action:manipulation; }
+  .case{ touch-action:pan-y; }
+}
+
+/* ══════════ M3 · Aufwendige Effekte auf Touch entschärfen ══════════ */
+/* backdrop-filter und mix-blend-mode kosten auf Mittelklasse-Android in
+   jedem Frame Zeit. Genau dort, wo der Hero beim Scrollen ohnehin Deckkraft
+   und Skalierung animiert, führt das zu sichtbarem Ruckeln. */
+@media (hover: none){
+  .countdown{
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    background:rgba(11,17,36,.74);
+  }
+  .mobile-menu{
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    background:var(--bg);
+  }
+  .modal, .lightbox{
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    background:rgba(7,12,27,.985);
+  }
+  .hero__grain{ display:none; }
+  .hero__logo{ filter:drop-shadow(0 14px 34px rgba(0,0,0,.7)); }
+  .story__media::after{ mix-blend-mode:normal; opacity:.5; }
+}
+
+/* ══════════ M4 · Nav, Menü, Safe-Area ══════════ */
+@media (max-width:1024px){
+  :root{ --nav-h:62px; }
+  .nav{
+    padding-left:max(var(--pad), env(safe-area-inset-left));
+    padding-right:max(var(--pad), env(safe-area-inset-right));
+    gap:var(--s2);
+  }
+  .vi-mark{ height:25px; }
+  .nav__right{ margin-left:auto; }
+  .nav__burger{ margin-right:-9px; }
+
+  .mobile-menu{
+    padding-top:var(--s3);
+    padding-bottom:calc(var(--s4) + env(safe-area-inset-bottom));
+    padding-left:max(var(--pad), env(safe-area-inset-left));
+    padding-right:max(var(--pad), env(safe-area-inset-right));
+    gap:var(--s3);
+    overflow-y:auto;
+  }
+  .mobile-menu nav a{ font-size:clamp(1.6rem,7.4vw,2.2rem); padding:11px 0; }
+}
+@media (max-width:380px){
+  .nav{ padding-left:14px; padding-right:14px; }
+}
+
+/* ══════════ M5 · Hero auf dem Handy ══════════ */
+/* Warum svh statt vh: Android blendet beim Scrollen die URL-Leiste aus.
+   `100vh` ist dort die *große* Ansicht (Leiste weg), `100svh` die kleine.
+   `.hero__pin` rechnet in svh — die Gesamthöhe muss mitziehen, sonst passt
+   die Ausblend-Staffel nicht zur tatsächlichen Scrollstrecke.
+   Zusätzlich ist die Strecke kürzer: 320vh sind am Handy gefühlt endlos. */
+@media (max-width:860px){
+  .hero{ height:240svh; }
+}
+@media (max-width:560px){
+  .hero{ height:205svh; }
+  .hero__pin{ padding:calc(var(--nav-h) + 12px) var(--pad) calc(84px + env(safe-area-inset-bottom)); }
+  .hero__logo{ width:min(272px,68vw); }
+  .hero__sub{ font-size:1rem; margin:12px auto 18px; max-width:32ch; }
+  .countdown{ border-radius:15px; padding:12px 8px; }
+  .cd__num{ font-size:clamp(1.75rem,9.4vw,2.7rem); }
+  .cd__lab{ font-size:.5rem; margin-top:6px; }
+  .countdown__note{ font-size:.63rem; letter-spacing:.06em; margin:11px 0 18px; }
+  .hero__platforms{ gap:var(--s2); margin-top:var(--s2); font-size:.62rem; letter-spacing:.16em; }
+  .hero__platforms li + li{ padding-left:var(--s2); }
+  .hero__scroll{ bottom:calc(16px + env(safe-area-inset-bottom)); font-size:.56rem; }
+}
+
+/* ══════════ M6 · Scroll-Videos auf dem Handy ══════════ */
+/* Gleiche Rechnung wie beim Hero: alles in svh, und die Strecke kürzer,
+   damit ein kurzer Clip nicht vier Bildschirmhöhen Wischen kostet. */
+@media (max-width:860px){
+  .scrub{ height:250svh; margin-top:-100svh; }
+}
+@media (max-width:560px){
+  .scrub{ height:215svh; }
+}
+
+/* ══════════ M7 · Inhalte ══════════ */
+/* Filter- und Tab-Leisten werden zum wischbaren Streifen statt zu einem
+   drei Zeilen hohen Block, der die halbe Bildhöhe frisst. */
+@media (max-width:720px){
+  .places__tabs, .gal-filter{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    margin-inline:calc(var(--pad) * -1);
+    padding-inline:var(--pad);
+    padding-bottom:2px;
+  }
+  .places__tabs::-webkit-scrollbar, .gal-filter::-webkit-scrollbar{ display:none; }
+  .ptab{ flex:0 0 auto; scroll-snap-align:start; }
+}
+
+@media (max-width:860px){
+  .sec__head{ margin-bottom:var(--s4); }
+  .sec__intro{ font-size:1rem; }
+  .tcard--wide{ min-height:0; }
+  .tcard__play{ width:60px; height:60px; top:calc(50% - 34px); }
+  .story{ padding-inline:clamp(18px,4vw,32px); }
+  .story__media{ aspect-ratio:4/3; }
+  .rise-card.sec--pad{ padding-inline:clamp(18px,4vw,32px); }
+  .news-grid{ grid-template-columns:1fr; }
+  .news-col:last-child{ grid-column:auto; }
+  .vvcp{ grid-template-columns:1fr; padding:var(--s3); }
+  .ue-top{ gap:var(--s4); }
+  .case-wrap{ padding:16px 0 34px; }
+  .finale{ min-height:64svh; }
+}
+
+@media (max-width:560px){
+  /* Zwei Spalten schlagen eine: 118 Bilder untereinander sind kein Stöbern */
+  .gallery{ grid-template-columns:repeat(2,1fr); gap:8px; }
+  .cast{ grid-template-columns:repeat(2,1fr); gap:10px; }
+  /* rechts Platz für den Pfeil-Ring, sonst läuft der Untertitel hinein */
+  .ccard__txt{ padding:13px 44px 13px 13px; }
+  .ccard__txt h3{ font-size:1.15rem; }
+  .ccard__txt span{ font-size:.54rem; letter-spacing:.12em; }
+  .ccard__ring{ inset:auto 10px 10px auto; width:28px; height:28px; }
+  .ccard__ring svg{ width:12px; height:12px; }
+  .duo__card{ aspect-ratio:4/3; }
+  .duo__txt h3{ font-size:2rem; }
+  .ue-grid{ gap:10px; }
+  .ue-item__t{ padding:11px 12px 13px; }
+  .ue-item__t b{ font-size:.86rem; }
+  .leak, .nitem, .xfeed{ padding:16px; }
+  .footer__links{ gap:var(--s2) var(--s3); }
+  .footer__top p{ font-size:.76rem; }
+}
+
+/* ══════════ M8 · Overlays auf dem Handy ══════════ */
+@media (max-width:860px){
+  .modal, .lightbox{
+    padding:calc(var(--nav-h) + 6px) 12px calc(12px + env(safe-area-inset-bottom));
+  }
+  .modal__close{
+    top:calc(10px + env(safe-area-inset-top));
+    right:12px; width:42px; height:42px;
+  }
+  .modal__panel{ border-radius:16px; }
+  .cm__hero{ aspect-ratio:16/10; }
+  .cm__body{ margin-top:-42px; padding-inline:20px; padding-bottom:26px; }
+  .cm__quote{ max-width:none; }
+  .cm__meta{ gap:var(--s2) var(--s3); }
+
+  /* Die Pfeile lagen mittig über dem Bild — auf 390px verdecken sie es.
+     Stattdessen stehen sie unter der Bildunterschrift. */
+  .lightbox{
+    grid-template-columns:1fr;
+    grid-template-rows:1fr auto;
+    grid-template-areas:"fig" "nav";
+    align-content:center;
+    justify-items:center;
+    gap:12px;
+  }
+  .lb__fig{ grid-area:fig; align-self:center; gap:10px; }
+  .lb__fig img{ max-width:100%; max-height:62dvh; }
+  .lb__nav{
+    position:static; transform:none; grid-area:nav;
+    width:46px; height:46px; align-self:center;
+  }
+  .lb__prev{ justify-self:start; margin-left:16vw; }
+  .lb__next{ justify-self:end; margin-right:16vw; }
+}
+
+/* ══════════ M9 · Querformat auf kleinen Geräten ══════════ */
+/* Ein Handy im Querformat hat rund 375px Höhe — untereinander passt der
+   Hero-Block dort nicht mehr. Stattdessen steht das Logo links und der
+   Textblock rechts daneben; die überschüssige Breite ist ja vorhanden. */
+@media (max-height:560px) and (orientation:landscape){
+  :root{ --nav-h:54px; }
+  .hero{ height:200svh; }
+  .hero__pin{ padding:calc(var(--nav-h) + 6px) var(--pad) 26px; }
+
+  .hero__inner{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:center;
+    gap:clamp(16px,4vw,44px);
+    text-align:left;
+    max-width:none;
+    width:100%;
+  }
+  .hero__title{ justify-content:flex-start; }
+  .hero__logo{ width:min(215px,26vw); }
+  .hero__sub{ margin:0 0 10px; max-width:36ch; font-size:.86rem; }
+  .countdown{ padding:8px 14px; border-radius:13px; }
+  .cd__unit{ min-width:clamp(44px,6.4vw,62px); }
+  .cd__num{ font-size:clamp(1.4rem,4.6vh,2rem); }
+  .cd__lab{ font-size:.48rem; margin-top:3px; }
+  .cd__sep{ display:none; }
+  .countdown__note{ margin:8px 0 12px; font-size:.6rem; }
+  .hero__actions{ flex-direction:row; justify-content:flex-start; gap:10px; }
+  .hero__actions .btn{ width:auto; }
+  .btn--lg{ min-height:40px; padding:9px 18px; font-size:.86rem; }
+  .hero__platforms{ display:none; }
+  .hero__scroll{ display:none; }
+
+  .scrub{ height:200svh; }
+  .lb__fig img{ max-height:70dvh; }
+  .modal, .lightbox{ padding-top:calc(var(--nav-h) + 4px); }
+  .cm__hero{ aspect-ratio:21/7; }
 }

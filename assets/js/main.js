@@ -10,6 +10,14 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const pad2 = n => String(n).padStart(2, "0");
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/* Touch-Geräte verhalten sich an vier Stellen grundsätzlich anders:
+   es gibt keinen Hover, der Browser blendet beim Scrollen die URL-Leiste
+   ein und aus (was ein resize auslöst), das Mobilfunknetz ist teuer, und
+   es lassen sich nur eine Handvoll Videos gleichzeitig dekodieren.
+   Die Klasse am <html> macht das zusätzlich für CSS greifbar. */
+const coarse = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+document.documentElement.classList.toggle("is-touch", coarse);
+
 /* ═══ 1 · COUNTDOWN ═══════════════════════════════════════ */
 (function countdown() {
   const box = $("#countdown");
@@ -91,6 +99,14 @@ function watchReveals(root = document) {
   menu.addEventListener("click", e => { if (e.target.closest("a")) closeMenu(); });
   addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) closeMenu(); });
 
+  /* Dreht man das Handy quer und die Seite fällt zurück auf die
+     Desktop-Navigation, verschwindet der Burger — ein offenes Menü bliebe
+     sonst über der Seite stehen, ohne dass man es schließen könnte. */
+  const wide = matchMedia("(min-width: 1025px)");
+  const onWide = e => { if (e.matches && !menu.hidden) closeMenu(); };
+  if (wide.addEventListener) wide.addEventListener("change", onWide);
+  else wide.addListener(onWide);
+
   // Aktiver Abschnitt
   const links = $$(".nav__links a");
   const map = new Map();
@@ -111,115 +127,179 @@ function watchReveals(root = document) {
   map.forEach((_, el) => io.observe(el));
 })();
 
-/* ═══ 3b · HERO: GESTAFFELTES AUSBLENDEN ═══════════ */
-/* Der Hero ist über .hero__pin gepinnt. Beim Scrollen kommt zunächst kein
-   neuer Inhalt — stattdessen blendet erst der Textblock aus, danach das
-   Logo, zum Schluss dunkelt der ganze Hero ab. */
+/* ═══ 3b · SCROLL-MOTOR ═════════════════════════ */
+/* Liest die Scrollposition eines Abschnitts einmal pro Frame und zieht den
+   Wert weich nach. Ohne das springen die Werte im Takt der Mausrad-Schritte,
+   was beim langsamen Scrollen als Haken sichtbar wird. */
+const smooth = t => t * t * (3 - 2 * t);
+const seg = (p, a, b) => clamp((p - a) / (b - a), 0, 1);
+
+function scrollStage(el, onUpdate, ease = 0.16) {
+  let target = 0, current = 0, rafId = null;
+  let lastFrame = performance.now();
+
+  const read = () => {
+    const range = el.offsetHeight - innerHeight;
+    if (range <= 0) return 0;
+    return clamp(-el.getBoundingClientRect().top / range, 0, 1);
+  };
+
+  const frame = () => {
+    lastFrame = performance.now();
+    current += (target - current) * ease;
+    if (Math.abs(target - current) < 0.0004) current = target;
+    onUpdate(current, target);
+    if (current !== target) rafId = requestAnimationFrame(frame);
+    else rafId = null;
+  };
+
+  const kick = () => {
+    target = read();
+    if (rafId === null) rafId = requestAnimationFrame(frame);
+    // Fallback, falls requestAnimationFrame gedrosselt ist
+    if (performance.now() - lastFrame > 260) { current = target; onUpdate(current, target); }
+  };
+
+  addEventListener("scroll", kick, { passive: true });
+
+  /* Auf dem Handy blendet der Browser beim Scrollen die URL-Leiste aus und
+     wieder ein. Das löst ein resize aus, obwohl sich am Layout nichts
+     geändert hat. Würde man dabei — wie am Desktop — Ist- und Sollwert hart
+     gleichsetzen, springt die Sequenz bei jedem Richtungswechsel sichtbar.
+     Bei einer reinen Höhenänderung wird deshalb nur das Ziel nachgezogen
+     und die Differenz vom weichen Lauf geschluckt. */
+  let lastW = innerWidth, lastH = innerHeight;
+  addEventListener("resize", () => {
+    const dw = Math.abs(innerWidth - lastW);
+    const dh = Math.abs(innerHeight - lastH);
+    lastW = innerWidth; lastH = innerHeight;
+    if (coarse && dw === 0 && dh < 200) { kick(); return; }
+    target = current = read();
+    onUpdate(current, target);
+  });
+
+  target = current = read();
+  onUpdate(current, target);
+  return kick;
+}
+
+/* Wie weit ist die nachfolgende Karte hochgefahren?
+   0 = Oberkante am unteren Bildschirmrand, 1 = Karte füllt das Bild. */
+function cardRise(card) {
+  if (!card) return 0;
+  return clamp((innerHeight - card.getBoundingClientRect().top) / innerHeight, 0, 1);
+}
+
+/* ═══ 3c · HERO: GESTAFFELTES AUSBLENDEN ═══════════ */
+/* Erst Textblock, dann Logo, dann dunkelt der Hero auf die Grundfarbe ab,
+   während die Trailer-Karte von unten hochfährt. */
 (function heroSequence() {
   const hero = $("#home");
   const img = $("#heroImg");
-  if (!hero) return;
+  const card = $("#trailer");
+  if (!hero || reduced) return;
 
-  const smooth = t => t * t * (3 - 2 * t);
-  const seg = (p, a, b) => clamp((p - a) / (b - a), 0, 1);
-
-  const apply = () => {
-    const range = hero.offsetHeight - innerHeight;
-    if (range <= 0) return;
-    const p = clamp(-hero.getBoundingClientRect().top / range, 0, 1);
-
-    const bodyOut = smooth(seg(p, 0.04, 0.46));   // Text, Countdown, Buttons
-    const logoLate = smooth(seg(p, 0.50, 0.88));  // Logo verschwindet erst danach ganz
-    // Das Logo geht in der ersten Phase nur auf 68 % zurück — es bleibt sichtbar,
-    // während Zeitangabe und Buttons schon weg sind.
-    const logoOut = 0.32 * bodyOut + 0.68 * logoLate;
-    const black   = smooth(seg(p, 0.86, 1.00));   // zum Schluss abdunkeln
+  scrollStage(hero, p => {
+    const bodyOut  = smooth(seg(p, 0.04, 0.36));   // Text, Countdown, Buttons
+    const logoLate = smooth(seg(p, 0.38, 0.66));   // danach das Logo
+    const logoOut  = 0.32 * bodyOut + 0.68 * logoLate;
 
     hero.style.setProperty("--h-body", (1 - bodyOut).toFixed(3));
     hero.style.setProperty("--h-body-y", (-bodyOut * 46).toFixed(1) + "px");
     hero.style.setProperty("--h-logo", (1 - logoOut).toFixed(3));
     hero.style.setProperty("--h-logo-s", (1 + logoLate * 0.10).toFixed(3));
-    hero.style.setProperty("--h-out", black.toFixed(3));
     if (img) img.style.transform = `scale(${(1.06 + p * 0.10).toFixed(3)}) translate3d(0,0,0)`;
-  };
 
-  if (reduced) return;
-  addEventListener("scroll", apply, { passive: true });
-  addEventListener("resize", apply);
-  apply();
+    // Hintergrund geht auf die Grundfarbe über, sobald die Karte kommt
+    const q = cardRise(card);
+    hero.style.setProperty("--h-out", smooth(clamp(q / 0.85, 0, 1)).toFixed(3));
+    if (card) card.style.setProperty("--card-bg", smooth(clamp(q / 0.55, 0, 1)).toFixed(3));
+  });
 })();
 
 /* ═══ 4 · SCROLL-VIDEOS ════════════════════════ */
 /* Jeder .scrub-Abschnitt blendet sein Video hinter dem vorherigen Abschnitt
-   auf, spielt es über die Scrollposition ab und übergibt am Ende an die
-   Karte, die von unten darüber fährt. */
+   auf, spielt es über die Scrollposition ab und übergibt an die Karte, die
+   schon ab rund drei Vierteln des Clips von unten hochfährt. */
 (function scrubVideos() {
-  const FADE_IN   = 0.22;  // bis hierhin ist das Video voll sichtbar
-  const PLAY_END  = 0.70;  // bis hierhin ist der Clip durchgelaufen
-  const CARD_FROM = 0.66;  // ab hier kommt die Karte hoch
-
-  const smooth = t => t * t * (3 - 2 * t);
+  const FADE_IN  = 0.22;  // bis hierhin ist das Video voll sichtbar
+  const PLAY_END = 0.90;  // bis hierhin läuft der Clip — er wird nicht vorher gestoppt
 
   $$(".scrub").forEach(sec => {
     const vid = sec.querySelector(".scrub__video");
     const frame = sec.querySelector(".scrub__frame");
+    const card = sec.nextElementSibling && sec.nextElementSibling.classList.contains("rise-card")
+      ? sec.nextElementSibling : null;
     if (!vid) return;
 
     let duration = 0, target = 0, current = 0, rafId = null;
+    let looping = false;   // Rückfallebene, wenn sich der Clip nicht spulen lässt
     let lastFrame = performance.now();
 
-    /* Über HTTP ausgelieferte MP4s melden je nach Server seekable = 0–0; das
-       Setzen von currentTime wird dann ignoriert und das Video bleibt auf dem
-       ersten Bild stehen. Als Blob geladen ist die Datei immer voll spulbar. */
-    const makeSeekable = async () => {
+    const waitFor = (evt, ms) => new Promise(res => {
+      let done = false;
+      const fin = () => { if (!done) { done = true; res(); } };
+      vid.addEventListener(evt, fin, { once: true });
+      setTimeout(fin, ms);
+    });
+
+    /* Meldet der Browser eine brauchbare Spulweite? */
+    const canSeek = () =>
+      vid.seekable && vid.seekable.length > 0 &&
+      vid.seekable.end(vid.seekable.length - 1) > 0.5;
+
+    /* Letzte Rückfallebene: lässt sich der Clip partout nicht spulen, läuft
+       er stattdessen stumm in der Schleife. Sieht beim Vorbeiscrollen fast
+       gleich aus und ist allemal besser als ein eingefrorenes Standbild. */
+    const fallBackToLoop = () => {
+      if (looping) return;
+      looping = true;
+      vid.loop = true;
+      vid.muted = true;
+      vid.play().catch(() => {});
+    };
+
+    const load = async () => {
       const url = vid.getAttribute("src");
       if (!url || url.startsWith("blob:")) return;
+
+      /* Schritt 1 — Direktquelle prüfen.
+         Beherrscht der Server Range-Requests (206 Partial Content, siehe
+         serve.py), meldet der Browser seekable: 0–<dauer> und die Datei ist
+         ohne Umweg spulbar. Auf dem Handy spart das den vollständigen
+         Download in den Arbeitsspeicher. */
+      if (vid.readyState < 1) await waitFor("loadedmetadata", 6000);
+      if (vid.duration && canSeek()) {
+        duration = vid.duration;
+        vid.removeAttribute("poster");
+        kick();
+        return;
+      }
+
+      /* Schritt 2 — Blob-Umweg.
+         Ohne Range-Support meldet der Browser seekable = 0–0; das Setzen von
+         currentTime wird dann stillschweigend ignoriert und das Video bleibt
+         auf dem ersten Bild stehen. buffered meldet dabei trotzdem die volle
+         Länge. Als blob:-URL ist die Datei immer voll spulbar.
+         NICHT ENTFERNEN. */
       try {
         const blob = await (await fetch(url)).blob();
         vid.src = URL.createObjectURL(blob);
         vid.load();
-        await new Promise(res => {
-          if (vid.readyState >= 2) return res();
-          vid.addEventListener("loadeddata", res, { once: true });
-          setTimeout(res, 8000);
-        });
+        await waitFor("loadeddata", 8000);
       } catch (e) { /* Direktquelle behalten */ }
+
       duration = vid.duration || 0;
       vid.removeAttribute("poster");
-      onScroll();
-    };
-
-    const near = () => {
-      const r = sec.getBoundingClientRect();
-      return r.bottom > -300 && r.top < innerHeight + 300;
-    };
-
-    const progress = () => {
-      const range = sec.offsetHeight - innerHeight;
-      if (range <= 0) return 0;
-      return clamp(-sec.getBoundingClientRect().top / range, 0, 1);
+      if (!duration || !canSeek()) fallBackToLoop();
+      kick();
     };
 
     const seek = t => {
-      if (!duration) return;
+      if (looping || !duration) return;
       try { vid.currentTime = clamp(t, 0, duration - 0.05); } catch (e) {}
     };
 
-    const update = () => {
-      const p = progress();
-      // Video taucht hinter dem vorherigen Abschnitt auf …
-      sec.style.setProperty("--v-in", smooth(clamp(p / FADE_IN, 0, 1)).toFixed(3));
-      // … und läuft dabei von Anfang an mit
-      const vp = clamp(p / PLAY_END, 0, 1);
-      target = vp * duration;
-      if (frame) frame.style.setProperty("--z", (1 + vp * 0.06).toFixed(3));
-      // zum Schluss abdunkeln, während die Karte hochkommt
-      sec.style.setProperty("--s-out",
-        (clamp((p - CARD_FROM) / (1 - CARD_FROM), 0, 1) * 0.5).toFixed(3));
-    };
-
-    // Sanftes Nachziehen: der Clip läuft, solange gescrollt wird, und
-    // bleibt stehen, sobald der Scroll stoppt.
     const loop = () => {
       lastFrame = performance.now();
       current += (target - current) * 0.16;
@@ -233,20 +313,49 @@ function watchReveals(root = document) {
       }
     };
 
-    function onScroll() {
-      if (!near()) return;
-      update();
-      if (rafId === null) rafId = requestAnimationFrame(loop);
-      // Fallback, falls requestAnimationFrame gedrosselt ist
-      if (performance.now() - lastFrame > 260) { current = target; seek(target); }
-    }
-
     if (reduced) { sec.style.setProperty("--v-in", "1"); return; }
 
-    addEventListener("scroll", onScroll, { passive: true });
-    addEventListener("resize", onScroll);
-    onScroll();
-    makeSeekable();
+    const kick = scrollStage(sec, (p, raw) => {
+      // Video taucht hinter dem vorherigen Abschnitt auf …
+      sec.style.setProperty("--v-in", smooth(clamp(p / FADE_IN, 0, 1)).toFixed(3));
+      // … und läuft von Anfang an mit. Die Rohposition steuert das Video,
+      // damit es dem Finger direkt folgt.
+      const vp = clamp(raw / PLAY_END, 0, 1);
+      target = vp * duration;
+      if (frame) frame.style.setProperty("--z", (1 + vp * 0.06).toFixed(3));
+
+      // Karte fährt hoch, das Video geht dahinter auf die Grundfarbe über
+      const q = cardRise(card);
+      sec.style.setProperty("--s-out", smooth(clamp(q / 0.9, 0, 1)).toFixed(3));
+      if (card) card.style.setProperty("--card-bg", smooth(clamp(q / 0.55, 0, 1)).toFixed(3));
+
+      if (looping) {
+        // Im Loop-Modus wird nicht gespult — nur außerhalb des Bilds gestoppt
+        const r = sec.getBoundingClientRect();
+        const onScreen = r.top < innerHeight && r.bottom > 0;
+        if (onScreen && vid.paused) vid.play().catch(() => {});
+        else if (!onScreen && !vid.paused) vid.pause();
+        return;
+      }
+
+      if (rafId === null) rafId = requestAnimationFrame(loop);
+      if (performance.now() - lastFrame > 260) { current = target; seek(target); }
+    });
+
+    /* Auf dem Handy erst laden, wenn der Abschnitt in die Nähe kommt. Sonst
+       gehen beim Seitenaufruf rund 5 MB Video ins Netz, bevor der Hero
+       überhaupt zu Ende gescrollt ist. */
+    if (coarse && "IntersectionObserver" in window) {
+      vid.preload = "metadata";
+      const io = new IntersectionObserver(entries => {
+        if (!entries.some(e => e.isIntersecting)) return;
+        io.disconnect();
+        load();
+      }, { rootMargin: "120% 0px 120% 0px" });
+      io.observe(sec);
+    } else {
+      load();
+    }
   });
 })();
 
@@ -305,6 +414,43 @@ function watchReveals(root = document) {
   $$(".ccard").forEach(c => bindLoop(c, c.querySelector("video")));
   // Jason und Lucia verhalten sich wie die übrigen Karten: erst beim Hover
   $$(".duo__card").forEach(c => bindLoop(c, c.querySelector(".duo__vid")));
+
+  /* Auf Touch gibt es keinen Hover — die Karten blieben sonst Standbilder.
+     Der Loop startet dort, sobald eine Karte weit genug im Bild steht, und
+     hört auf, wenn sie es wieder verlässt. Mehr als zwei gleichzeitig sind
+     nicht drin: Android-Geräte halten nur eine Handvoll Video-Dekoder
+     bereit, danach bleibt das nächste Video schwarz. */
+  if (coarse && !reduced && "IntersectionObserver" in window) {
+    const MAX = 2;
+    const playing = new Set();
+
+    const stopCard = card => {
+      const v = card.querySelector("video");
+      card.classList.remove("is-playing");
+      if (v) v.pause();
+      playing.delete(card);
+    };
+
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const card = e.target;
+        const v = card.querySelector("video");
+        if (!v) return;
+        if (e.intersectionRatio >= 0.62) {
+          if (playing.has(card)) return;
+          if (playing.size >= MAX) stopCard(playing.values().next().value);
+          if (v.preload === "none") v.preload = "auto";
+          playing.add(card);
+          card.classList.add("is-playing");
+          v.play().catch(() => stopCard(card));
+        } else if (e.intersectionRatio < 0.35) {
+          stopCard(card);
+        }
+      });
+    }, { threshold: [0, 0.35, 0.62, 0.9] });
+
+    $$(".ccard, .duo__card").forEach(c => io.observe(c));
+  }
 
   // Klick / Enter öffnet die Akte
   const open = id => openChar(id);
@@ -443,14 +589,21 @@ function openChar(id) {
     idleTimer = setTimeout(() => { if (!dragging) box.classList.add("is-idle"); }, 2600);
   };
 
-  wrap.addEventListener("pointermove", e => {
-    if (dragging) return;
-    const r = wrap.getBoundingClientRect();
-    ry = ((e.clientX - r.left) / r.width - 0.5) * 78 - 10;
-    rx = -((e.clientY - r.top) / r.height - 0.5) * 26;
-    wake(); apply();
-  });
-  wrap.addEventListener("pointerleave", () => { ry = -26; rx = -8; apply(); wake(); });
+  /* Die Maus-Neigung ergibt nur mit einem Zeigegerät Sinn. Auf Touch würde
+     schon das Antippen die Hülle verreißen — dort bleibt nur das Ziehen. */
+  if (!coarse) {
+    wrap.addEventListener("pointermove", e => {
+      if (dragging) return;
+      const r = wrap.getBoundingClientRect();
+      ry = ((e.clientX - r.left) / r.width - 0.5) * 78 - 10;
+      rx = -((e.clientY - r.top) / r.height - 0.5) * 26;
+      wake(); apply();
+    });
+    wrap.addEventListener("pointerleave", () => { ry = -26; rx = -8; apply(); wake(); });
+  } else {
+    const hint = $(".case__hint");
+    if (hint) hint.textContent = "waagerecht wischen zum Drehen";
+  }
 
   box.addEventListener("pointerdown", e => {
     dragging = true; lastX = e.clientX;
