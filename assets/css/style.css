@@ -463,8 +463,12 @@ p strong{ color:var(--fg); font-weight:700; }
 .fact__v{ font-family:var(--f-display); font-size:1.75rem; font-weight:800; color:var(--cream); text-transform:uppercase; }
 
 /* ══════════ 4 · CHARAKTERE ══════════ */
+/* Die Karten sind Links auf charakter.html?c=<id> — display:block und das
+   Zurücksetzen von Farbe/Unterstreichung holen die Optik der früheren
+   <article>-Kacheln zurück. */
 .duo{ display:grid; grid-template-columns:1fr 1fr; gap:var(--s3); margin-bottom:var(--s3); }
 .duo__card{
+  display:block; text-decoration:none; color:inherit;
   position:relative; aspect-ratio:16/11; border-radius:var(--r); overflow:hidden;
   cursor:pointer; border:1px solid var(--line); background:var(--surf);
   transition:transform .5s var(--ease-out), border-color .3s var(--ease), box-shadow .5s var(--ease-out);
@@ -504,6 +508,7 @@ p strong{ color:var(--fg); font-weight:700; }
 
 .cast{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--s3); }
 .ccard{
+  display:block; text-decoration:none; color:inherit;
   position:relative; aspect-ratio:1/1; border-radius:var(--r); overflow:hidden;
   cursor:pointer; border:1px solid var(--line); background:var(--surf);
   transition:transform .45s var(--ease-out), border-color .3s var(--ease);
@@ -912,7 +917,12 @@ p strong{ color:var(--fg); font-weight:700; }
   padding-top:var(--s3); border-top:1px solid var(--line);
   font-size:.78rem;
 }
-.footer__links a{ color:var(--fg-mid); text-decoration:none; }
+/* min-height 24px: darunter liegt das Ziel unter der Mindestgröße für
+   Zeigereingaben (WCAG 2.2, 2.5.8) — die Zeile war 21px hoch. */
+.footer__links a{
+  color:var(--fg-mid); text-decoration:none;
+  display:inline-flex; align-items:center; min-height:24px;
+}
 .footer__links a:hover{ color:var(--cream); text-decoration:underline; }
 .footer__esrb{ margin-left:auto; color:var(--fg-dim); font-family:var(--f-label); font-size:.66rem; }
 
@@ -942,47 +952,6 @@ p strong{ color:var(--fg); font-weight:700; }
   animation:panelIn .35s var(--ease-out);
 }
 @keyframes panelIn{ from{ opacity:0; transform:translateY(22px) scale(.985); } }
-.cm__hero{ position:relative; aspect-ratio:21/9; overflow:hidden; }
-.cm__hero img, .cm__hero video{ width:100%; height:100%; object-fit:cover; }
-.cm__hero::after{
-  content:""; position:absolute; inset:0;
-  background:linear-gradient(to top, var(--bg2) 2%, transparent 62%);
-}
-.cm__body{ padding:0 clamp(22px,3.4vw,44px) clamp(28px,3.4vw,44px); margin-top:-58px; position:relative; z-index:2; }
-.cm__tag{
-  font-family:var(--f-label); font-size:.64rem; letter-spacing:.24em;
-  text-transform:uppercase; color:var(--pink); display:block; margin-bottom:8px;
-}
-.cm__body h2{
-  font-family:var(--f-display); font-weight:800;
-  font-size:clamp(2.5rem,6.2vw,4.6rem); line-height:.88; text-transform:uppercase;
-  margin:0 0 var(--s2); color:var(--cream);
-}
-.cm__quote{
-  font-family:var(--f-display); font-weight:700; font-size:clamp(1.2rem,2.4vw,1.7rem);
-  line-height:1.15; text-transform:uppercase; color:var(--vice-hot);
-  margin:0 0 var(--s3); max-width:26ch;
-}
-.cm__cols{ display:grid; grid-template-columns:1fr 1fr; gap:var(--s3) var(--s4); margin-bottom:var(--s3); }
-.cm__cols p{ margin:0; font-size:.96rem; }
-.cm__meta{
-  display:flex; gap:var(--s3); flex-wrap:wrap; padding:16px 0;
-  border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:var(--s3);
-}
-.cm__meta div{ display:flex; flex-direction:column; gap:2px; }
-.cm__meta dt, .cm__meta b{
-  font-family:var(--f-label); font-size:.6rem; letter-spacing:.18em;
-  text-transform:uppercase; color:var(--fg-dim); font-weight:400;
-}
-.cm__meta i{ font-style:normal; color:var(--cream); font-weight:700; font-size:.95rem; }
-.cm__shots{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-.cm__shots button{
-  padding:0; border:1px solid var(--line); border-radius:9px; overflow:hidden;
-  cursor:pointer; background:none; aspect-ratio:16/10;
-  transition:border-color .2s var(--ease), transform .3s var(--ease-out);
-}
-.cm__shots button:hover{ border-color:var(--pink); transform:translateY(-3px); }
-.cm__shots img{ width:100%; height:100%; object-fit:cover; }
 
 .modal--dark{ background:rgba(6,10,24,.97); }
 .yt-wrap{
@@ -1036,7 +1005,7 @@ p strong{ color:var(--fg); font-weight:700; }
   .ue-top{ grid-template-columns:1fr; }
   .case-wrap{ order:2; }
   .vvcp{ grid-template-columns:1fr; }
-  .cm__cols{ grid-template-columns:1fr; }
+
 }
 @media (max-width:860px){
   body{ font-size:16px; }
@@ -1047,7 +1016,7 @@ p strong{ color:var(--fg); font-weight:700; }
   .tcard--wide > img{ flex:none; width:100%; aspect-ratio:16/9; }
   .ue-grid{ grid-template-columns:repeat(2,1fr); }
   .gallery{ grid-template-columns:repeat(2,1fr); }
-  .cm__shots{ grid-template-columns:repeat(3,1fr); }
+
   .scrub{ height:340vh; }
   .hero{ height:280vh; }
 }
@@ -1067,7 +1036,7 @@ p strong{ color:var(--fg); font-weight:700; }
   .ue-facts{ grid-template-columns:repeat(2,1fr); }
   .cast{ grid-template-columns:1fr; }
   .gallery{ grid-template-columns:1fr; }
-  .cm__shots{ grid-template-columns:repeat(2,1fr); }
+
   .pane__thumbs{ grid-template-columns:repeat(2,1fr); }
   .vvcp__thumbs{ grid-template-columns:repeat(2,1fr); }
   .footer__top{ flex-direction:column; }
@@ -1112,9 +1081,16 @@ p strong{ color:var(--fg); font-weight:700; }
 /* Android führt beim Tap einen synthetischen Hover aus. Ohne diesen Block
    bleibt die Karte nach dem Antippen dauerhaft angehoben stehen. */
 @media (hover: none){
-  .tcard:hover, .ccard:hover, .duo__card:hover, .ue-item:hover,
-  .gitem:hover, .nitem:hover, .xrow:hover, .xfeed:hover,
-  .pane__thumbs button:hover, .cm__shots button:hover, .btn:hover{
+  .tcard:hover,
+  .ccard:hover,
+  .duo__card:hover,
+  .ue-item:hover,
+  .gitem:hover,
+  .nitem:hover,
+  .xrow:hover,
+  .xfeed:hover,
+  .pane__thumbs button:hover,
+  .btn:hover{
     transform:none;
     box-shadow:none;
   }
@@ -1136,9 +1112,17 @@ p strong{ color:var(--fg); font-weight:700; }
   }
 
   /* Stattdessen eine kurze Rückmeldung beim Antippen */
-  .ccard:active, .duo__card:active, .gitem:active, .ue-item:active,
-  .tcard:active, .nitem:active, .xrow:active, .xfeed:active,
-  .pane__thumbs button:active, .cm__shots button:active, .ptab:active, .btn:active{
+  .ccard:active,
+  .duo__card:active,
+  .gitem:active,
+  .ue-item:active,
+  .tcard:active,
+  .nitem:active,
+  .xrow:active,
+  .xfeed:active,
+  .pane__thumbs button:active,
+  .ptab:active,
+  .btn:active{
     transform:scale(.975);
     transition-duration:.09s;
   }
@@ -1306,10 +1290,6 @@ html{ overscroll-behavior-y:none; }
     right:12px; width:42px; height:42px;
   }
   .modal__panel{ border-radius:16px; }
-  .cm__hero{ aspect-ratio:16/10; }
-  .cm__body{ margin-top:-42px; padding-inline:20px; padding-bottom:26px; }
-  .cm__quote{ max-width:none; }
-  .cm__meta{ gap:var(--s2) var(--s3); }
 
   /* Die Pfeile lagen mittig über dem Bild — auf 390px verdecken sie es.
      Stattdessen stehen sie unter der Bildunterschrift. */
@@ -1367,5 +1347,5 @@ html{ overscroll-behavior-y:none; }
   .scrub{ height:200svh; }
   .lb__fig img{ max-height:70dvh; }
   .modal, .lightbox{ padding-top:calc(var(--nav-h) + 4px); }
-  .cm__hero{ aspect-ratio:21/7; }
+
 }

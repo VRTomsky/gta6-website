@@ -221,9 +221,11 @@
     <p class="sec__intro reveal">Zwei Protagonisten, ein Dutzend Probleme. Karte öffnen für die volle Akte — inklusive Bildergalerie.</p>
   </header>
 
-  <!-- Duo feature -->
+  <!-- Duo feature — echte Links, damit Mittelklick, Strg+Klick und das
+       Kontextmenü funktionieren; die Akte öffnet in einem neuen Tab -->
   <div class="duo">
-    <article class="duo__card reveal" data-char="jason" tabindex="0" role="button" aria-label="Akte Jason Duval öffnen">
+    <a class="duo__card reveal" href="charakter.html?c=jason" target="_blank" rel="noopener"
+       aria-label="Akte Jason Duval öffnen (neuer Tab)">
       <video class="duo__vid" src="assets/video/loop_jason_duval.mp4" poster="assets/img/chars/loop_jason_duval_poster.jpg" muted loop playsinline preload="none"></video>
       <div class="duo__grad"></div>
       <div class="duo__txt">
@@ -232,9 +234,10 @@
         <p>„Another day in paradise, right?"</p>
         <span class="duo__more">Akte öffnen</span>
       </div>
-    </article>
+    </a>
 
-    <article class="duo__card reveal" data-char="lucia" tabindex="0" role="button" aria-label="Akte Lucia Caminos öffnen">
+    <a class="duo__card reveal" href="charakter.html?c=lucia" target="_blank" rel="noopener"
+       aria-label="Akte Lucia Caminos öffnen (neuer Tab)">
       <video class="duo__vid" src="assets/video/loop_lucia_caminos.mp4" poster="assets/img/chars/loop_lucia_caminos_poster.jpg" muted loop playsinline preload="none"></video>
       <div class="duo__grad"></div>
       <div class="duo__txt">
@@ -243,7 +246,7 @@
         <p>„Only smart moves from here."</p>
         <span class="duo__more">Akte öffnen</span>
       </div>
-    </article>
+    </a>
   </div>
 
   <!-- Supporting cast -->
@@ -450,13 +453,8 @@
 </footer>
 
 <!-- ══════════════ OVERLAYS ══════════════ -->
-<div class="modal" id="charModal" hidden role="dialog" aria-modal="true" aria-labelledby="charModalTitle">
-  <button class="modal__close" data-close aria-label="Schließen">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-  </button>
-  <div class="modal__panel" id="charModalPanel"></div>
-</div>
-
+<!-- Die Charakter-Akte war früher ein Modal an dieser Stelle. Sie ist
+     jetzt eine eigene Seite: charakter.html?c=<id> -->
 <div class="modal modal--dark" id="ytModal" hidden role="dialog" aria-modal="true" aria-labelledby="ytModalTitle">
   <button class="modal__close" data-close aria-label="Schließen">
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>

@@ -1,0 +1,419 @@
+/* ═══════════════════════════════════════════════════════════
+   Charakter-Detailseite (charakter.html)
+
+   Baut auf den Tokens aus style.css auf — hier stehen nur die
+   Bausteine, die es auf der Startseite nicht gibt. Das Muster ist
+   ein asymmetrisches Editorial-Raster nach dem Vorbild von
+   rockstargames.com/VI: Lead-Satz in Creme, Fließtext in Weiß,
+   Bilder versetzt ineinandergeschoben statt in einer Reihe.
+
+   Rhythmus einer Seite:
+     .cv        scroll-gesteuertes Video im Vollbild
+     .cintro    faehrt als Karte ueber den Hero; Name, Text, Bilder
+     .cquote    Zitatband quer über die Seite
+     .cband     zweispaltiger Textblock, Spalten wechseln die Seite
+     .cfull     Vollbild ueber die volle Breite, scrollt normal mit
+     .cgal      Bilderraster
+     .coutro    Bilder + Zurueck-Button
+   ═══════════════════════════════════════════════════════════ */
+
+.char-body{ background:var(--bg); }
+.char-root{ display:block; }
+.char-loading{
+  min-height:70svh; display:grid; place-items:center;
+  font-family:var(--f-label); letter-spacing:.2em; text-transform:uppercase;
+  font-size:.72rem; color:var(--fg-dim);
+}
+
+/* ══════════ Nav-Variante ══════════ */
+.nav--char{ gap:var(--s2); }
+.nav__sep{
+  width:1px; height:20px; background:var(--line2); flex:none;
+}
+.nav__where{
+  margin:0; font-weight:700; font-size:.9rem; color:var(--fg);
+  text-shadow:0 1px 10px rgba(8,13,29,.85);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.nav--char .nav__right{ margin-left:auto; }
+.btn--sm{ min-height:38px; padding:8px 16px; font-size:.82rem; }
+.nav__back{ white-space:nowrap; }
+
+/* ══════════ 1 · Hero ══════════ */
+/* Gleiche Mechanik wie .scrub auf der Startseite: der Abschnitt ist hoch,
+   das Medium klebt oben, darueber faehrt die Intro-Karte hoch. Hier steht
+   er ganz am Anfang, deshalb ohne den negativen margin-top der Startseite.
+   Bei Jason und Lucia haengt zusaetzlich die Wiedergabe an der
+   Scrollposition; die Nebenfiguren zeigen ein Standbild und brauchen
+   deshalb weniger Strecke. */
+/* Zwei Bedingungen an diese Hoehe:
+
+   1. Sie bestimmt, wie schnell der Clip beim Scrollen laeuft. Die nutzbare
+      Strecke ist `Hoehe - 100svh` (die ersten 100svh klebt das Medium nur).
+      Davon spielt `PLAY_END` (0.90) den Clip ab. Die Startseite kommt mit
+      400vh auf 0.90 x 300vh = 270vh Scrollweg fuer ein ganzes Video —
+      dieselbe Rechnung gilt hier, damit sich beides gleich anfuehlt.
+   2. Sie muss mindestens `--rise + 100svh` betragen, sonst ragt die
+      Intro-Karte schon beim Laden ins Bild und der Name steht doppelt da.
+
+   Alles in svh, damit die Rechnung auch auf dem Handy aufgeht (dort ist vh
+   die grosse und svh die kleine Ansicht). Standbild-Heroes brauchen keine
+   Spulstrecke und bleiben deshalb kuerzer.
+
+   Die Werte in den Media-Queries weiter unten spiegeln `.scrub` aus
+   style.css, damit sich das Video auf jedem Geraet gleich schnell
+   durchscrollen laesst wie auf der Startseite. Dort ist `--rise` kleiner,
+   weil die kuerzeren Hoehen sonst Bedingung 2 verletzen. */
+.cv{ position:relative; z-index:0; height:400svh; }
+.cv--still{ height:250svh; }
+.cv__sticky{
+  position:sticky; top:0; height:100svh; overflow:hidden;
+  background:#000;
+}
+.cv__frame{
+  position:absolute; inset:0;
+  transform:scale(var(--z,1)) translate3d(0,0,0);
+  transform-origin:50% 48%;
+  will-change:transform;
+}
+/* Gilt für beides: das Video bei Jason und Lucia, das Artwork bei allen
+   anderen. Deshalb dieselbe Klasse für <video> und <img>. */
+.cv__video{ width:100%; height:100%; object-fit:cover; background:#000; display:block; }
+/* Deckt den Hero ab, während die Intro-Karte darüber hochfährt — dadurch
+   steht die Karte am Ende auf der Grundfarbe und nicht mehr auf dem Bild.
+   Gleiche Mechanik wie `.scrub__sticky::after` auf der Startseite. */
+.cv__out{
+  position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:var(--bg); opacity:var(--s-out, 0);
+}
+/* Der untere Verlauf traegt den Titelblock. Er muss dort fast die
+   Grundfarbe erreichen: die hellen Artworks der Nebenfiguren (Raul, Boobie)
+   sind im unteren Drittel sehr hell, gemessen kam der Kicker dort auf
+   1,37:1 — unlesbar. Mit dieser Staffelung liegen Kicker, Name und Hinweis
+   auf dunklem Grund, unabhaengig vom Bild. */
+.cv__vig{
+  position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(130% 95% at 50% 40%, transparent 40%, rgba(8,13,29,.52) 100%),
+    linear-gradient(180deg,
+      rgba(8,13,29,.72) 0%,
+      rgba(8,13,29,0) 24%,
+      rgba(11,17,36,0) 38%,
+      rgba(11,17,36,.72) 64%,
+      rgba(11,17,36,.94) 84%,
+      rgba(11,17,36,.99) 100%);
+}
+/* Der Name liegt ueber dem Video und blendet mit dem Scrollen aus */
+.cv__title{
+  position:absolute; inset:auto 0 0 0; z-index:3;
+  padding:0 var(--pad) clamp(48px,9svh,110px);
+  display:grid; gap:10px; justify-items:start;
+  max-width:var(--wrap); margin-inline:auto;
+  opacity:var(--t-out,1);
+  transform:translate3d(0, var(--t-y,0px), 0);
+  will-change:opacity, transform;
+}
+.cv__title--right{ justify-items:end; text-align:right; }
+.cv__kicker{
+  font-family:var(--f-label); font-size:.68rem; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--pink); margin:0;
+  text-shadow:0 2px 14px rgba(8,13,29,.95), 0 1px 3px rgba(8,13,29,.9);
+}
+.cv__name{
+  font-family:var(--f-display); font-weight:800;
+  font-size:clamp(3rem,11vw,9rem); line-height:.86;
+  letter-spacing:-.006em; text-transform:uppercase;
+  color:var(--cream); margin:0;
+  text-shadow:0 10px 50px rgba(0,0,0,.75);
+}
+.cv__hint{
+  display:flex; align-items:center; gap:9px; margin:6px 0 0;
+  font-family:var(--f-label); font-size:.6rem; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--fg-dim);
+}
+.cv__hint svg{ animation:bob 2.2s var(--ease) infinite; }
+
+/* ══════════ 2 · Intro — Text und Bildercluster ══════════ */
+/* Zwei Spalten. Bei "left" steht der Text links und die Bilder rechts,
+   bei "right" andersherum — dadurch spiegeln sich Jason und Lucia,
+   statt zweimal dasselbe Layout zu zeigen. */
+/* Breite, Radius, Fläche und der negative Versatz kommen von `.rise-card`
+   aus style.css — dieselbe Karte wie beim Übergang Trailer → Story auf der
+   Startseite. Hier stehen deshalb nur Innenabstand und Raster; margin und
+   width dürfen nicht überschrieben werden, sonst fährt nichts mehr hoch. */
+.cintro{
+  padding:clamp(64px,10svh,120px) clamp(20px,3.4vw,56px);
+  display:grid; gap:clamp(32px,5vw,80px);
+  grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);
+  align-items:start;
+}
+/* Etwas mehr Überlappung als der Standard. Wer das erhoeht, muss auch
+   die Hoehen von `.cv` und `.cv--still` mitziehen — siehe dort. */
+#cintro{ --rise:118; }
+.cintro--right .cintro__copy{ order:2; }
+.cintro--right .cintro__shots{ order:1; }
+.cintro--right .cintro__copy{ text-align:left; }
+
+.cintro__copy{ position:relative; }
+.cintro__name{
+  font-family:var(--f-display); font-weight:800;
+  font-size:clamp(2.6rem,6.4vw,5.4rem); line-height:.88;
+  letter-spacing:-.006em; text-transform:uppercase;
+  color:var(--cream); margin:0 0 clamp(20px,3vw,38px);
+}
+/* Der Lead ist der Satz, den Rockstar auf seinen Akten in Pink setzt */
+.clead{
+  font-family:var(--f-body); font-weight:700;
+  font-size:clamp(1.5rem,3vw,2.5rem); line-height:1.14;
+  color:var(--pink); margin:0 0 clamp(18px,2.4vw,30px);
+  max-width:22ch;
+}
+.cbody{ font-size:1.02rem; line-height:1.7; color:var(--fg); max-width:46ch; }
+.cbody p{ color:var(--fg); margin:0 0 1em; }
+.cbody p:last-child{ margin-bottom:0; }
+
+/* Zwei feste Spalten statt vier dehnbarer Kacheln. Mit `flex:1 1 140px`
+   zogen sich die vier Angaben über die volle Spaltenbreite auseinander und
+   standen weit auseinander; als 2x2-Block sitzen sie beieinander. */
+.cmeta{
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:1px; margin-top:clamp(22px,2.8vw,34px);
+  background:var(--line); border:1px solid var(--line);
+  border-radius:var(--r); overflow:hidden;
+  max-width:400px;
+}
+.cmeta div{
+  background:var(--surf); padding:10px 14px;
+  display:flex; flex-direction:column; gap:1px;
+}
+.cmeta b{
+  font-family:var(--f-label); font-size:.55rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--fg-dim); font-weight:400;
+  line-height:1.4;
+}
+.cmeta i{
+  font-style:normal; color:var(--cream); font-weight:700;
+  font-size:.88rem; line-height:1.3;
+}
+.cintro--right .cmeta{ margin-left:auto; }
+
+/* Bildercluster: das zweite Bild schiebt sich versetzt unter das erste */
+.cintro__shots{ display:grid; gap:clamp(14px,2vw,26px); }
+.cintro__shots .cshot:nth-child(2){
+  margin-left:clamp(0px,8vw,120px);
+}
+.cintro__shots .cshot:nth-child(3){
+  margin-right:clamp(0px,10vw,150px);
+}
+.cintro--right .cintro__shots .cshot:nth-child(2){
+  margin-left:0; margin-right:clamp(0px,8vw,120px);
+}
+.cintro--right .cintro__shots .cshot:nth-child(3){
+  margin-right:0; margin-left:clamp(0px,10vw,150px);
+}
+
+/* ══════════ Bild-Baustein mit Vergroessern-Knopf ══════════ */
+.cshot{
+  position:relative; margin:0; overflow:hidden;
+  border-radius:var(--r); border:1px solid var(--line);
+  background:var(--surf); aspect-ratio:16/9;
+}
+.cshot--tall{ aspect-ratio:3/4; }
+.cshot img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cshot__zoom{
+  position:absolute; right:12px; bottom:12px; z-index:2;
+  width:44px; height:44px; border-radius:50%; cursor:pointer;
+  background:rgba(11,17,36,.72); border:1px solid var(--line2);
+  color:var(--cream); display:grid; place-items:center;
+  transition:background-color .2s var(--ease), color .2s var(--ease),
+             border-color .2s var(--ease);
+}
+.cshot__zoom:hover{ background:var(--cream); color:var(--ink); border-color:var(--cream); }
+/* Rahmen-Variante wie auf der Vorlage — hebt ein Bild pro Abschnitt heraus */
+.cshot--framed{ border:2px solid var(--cream); }
+.cshot--framed .cshot__zoom{ background:var(--cream); color:var(--ink); border-color:var(--cream); }
+.cshot--framed .cshot__zoom:hover{ background:var(--pink); border-color:var(--pink); }
+
+/* ══════════ 3 · Zitatband ══════════ */
+.cquote{
+  position:relative; z-index:2;
+  max-width:var(--wrap); margin-inline:auto;
+  padding:clamp(48px,8svh,110px) var(--pad) clamp(30px,5svh,60px);
+}
+.cquote blockquote{
+  margin:0;
+  font-family:var(--f-display); font-weight:800;
+  font-size:clamp(2.2rem,6.4vw,5.6rem); line-height:.94;
+  letter-spacing:-.006em; text-transform:uppercase;
+  color:var(--cream);
+  text-wrap:balance;
+}
+.cquote--right blockquote{ text-align:right; }
+
+/* ══════════ 4 · Zweispaltiges Textband ══════════ */
+/* Ein Absatz in Pink, einer in Weiss — versetzt zueinander, damit
+   der Block nicht als Tabelle liest. */
+.cband{
+  position:relative; z-index:2;
+  max-width:var(--wrap); margin-inline:auto;
+  padding:clamp(20px,4svh,52px) var(--pad) clamp(60px,10svh,130px);
+  display:grid; gap:clamp(28px,5vw,80px);
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:start;
+}
+.cband__pink{
+  font-family:var(--f-body); font-weight:700;
+  font-size:clamp(1.3rem,2.5vw,2.1rem); line-height:1.18;
+  color:var(--pink); margin:0; max-width:20ch;
+}
+.cband__body{ font-size:1rem; line-height:1.7; color:var(--fg); max-width:42ch; margin:0; }
+/* Die zweite Spalte sackt ab, das erzeugt die versetzte Optik der Vorlage */
+.cband > *:nth-child(2){ margin-top:clamp(20px,5svh,90px); }
+
+.cband__shots{
+  grid-column:1 / -1; margin-top:clamp(30px,5svh,70px);
+  display:grid; gap:clamp(14px,2vw,24px);
+  grid-template-columns:repeat(auto-fit, minmax(280px,1fr));
+}
+.cband--right .cband__shots{ direction:rtl; }
+.cband--right .cband__shots > *{ direction:ltr; }
+
+/* ══════════ 5 · Vollbild ══════════ */
+/* Das Bild laeuft ueber die volle Breite und scrollt ganz normal mit.
+   Bewusst ohne sticky, ohne Parallax und ohne Zoom: mit `object-fit:cover`
+   in einem gepinnten Rahmen sah man nie das ganze Bild, sondern einen
+   wandernden Ausschnitt — und das Hineinzoomen beim Scrollen wirkte
+   unruhig. Jetzt gilt das natuerliche Seitenverhaeltnis (16:9), das Bild
+   ist dadurch vollstaendig zu sehen und auf breiten Schirmen fast genau
+   bildschirmfuellend hoch. */
+.cfull{
+  position:relative; z-index:2;
+  margin:0; padding:0;
+  background:var(--bg);
+}
+/* aspect-ratio reserviert den Platz, bevor das Bild geladen ist. Ohne das
+   ist die Figur beim Laden 0 px hoch und der halbe Seiteninhalt springt
+   nach unten, sobald sie ankommt. Alle Vollbilder sind 16:9. */
+.cfull img{
+  display:block; width:100%; height:auto; aspect-ratio:16/9;
+}
+.cfull__cap{
+  max-width:var(--wrap); margin:0 auto;
+  padding:14px var(--pad) 0;
+  font-family:var(--f-label); font-size:.66rem; letter-spacing:.24em;
+  text-transform:uppercase; color:var(--fg-dim);
+}
+
+/* ══════════ 6 · Bilderraster ══════════ */
+.cgal{
+  position:relative; z-index:2;
+  max-width:var(--wrap); margin-inline:auto;
+  padding:clamp(60px,10svh,130px) var(--pad);
+}
+.cgal__head{
+  font-family:var(--f-label); font-size:.68rem; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--vice); margin:0 0 var(--s3); font-weight:700;
+}
+.cgal__grid{
+  display:grid; gap:clamp(10px,1.4vw,18px);
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.cgal__grid .cshot{ aspect-ratio:16/10; }
+/* Erstes Bild gross — bricht das gleichfoermige Raster auf */
+.cgal__grid .cshot:first-child{ grid-column:span 2; grid-row:span 2; aspect-ratio:auto; }
+
+/* ══════════ 7 · Abschluss ══════════ */
+.coutro{
+  position:relative; z-index:2;
+  padding:clamp(30px,5svh,70px) var(--pad) clamp(80px,12svh,150px);
+  max-width:var(--wrap); margin-inline:auto;
+  text-align:center;
+}
+.coutro__shots{
+  display:grid; gap:clamp(14px,2vw,24px);
+  grid-template-columns:repeat(auto-fit, minmax(300px,1fr));
+  margin-bottom:clamp(34px,6svh,70px);
+}
+.coutro__h{
+  font-family:var(--f-display); font-weight:800;
+  font-size:clamp(1.9rem,4.4vw,3.4rem); line-height:.94;
+  text-transform:uppercase; color:var(--cream); margin:0 0 var(--s3);
+}
+.coutro__acts{ display:flex; gap:var(--s2); justify-content:center; flex-wrap:wrap; }
+
+/* ══════════ Einblenden beim Scrollen ══════════ */
+.cin{
+  opacity:0; transform:translateY(30px);
+  transition:opacity .85s var(--ease-out), transform .85s var(--ease-out);
+  transition-delay:var(--d,0ms);
+}
+.cin.is-in{ opacity:1; transform:none; }
+
+/* ══════════ Responsive ══════════ */
+@media (max-width:1024px){
+  .cintro{ grid-template-columns:1fr; }
+  .cintro--right .cintro__copy{ order:1; }
+  .cintro--right .cintro__shots{ order:2; }
+  .cintro__shots .cshot:nth-child(n){ margin-left:0; margin-right:0; }
+  .cgal__grid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .cgal__grid .cshot:first-child{ grid-column:span 2; grid-row:span 1; aspect-ratio:16/10; }
+}
+@media (max-width:860px){
+  /* Ab hier ueberlappt die Karte weniger, damit die kuerzeren Hero-Hoehen
+     die Bedingung `Hoehe >= --rise + 100svh` noch erfuellen. */
+  #cintro{ --rise:100; }
+  .cv{ height:250svh; }
+  .cv--still{ height:230svh; }
+  .cband{ grid-template-columns:1fr; }
+  .cband > *:nth-child(2){ margin-top:0; }
+  .cband--right .cband__shots{ direction:ltr; }
+  .cquote--right blockquote{ text-align:left; }
+  .cgal__grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .nav__where{ display:none; }
+  .nav__sep{ display:none; }
+}
+@media (max-width:560px){
+  .cv{ height:215svh; }
+  .cv--still{ height:215svh; }
+  .cv__title{ padding-bottom:calc(38px + env(safe-area-inset-bottom)); }
+  .clead{ font-size:1.32rem; max-width:none; }
+  .cband__pink{ font-size:1.24rem; max-width:none; }
+  .cbody, .cband__body{ max-width:none; }
+  .cgal__grid{ gap:8px; }
+  .cshot__zoom{ right:9px; bottom:9px; }
+  .nav__back span{ display:none; }
+  .coutro__shots{ grid-template-columns:1fr; }
+}
+
+/* Im Querformat ist die Hoehe knapp — Name kleiner, Strecken kuerzer */
+@media (max-height:560px) and (orientation:landscape){
+  /* Quer ist wenig Hoehe da — die Karte ueberlappt hier weniger, damit
+     die Sektion nicht endlos lang wird. */
+  #cintro{ --rise:100; }
+  .cv{ height:215svh; }
+  .cv--still{ height:215svh; }
+  .cv__name{ font-size:clamp(2rem,7vw,3.4rem); }
+  .cv__hint{ display:none; }
+}
+
+/* ══════════ Reduced Motion ══════════ */
+/* Ohne Bewegung wird aus dem gepinnten Hero ein normales Standbild im
+   Seitenfluss und die Intro-Karte faehrt nicht mehr hoch, sondern steht
+   einfach darunter. Der Inhalt bleibt vollstaendig, nur die Bewegung
+   faellt weg. */
+@media (prefers-reduced-motion: reduce){
+  .cv{ height:auto; }
+  .cv__sticky{ position:relative; height:auto; aspect-ratio:16/9; }
+  .cv__frame{ position:relative; inset:auto; transform:none; }
+  .cv__video{ height:auto; aspect-ratio:16/9; }
+  .cv__title{ position:relative; opacity:1 !important; transform:none !important;
+              padding-top:var(--s4); }
+  .cv__hint{ display:none; }
+  /* Die Karte fährt nicht mehr hoch, sondern steht im Seitenfluss.
+     Ohne diese Zeilen bliebe der negative Versatz aus .rise-card stehen
+     und die Karte würde den Hero überdecken. */
+  .cintro{ margin-top:0; width:auto; max-width:none; border-radius:0; }
+  .cintro::before{ display:none; }
+  .cv__out{ display:none; }
+  .cin{ opacity:1; transform:none; }
+}

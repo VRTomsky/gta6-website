@@ -15,7 +15,10 @@ Warum nicht einfach `python -m http.server`?
   * **Im WLAN erreichbar.** Bindet auf 0.0.0.0 und zeigt beim Start die
     Adresse an, unter der das Handy die Seite öffnen kann.
 
-Aufruf:  python serve.py [--port 5174] [--no-browser]
+Aufruf:  python serve.py [--port 5174] [--no-browser] [--log PFAD] [--print-lan-ip]
+
+Im Hintergrund wird er über `pythonw.exe` gestartet (siehe `Server starten.bat`).
+Dort gibt es keine Konsole — alle Meldungen landen dann in der Logdatei.
 """
 
 import argparse
@@ -25,6 +28,7 @@ import re
 import socket
 import sys
 import threading
+import time
 import webbrowser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -134,7 +138,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         msg = fmt % args
         if any(code in msg for code in (" 200 ", " 206 ", " 304 ")):
             return
-        sys.stderr.write("  %s\n" % msg)
+        say("  %s" % msg)
+
+
+# ── Ausgabe ────────────────────────────────────────────────────────────
+# Unter pythonw.exe — so läuft der Server im Hintergrund — gibt es keine
+# Konsole: sys.stdout und sys.stderr sind dort None und jedes nackte print()
+# würde mit einem AttributeError abbrechen. Alles geht deshalb durch say(),
+# das die Konsole nimmt, wenn es eine gibt, und sonst nur die Logdatei.
+
+LOGFILE = None
+
+
+def open_log(path):
+    """Logdatei festlegen und bei Bedarf kürzen, damit sie nicht wächst."""
+    global LOGFILE
+    LOGFILE = path
+    try:
+        if os.path.exists(path) and os.path.getsize(path) > 256 * 1024:
+            os.remove(path)
+    except OSError:
+        pass
+
+
+def say(msg=""):
+    if sys.stdout is not None:
+        try:
+            print(msg)
+        except Exception:
+            pass
+    if LOGFILE:
+        try:
+            with open(LOGFILE, "a", encoding="utf-8") as f:
+                f.write(msg + "\n")
+        except OSError:
+            pass
 
 
 def lan_ip():
@@ -151,27 +189,40 @@ def lan_ip():
 
 def banner(port):
     ip = lan_ip()
-    line = "  " + "─" * 56
-    print()
-    print("  GRAND THEFT AUTO VI — Fan-Seite")
-    print(line)
-    print("  Am PC        http://localhost:%d" % port)
+    line = "  " + "-" * 56
+    say()
+    say("  GRAND THEFT AUTO VI - Fan-Seite")
+    say("  gestartet am " + time.strftime("%d.%m.%Y um %H:%M:%S"))
+    say(line)
+    say("  Am PC        http://localhost:%d" % port)
     if ip:
-        print("  Am Handy     http://%s:%d" % (ip, port))
-        print("               (gleiches WLAN; beim ersten Start fragt die")
-        print("                Windows-Firewall — 'Privates Netzwerk' zulassen)")
+        say("  Am Handy     http://%s:%d" % (ip, port))
+        say("               (gleiches WLAN; beim ersten Start fragt die")
+        say("                Windows-Firewall - 'Privates Netzwerk' zulassen)")
     else:
-        print("  Am Handy     keine Netzwerkadresse gefunden")
-    print(line)
-    print("  Beenden mit Strg+C oder Fenster schliessen")
-    print()
+        say("  Am Handy     keine Netzwerkadresse gefunden")
+    say(line)
 
 
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 5174)))
     ap.add_argument("--no-browser", action="store_true")
+    ap.add_argument("--log", metavar="PFAD",
+                    help="Meldungen zusaetzlich in diese Datei schreiben")
+    ap.add_argument("--print-lan-ip", action="store_true",
+                    help="nur die WLAN-Adresse ausgeben und beenden")
     args = ap.parse_args()
+
+    if args.print_lan_ip:
+        ip = lan_ip()
+        if not ip:
+            return 1
+        print(ip)
+        return 0
+
+    if args.log:
+        open_log(args.log)
 
     os.chdir(ROOT)
     handler = lambda *a, **kw: Handler(*a, directory=ROOT, **kw)  # noqa: E731
@@ -179,17 +230,18 @@ def main():
     try:
         httpd = http.server.ThreadingHTTPServer(("0.0.0.0", args.port), handler)
     except OSError as e:
-        print()
-        print("  Port %d ist belegt — laeuft der Server schon?" % args.port)
-        print("  (%s)" % e)
-        print("  Oeffne trotzdem http://localhost:%d" % args.port)
-        print()
+        say()
+        say("  Port %d ist belegt - laeuft der Server schon?" % args.port)
+        say("  (%s)" % e)
         if not args.no_browser:
             webbrowser.open("http://localhost:%d/" % args.port)
         return 1
 
     httpd.daemon_threads = True
     banner(args.port)
+    if sys.stdout is not None:
+        say("  Beenden mit Strg+C oder Fenster schliessen")
+        say()
 
     if not args.no_browser:
         threading.Timer(0.6, webbrowser.open, ["http://localhost:%d/" % args.port]).start()
@@ -197,7 +249,7 @@ def main():
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n  Server beendet.")
+        say("  Server beendet.")
     finally:
         httpd.server_close()
     return 0

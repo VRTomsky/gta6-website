@@ -244,7 +244,18 @@ const XACCOUNTS = [
 /* ── Galerie ────────────────────────────────────────────── */
 const GALLERY = (() => {
   const g = [];
-  const push = (cat, files, cap) => files.forEach((f, i) => g.push({ src: "assets/img/" + f, cat, cap: cap + " " + String(i + 1).padStart(2, "0") }));
+  /* Ein Eintrag ist entweder nur der Dateiname — dann wird die Bildunter-
+     schrift durchnummeriert ("Artwork 01") — oder ein Paar
+     ["datei.jpg", "Was drauf ist"]. Das Paar ist die bessere Form: die
+     Beschriftung landet als Alt-Text am Bild und als Zeile in der Lightbox. */
+  const push = (cat, files, cap) => files.forEach((f, i) => {
+    const [datei, text] = Array.isArray(f) ? f : [f, null];
+    g.push({
+      src: "assets/img/" + datei,
+      cat,
+      cap: text || cap + " " + String(i + 1).padStart(2, "0")
+    });
+  });
 
   push("art", [
     "art/cover_art.jpg","art/jason_lucia_robbery_logo.jpg","art/jason_lucia_beach_logo.jpg",
@@ -280,8 +291,32 @@ const GALLERY = (() => {
     "chars/raul_01.jpg","chars/raul_02.jpg","chars/raul_03.jpg","chars/raul_04.jpg",
     "chars/brian_01.jpg","chars/brian_02.jpg","chars/brian_03.jpg","chars/brian_04.jpg",
     "art/cal_hampton.jpg","art/boobie_ike.jpg","art/drequan_priest.jpg","art/real_dimez.jpg",
-    "art/raul_bautista.jpg","art/brian_heder.jpg"
+    "art/raul_bautista.jpg","art/brian_heder.jpg",
+    ["chars/jason_07.jpg", "Jason hinter einem Maschendrahtzaun, im Rücken das Blaulicht"],
+    ["chars/jason_08.jpg", "Jason mit Pistole an einem Boot in den Leonida Keys"],
+    ["chars/lucia_07.jpg", "Lucia mit Schrotflinte während einer Verfolgungsjagd"],
+    ["chars/lucia_08.jpg", "Lucia vor einer Wechselstube in Vice City"],
+    ["chars/lucia_10.jpg", "Lucia im Wagen, Neonlicht auf dem Gesicht"]
   ], "Charakter");
+
+  /* Die Szenen mit beiden Protagonisten bekommen einen eigenen Filter —
+     13 Bilder sind genug dafür, und inhaltlich sind es Story-Momente und
+     keine Einzelporträts. */
+  push("duo", [
+    ["duo/duo_01.jpg", "Jason und Lucia am Hafen, dahinter die Skyline von Vice City"],
+    ["duo/duo_02.jpg", "Jason und Lucia bewaffnet in einem Tresorraum"],
+    ["duo/duo_03.jpg", "Lucia auf die Autotür gelehnt, Jason am Steuer"],
+    ["duo/duo_04.jpg", "Schusswechsel in einem Nagelstudio"],
+    ["duo/duo_05.jpg", "Nächtliches Treffen in einem Hinterhof"],
+    ["duo/duo_06.jpg", "Jason am Steuer, Lucia mit gezogener Waffe"],
+    ["duo/duo_07.jpg", "Lucia auf einer Motorhaube im türkisen Neonlicht"],
+    ["duo/duo_08.jpg", "Jason und Lucia vor einem brennenden Wrack im Sonnenuntergang"],
+    ["duo/duo_09.jpg", "Verfolgungsjagd auf dem Motorrad, Streifenwagen im Rücken"],
+    ["duo/duo_10.jpg", "Lucia auf einer Dachterrasse über der nächtlichen Skyline"],
+    ["duo/duo_11.jpg", "Jason und Lucia im Cabrio an der Küste"],
+    ["duo/duo_12.jpg", "Jason bewaffnet im Halbdunkel"],
+    ["duo/duo_13.jpg", "Jason und Lucia im Gegenlicht des Sonnenuntergangs"]
+  ], "Jason & Lucia");
 
   push("ultimate", ULTIMATE.map(u => u.img).concat([
     "ultimate/ue_01.jpg","ultimate/ue_02.jpg","ultimate/ue_cheetah_03.jpg","ultimate/ue_vc_style_03.jpg",
@@ -297,6 +332,339 @@ const GAL_CATS = [
   { id: "vice",     label: "Vice City" },
   { id: "leonida",  label: "Leonida" },
   { id: "chars",    label: "Charaktere" },
+  { id: "duo",      label: "Jason & Lucia" },
   { id: "art",      label: "Artworks" },
   { id: "ultimate", label: "Ultimate Edition" }
 ];
+
+/* ── Charakter-Detailseiten ──────────────────────────────
+   Inhalte für charakter.html. Aufbau je Seite immer gleich:
+
+     scrub    scroll-gesteuertes Video im Vollbild
+     intro    Name, Lead (pink), Fließtext + Bildercluster gegenüber
+     quote1   grosses Zitat quer über die Seite
+     band     zweispaltiger Textblock unter dem Zitat
+     full     Vollbild, das beim Scrollen durchfährt
+     quote2   zweites Zitat
+     band2    zweiter Textblock, Spalten getauscht
+     gallery  Bilderraster
+     outro    Bilder + Zurück-Button
+
+   `side` dreht das Intro-Layout: "left" = Text links (Jason),
+   "right" = Text rechts (Lucia). Alles andere ergibt sich daraus,
+   damit sich die beiden Hauptfiguren spiegeln statt zu doppeln.
+   ─────────────────────────────────────────────────────── */
+const CHAR_PAGES = {
+
+  jason: {
+    side: "left",
+    kicker: "Protagonist 01",
+    scrub: "assets/video/scrub_jason.mp4",
+    scrubPoster: "assets/img/art/scrub_poster2.jpg",
+    lead: "Jason will ein einfaches Leben — aber es wird einfach nicht einfacher.",
+    intro: [
+      "Aufgewachsen ist er zwischen Trickbetrügern und Kleinkriminellen. Nach einer Zeit bei der Army, mit der er seine schwierige Jugend abschütteln wollte, landete er in den Keys und macht das, was er am besten kann: für die örtlichen Drogenkuriere arbeiten.",
+      "Vielleicht ist es Zeit, etwas Neues zu probieren."
+    ],
+    introShots: [
+      ["chars/jason_08.jpg", "Jason an einem Boot in den Leonida Keys"],
+      ["duo/duo_11.jpg", "Jason und Lucia im Cabrio an der Küste"],
+      ["chars/jason_02.jpg", "Jason auf der Veranda"]
+    ],
+    quote1: "If anything happens,<br>I'm right behind you.",
+    band: {
+      pink: "Another day in paradise, right?",
+      body: "Lucia zu treffen könnte das Beste oder das Schlimmste sein, was ihm je passiert ist. Jason weiß ziemlich genau, wie er es gern hätte — aber im Moment ist schwer zu sagen, wohin das läuft."
+    },
+    bandShots: [
+      ["duo/duo_06.jpg", "Jason am Steuer, Lucia auf dem Beifahrersitz"],
+      ["chars/jason_04.jpg", "Jason in Vice City"]
+    ],
+    full: "chars/jason_07.jpg",
+    fullAlt: "Jason hinter einem Maschendrahtzaun, im Rücken das Blaulicht der Streifenwagen",
+    fullCap: "Leonida Keys · die Nacht, in der es kippt",
+    quote2: "Vom einfachen Job<br>zum Punkt ohne Rückweg.",
+    band2: {
+      body: "Ein simples krummes Ding läuft schief — und plötzlich steht Jason mitten in einer Verschwörung, die sich über den ganzen Bundesstaat zieht. Zurück kann er nicht mehr.",
+      pink: "Er weiß, wie er es gern hätte. Nur fragt ihn gerade niemand."
+    },
+    gallery: [
+      ["chars/jason_01.jpg", "Jason Duval — Porträt"],
+      ["chars/jason_03.jpg", "Jason am Strand"],
+      ["chars/jason_05.jpg", "Jason im Motel"],
+      ["chars/jason_06.jpg", "Jason bei Nacht"],
+      ["duo/duo_04.jpg", "Überfall zu zweit"],
+      ["duo/duo_09.jpg", "Verfolgungsjagd auf dem Motorrad"],
+      ["duo/duo_12.jpg", "Jason bewaffnet im Halbdunkel"],
+      ["art/jason_lucia_motel.jpg", "Jason und Lucia im Motel"]
+    ],
+    outro: [
+      ["duo/duo_01.jpg", "Jason und Lucia am Hafen von Vice City"],
+      ["duo/duo_08.jpg", "Jason und Lucia vor einem brennenden Wrack"]
+    ]
+  },
+
+  lucia: {
+    side: "right",
+    kicker: "Protagonistin 02",
+    scrub: "assets/video/scrub_lucia.mp4",
+    scrubPoster: "assets/img/art/scrub_poster.jpg",
+    lead: "Lucias Vater brachte ihr das Kämpfen bei, sobald sie laufen konnte.",
+    intro: [
+      "Seitdem schlägt das Leben zurück. Weil sie für ihre Familie kämpfte, landete sie im Leonida Penitentiary. Reines Glück holte sie wieder heraus.",
+      "Lucia hat ihre Lektion gelernt — ab jetzt nur noch kluge Entscheidungen."
+    ],
+    introShots: [
+      ["chars/lucia_10.jpg", "Lucia im Wagen, Neonlicht auf dem Gesicht"],
+      ["chars/lucia_07.jpg", "Lucia mit Schrotflinte während einer Verfolgungsjagd"],
+      ["chars/lucia_03.jpg", "Lucia in Vice City"]
+    ],
+    quote1: "The only thing that matters is<br>who you know and what you got.",
+    band: {
+      pink: "Ein Leben mit Jason könnte ihr Weg raus sein.",
+      body: "Frisch aus dem Knast und fest entschlossen, die Chancen zu ihren Gunsten zu drehen, hält Lucia an ihrem Plan fest — egal, was es kostet."
+    },
+    bandShots: [
+      ["chars/lucia_08.jpg", "Lucia vor einem Wechselstubenladen"],
+      ["duo/duo_03.jpg", "Lucia und Jason im Wagen bei Tag"]
+    ],
+    full: "duo/duo_10.jpg",
+    fullAlt: "Lucia auf einer Dachterrasse über der nächtlichen Skyline von Vice City",
+    fullCap: "Vice City · alles, was sie wollte, eine Etage zu hoch",
+    quote2: "Sie will nicht träumen.<br>Sie will es nehmen.",
+    band2: {
+      body: "Mehr als alles andere will Lucia das gute Leben, von dem ihre Mutter seit ihren Tagen in Liberty City redet. Statt halbgarer Fantasien nimmt sie die Sache selbst in die Hand.",
+      pink: "Nur kluge Entscheidungen. Von hier an."
+    },
+    gallery: [
+      ["chars/lucia_01.jpg", "Lucia Caminos — Porträt"],
+      ["chars/lucia_02.jpg", "Lucia am Strand"],
+      ["chars/lucia_04.jpg", "Lucia im Club"],
+      ["chars/lucia_05.jpg", "Lucia bei Nacht"],
+      ["chars/lucia_06.jpg", "Lucia auf der Straße"],
+      ["duo/duo_02.jpg", "Lucia und Jason im Tresorraum"],
+      ["duo/duo_07.jpg", "Lucia im Neonlicht"],
+      ["duo/duo_05.jpg", "Treffen im Hinterhof"]
+    ],
+    outro: [
+      ["duo/duo_13.jpg", "Lucia und Jason im Sonnenuntergang"],
+      ["art/jason_lucia_02.jpg", "Lucia und Jason — Artwork"]
+    ]
+  },
+
+  cal: {
+    side: "left",
+    kicker: "Nebenfigur",
+    heroImg: "assets/img/art/cal_hampton.jpg",
+    lead: "Cal ist am glücklichsten, wenn er allein mit seinem Polizeiscanner ist.",
+    intro: [
+      "Wer wissen will, wo gerade eine Streife steht, welcher Kanal abgehört wird oder wo man ungestört etwas abwickelt, fragt Cal.",
+      "Der Preis dafür: Man bekommt seine Theorien gleich mit dazu."
+    ],
+    introShots: [
+      ["chars/cal_02.jpg", "Cal an seinem Funkgerät"],
+      ["chars/cal_03.jpg", "Cal in den Leonida Keys"]
+    ],
+    quote1: "Der Funk lügt nicht.",
+    band: {
+      pink: "Über die Regierung. Über das, was über Leonida fliegt.",
+      body: "Und darüber, wer angeblich wirklich das Sagen hat. Nützlich ist er trotzdem — Jason hört ihm zu, weil es sich am Ende meistens auszahlt."
+    },
+    bandShots: [["chars/cal_04.jpg", "Cal im Halbdunkel"]],
+    full: "chars/cal_01.jpg",
+    fullAlt: "Cal Hampton an seinem Polizeiscanner",
+    fullCap: "Leonida Keys · Kanal offen, Tür zu",
+    quote2: "Er hört alles.<br>Er glaubt fast alles.",
+    band2: {
+      body: "Cal ist kein Kämpfer und will es auch nicht sein. Sein Beitrag kommt über Frequenzen, Kabel und die Geduld, stundenlang zuzuhören.",
+      pink: "Jasons ältester Freund — und sein zuverlässigster Vorsprung."
+    },
+    gallery: [
+      ["chars/cal_01.jpg", "Cal Hampton — Bild 1"],
+      ["chars/cal_02.jpg", "Cal Hampton — Bild 2"],
+      ["chars/cal_03.jpg", "Cal Hampton — Bild 3"],
+      ["chars/cal_04.jpg", "Cal Hampton — Bild 4"]
+    ],
+    outro: [["art/jason_lucia_beach.jpg", "Jason und Lucia am Strand"]]
+  },
+
+  boobie: {
+    side: "right",
+    kicker: "Nebenfigur",
+    heroImg: "assets/img/art/boobie_ike.jpg",
+    lead: "Boobie hat seine Zeit auf der Straße abgesessen — und den Hustle in etwas Belastbares verwandelt.",
+    intro: [
+      "Einen Club, ein Tonstudio, Immobilien. In Vice City kennt ihn jeder, der irgendwo Geld unterbringen muss.",
+      "Er macht die Drecksarbeit nicht mehr selbst. Er weiß nur noch genau, wie sie funktioniert."
+    ],
+    introShots: [
+      ["chars/boobie_02.jpg", "Boobie Ike in seinem Club"],
+      ["chars/boobie_03.jpg", "Boobie Ike in Vice City"]
+    ],
+    quote1: "Vom Block ins Grundbuch.",
+    band: {
+      pink: "Wer ihm etwas schuldet, merkt das ziemlich schnell.",
+      body: "Sein Netzwerk reicht von Dre'Quan Priests Label bis in Ecken der Stadt, in denen niemand Fragen stellt."
+    },
+    bandShots: [["chars/boobie_04.jpg", "Boobie Ike bei Nacht"]],
+    full: "chars/boobie_01.jpg",
+    fullAlt: "Boobie Ike in seinem Club in Vice City",
+    fullCap: "Vice City · Club, Studio, Grundbuch",
+    quote2: "Straße bleibt Straße.<br>Nur das Konto ändert sich.",
+    band2: {
+      body: "Boobie investiert in Leute, nicht in Ideen. Wer bei ihm anfängt, arbeitet erst und redet später.",
+      pink: "Sein Geschäft läuft leise. Genau das ist der Punkt."
+    },
+    gallery: [
+      ["chars/boobie_01.jpg", "Boobie Ike — Bild 1"],
+      ["chars/boobie_02.jpg", "Boobie Ike — Bild 2"],
+      ["chars/boobie_03.jpg", "Boobie Ike — Bild 3"],
+      ["chars/boobie_04.jpg", "Boobie Ike — Bild 4"]
+    ],
+    outro: [["art/jason_lucia_01.jpg", "Jason und Lucia — Artwork"]]
+  },
+
+  drequan: {
+    side: "left",
+    kicker: "Nebenfigur",
+    heroImg: "assets/img/art/drequan_priest.jpg",
+    lead: "Dre'Quan kam über selbstgebaute Beats nach oben — und betreibt heute sein eigenes Label.",
+    intro: [
+      "Only Raw Records. Sein Ziel ist simpel: einen echten Hit landen, bevor ihm jemand anderes zuvorkommt.",
+      "Bei ihm unter Vertrag: Real Dimez."
+    ],
+    introShots: [
+      ["chars/drequan_02.jpg", "Dre'Quan Priest im Studio"],
+      ["chars/drequan_03.jpg", "Dre'Quan Priest in Vice City"]
+    ],
+    quote1: "Only Raw Records.",
+    band: {
+      pink: "Ein Hit trennt ihn von allem.",
+      body: "Wenn Bae-Luxe und Roxy noch einmal einschlagen, ist Dre'Quan der Mann, der davon am meisten hat — und der am meisten zu verlieren hat, wenn nicht."
+    },
+    bandShots: [["chars/drequan_04.jpg", "Dre'Quan Priest bei einem Auftritt"]],
+    full: "chars/drequan_01.jpg",
+    fullAlt: "Dre'Quan Priest im Studio von Only Raw Records",
+    fullCap: "Vice City · alles auf eine Platte",
+    quote2: "Er hat die Halle gefüllt.<br>Jetzt braucht er die Charts.",
+    band2: {
+      body: "Zwischen Studio, Boobie Ikes Geld und den Erwartungen der Stadt bleibt Dre'Quan wenig Spielraum für einen zweiten Anlauf.",
+      pink: "Mixtapes waren die einfache Phase."
+    },
+    gallery: [
+      ["chars/drequan_01.jpg", "Dre'Quan Priest — Bild 1"],
+      ["chars/drequan_02.jpg", "Dre'Quan Priest — Bild 2"],
+      ["chars/drequan_03.jpg", "Dre'Quan Priest — Bild 3"],
+      ["chars/drequan_04.jpg", "Dre'Quan Priest — Bild 4"]
+    ],
+    outro: [["art/real_dimez.jpg", "Real Dimez — Artwork"]]
+  },
+
+  dimez: {
+    side: "right",
+    kicker: "Nebenfiguren",
+    heroImg: "assets/img/art/real_dimez.jpg",
+    lead: "Bae-Luxe und Roxy sind seit der Highschool befreundet — und clever genug, daraus Geld zu machen.",
+    intro: [
+      "Ihre Zeit als Abzockerinnen lokaler Dealer haben sie in deftige Rap-Tracks verwandelt und in eine Social-Media-Präsenz, die nie stillsteht.",
+      "Ein früher Hit mit dem Rapper DWNPLY brachte sie ganz nach oben."
+    ],
+    introShots: [
+      ["chars/dimez_02.jpg", "Real Dimez auf der Bühne"],
+      ["chars/dimez_03.jpg", "Real Dimez in Vice City"]
+    ],
+    quote1: "One hit away from fame.",
+    band: {
+      pink: "Fünf Jahre und eine Menge Ärger später.",
+      body: "Jetzt stehen sie bei Only Raw Records unter Vertrag und hoffen, dass der Blitz zweimal einschlägt."
+    },
+    bandShots: [["chars/dimez_04.jpg", "Real Dimez bei Nacht"]],
+    full: "chars/dimez_01.jpg",
+    fullAlt: "Real Dimez bei einem Auftritt",
+    fullCap: "Vice City · zwei Stimmen, ein Versuch",
+    quote2: "Sie waren schon einmal oben.<br>Der Weg zurück ist kürzer.",
+    band2: {
+      body: "Bae-Luxe schreibt, Roxy führt. Zusammen sind sie das lauteste Argument, das Dre'Quans Label vorzuweisen hat.",
+      pink: "Der Hustle hat nur das Format gewechselt."
+    },
+    gallery: [
+      ["chars/dimez_01.jpg", "Real Dimez — Bild 1"],
+      ["chars/dimez_02.jpg", "Real Dimez — Bild 2"],
+      ["chars/dimez_03.jpg", "Real Dimez — Bild 3"],
+      ["chars/dimez_04.jpg", "Real Dimez — Bild 4"]
+    ],
+    outro: [["art/drequan_priest.jpg", "Dre'Quan Priest — Artwork"]]
+  },
+
+  raul: {
+    side: "left",
+    kicker: "Nebenfigur",
+    heroImg: "assets/img/art/raul_bautista.jpg",
+    lead: "Selbstbewusstsein, Charme und Gerissenheit — Raul ist ein erfahrener Bankräuber.",
+    intro: [
+      "Ständig auf der Suche nach Leuten, die bereit sind, für den ganz großen Ertrag das ganz große Risiko zu nehmen.",
+      "Seine Rücksichtslosigkeit erhöht mit jedem Coup den Einsatz."
+    ],
+    introShots: [
+      ["chars/raul_02.jpg", "Raul Bautista in Port Gellhorn"],
+      ["chars/raul_03.jpg", "Raul Bautista mit seiner Crew"]
+    ],
+    quote1: "Experience counts.",
+    band: {
+      pink: "Früher oder später muss seine Crew entscheiden.",
+      body: "Nachlegen — oder die Chips vom Tisch nehmen. Raul selbst hat diese Frage für sich längst beantwortet."
+    },
+    bandShots: [["chars/raul_04.jpg", "Raul Bautista bei einem Überfall"]],
+    full: "chars/raul_01.jpg",
+    fullAlt: "Raul Bautista mit seiner Crew in Port Gellhorn",
+    fullCap: "Port Gellhorn · immer ein Ding zu viel",
+    quote2: "Erfahrung schützt ihn.<br>Nur nicht vor sich selbst.",
+    band2: {
+      body: "Wer bei Raul mitfährt, verdient mehr als anderswo. Und trägt jedes Mal ein bisschen mehr Risiko mit.",
+      pink: "Der nächste Coup ist immer der größte."
+    },
+    gallery: [
+      ["chars/raul_01.jpg", "Raul Bautista — Bild 1"],
+      ["chars/raul_02.jpg", "Raul Bautista — Bild 2"],
+      ["chars/raul_03.jpg", "Raul Bautista — Bild 3"],
+      ["chars/raul_04.jpg", "Raul Bautista — Bild 4"]
+    ],
+    outro: [["art/jason_lucia_robbery.jpg", "Jason und Lucia bei einem Überfall"]]
+  },
+
+  brian: {
+    side: "right",
+    kicker: "Nebenfigur",
+    heroImg: "assets/img/art/brian_heder.jpg",
+    lead: "Brian ist ein klassischer Schmuggler aus der goldenen Ära der Keys.",
+    intro: [
+      "Über seine Bootswerft läuft mit seiner dritten Frau Lori noch immer Ware — nur lässt er die schmutzige Arbeit inzwischen andere machen.",
+      "Sieht aus wie ein Strandpenner. Bewegt sich wie ein Weißer Hai."
+    ],
+    introShots: [
+      ["chars/brian_02.jpg", "Brian Heder auf seiner Bootswerft"],
+      ["chars/brian_03.jpg", "Brian Heder in den Leonida Keys"]
+    ],
+    quote1: "Nothing better than<br>a Mudslide at sunset.",
+    band: {
+      pink: "Jason wohnt mietfrei bei ihm.",
+      body: "Solange er bei den lokalen Abzocken hilft und ab und zu auf Loris Sangria vorbeischaut. Der Deal steht — bis er es nicht mehr tut."
+    },
+    bandShots: [["chars/brian_04.jpg", "Brian Heder am Wasser"]],
+    full: "chars/brian_01.jpg",
+    fullAlt: "Brian Heder auf seiner Bootswerft",
+    fullCap: "Leonida Keys · die Werft, über die alles läuft",
+    quote2: "Freundlich zu allen.<br>Verbindlich zu keinem.",
+    band2: {
+      body: "Brian hat jede Razzia der letzten dreißig Jahre überstanden, weil er nie derjenige war, der das Boot gefahren hat.",
+      pink: "Ein Gefallen von ihm ist nie umsonst."
+    },
+    gallery: [
+      ["chars/brian_01.jpg", "Brian Heder — Bild 1"],
+      ["chars/brian_02.jpg", "Brian Heder — Bild 2"],
+      ["chars/brian_03.jpg", "Brian Heder — Bild 3"],
+      ["chars/brian_04.jpg", "Brian Heder — Bild 4"]
+    ],
+    outro: [["art/jason_lucia_beach.jpg", "Jason und Lucia am Strand"]]
+  }
+};

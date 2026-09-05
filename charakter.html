@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Charakter — Grand Theft Auto VI</title>
+<meta name="description" content="Charakter-Akte zu Grand Theft Auto VI: Biografie, Zitate und Bildergalerie.">
+<meta name="theme-color" content="#0b1124">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/char.css">
+<link rel="icon" href="assets/img/art/vi_logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/img/app/apple-touch-icon.png">
+</head>
+<body class="char-body">
+
+<a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+<!-- ══════════════ NAV ══════════════ -->
+<header class="nav nav--char" id="nav">
+  <a class="nav__logo" href="index.html" aria-label="Grand Theft Auto VI — zur Startseite">
+    <svg class="vi-mark" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
+      <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/>
+      <path d="M49.2 0h11.6v38H49.2z"/>
+    </svg>
+  </a>
+  <span class="nav__sep" aria-hidden="true"></span>
+  <p class="nav__where" id="navWhere">Only in Leonida</p>
+
+  <div class="nav__right">
+    <a class="btn btn--pink btn--sm nav__back" href="index.html#charaktere">
+      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Alle Charaktere
+    </a>
+    <button class="nav__burger" id="burger" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobileMenu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" hidden>
+  <nav aria-label="Mobile Navigation">
+    <a href="index.html#charaktere">Alle Charaktere</a>
+    <a href="index.html#trailer">Trailer</a>
+    <a href="index.html#story">Story</a>
+    <a href="index.html#leonida">Leonida</a>
+    <a href="index.html#ultimate">Ultimate Edition</a>
+    <a href="index.html#news">News &amp; Leaks</a>
+    <a href="index.html#galerie">Medien</a>
+  </nav>
+  <p class="mobile-menu__cd"><span id="navMiniMobile">—</span> bis zum Release</p>
+</div>
+
+<main id="main" tabindex="-1">
+  <div id="charRoot" class="char-root" aria-busy="true">
+    <p class="char-loading">Akte wird geladen …</p>
+  </div>
+</main>
+
+<noscript>
+  <p style="padding:120px 24px 24px;max-width:60ch;margin:0 auto">
+    Diese Akte wird per JavaScript aufgebaut. Ohne JavaScript bleibt die Seite leer —
+    <a href="index.html#charaktere">zurück zur Charakterübersicht</a>.
+  </p>
+</noscript>
+
+<footer class="footer">
+  <div class="footer__top">
+    <svg class="vi-mark vi-mark--foot" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
+      <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/><path d="M49.2 0h11.6v38H49.2z"/>
+    </svg>
+    <p><strong>Inoffizielle Fan-Seite.</strong> Nicht mit Rockstar Games oder Take-Two Interactive verbunden und von diesen weder unterstützt noch autorisiert. Alle Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. Medien stammen aus dem offiziellen Presse- und Downloadbereich von Rockstar Games.</p>
+  </div>
+  <div class="footer__links">
+    <a href="index.html">Startseite</a>
+    <a href="index.html#charaktere">Charaktere</a>
+    <a href="https://www.rockstargames.com/VI/" target="_blank" rel="noopener noreferrer">Offizielle Seite</a>
+    <a href="https://www.rockstargames.com/VI/media" target="_blank" rel="noopener noreferrer">Media &amp; Artwork</a>
+    <span class="footer__esrb">Kann Inhalte enthalten, die für Kinder ungeeignet sind.</span>
+  </div>
+</footer>
+
+<!-- ══════════════ LIGHTBOX ══════════════ -->
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Bildansicht">
+  <button class="modal__close" data-close aria-label="Schließen">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <button class="lb__nav lb__prev" id="lbPrev" aria-label="Vorheriges Bild">
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <figure class="lb__fig"><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+  <button class="lb__nav lb__next" id="lbNext" aria-label="Nächstes Bild">
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/char.js"></script>
+</body>
+</html>

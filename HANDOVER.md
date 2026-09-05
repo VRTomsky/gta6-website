@@ -12,22 +12,24 @@ Rockstar-Seite, sondern eine eigene Scroll-Erzählung im Look von `rockstargames
 
 - **Pfad:** `C:\Users\young\OneDrive\Desktop\Claude Projekte\GTA6-Hype-Website`
 - **Stack:** statisches HTML/CSS/JS, **kein Build-Schritt**, keine Abhängigkeiten außer Google Fonts
-- **Umfang:** ~3.100 Zeilen Code, 132 Bilder, 10 Videos, 81 MB
+- **Umfang:** ~4.400 Zeilen Code, 150 Bilder, 10 Videos, ~85 MB
 - **Nicht veröffentlichen** — private Nutzung, siehe Abschnitt „Rechtliches"
 
 ### Starten
 
-**Doppelklick auf `Website starten.bat`.** Sucht Python (erst `py -3`, dann `python`),
-startet `serve.py` und öffnet den Browser. Fenster schließen beendet den Server.
+**Doppelklick auf `Server starten.bat`** — einmal, danach nie wieder. Der Server läuft als
+Hintergrunddienst weiter und kommt nach jedem Neustart von selbst hoch.
+**`Server stoppen.bat`** beendet ihn und schaltet den Autostart wieder ab.
+Details unten im Abschnitt „Hintergrund-Server & Autostart".
 
-Von Hand:
+Von Hand, mit Fenster und `Strg+C`:
 
 ```bash
 cd "C:\Users\young\OneDrive\Desktop\Claude Projekte\GTA6-Hype-Website"
 python serve.py
 ```
 
-Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy zeigt das Fenster beim Start an.
+Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.log`.
 
 `serve.py` ersetzt `python -m http.server` und kann drei Dinge mehr:
 
@@ -41,15 +43,20 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy zeigt das Fenster 
 
 | Datei | Zeilen | Inhalt |
 |---|---:|---|
-| `index.html` | 483 | Struktur aller Abschnitte |
-| `assets/css/style.css` | 1371 | Design-Tokens, Layout, Responsive, Reduced-Motion, **Mobil-Block M1–M9** |
-| `assets/js/data.js` | 302 | **Alle Texte und Bildlisten** (Charaktere, Orte, Ultimate, News, Galerie) |
-| `assets/js/main.js` | 761 | Countdown, Scroll-Motor, Videos, Modals, Galerie, 3D-Hülle |
-| `assets/img/` | 132 | `art/` 20, `chars/` 44, `places/` 42, `ultimate/` 26 |
+| `index.html` | 481 | Struktur aller Abschnitte der Startseite |
+| `charakter.html` | 104 | **Gerüst der Charakter-Detailseiten** — eine Seite für alle acht |
+| `assets/css/style.css` | 1351 | Design-Tokens, Layout, Responsive, Reduced-Motion, **Mobil-Block M1–M9** |
+| `assets/css/char.css` | 403 | **Nur die Detailseiten** — Editorial-Raster, Zitatbänder, Vollbild |
+| `assets/js/data.js` | 670 | **Alle Texte und Bildlisten**; `CHARS` (Stammdaten) + `CHAR_PAGES` (Seitenaufbau) |
+| `assets/js/main.js` | 756 | Countdown, Scroll-Motor, Videos, Galerie, 3D-Hülle |
+| `assets/js/char.js` | 514 | Aufbau der Detailseiten, Scroll-Video, Vollbild, Lightbox |
+| `assets/img/` | 150 | `art/` 20, `chars/` 49, `duo/` 13, `places/` 42, `ultimate/` 26 |
 | `assets/img/app/` | 4 | quadratische Symbole für den Android-Startbildschirm |
 | `assets/video/` | 10 | 2 Scroll-Clips + 8 Charakter-Loops |
-| `Website starten.bat` | — | Startet Server + Browser per Doppelklick |
-| `serve.py` | 207 | Der Server dahinter |
+| `Server starten.bat` | 126 | Hintergrund-Server starten + Autostart einrichten |
+| `Server stoppen.bat` | 42 | Server beenden + Autostart entfernen |
+| `serve.py` | 213 | Der Server dahinter |
+| `server.log` | — | Startzeiten und Adressen, wird automatisch angelegt |
 | `manifest.webmanifest` | — | Name/Symbol für „Zum Startbildschirm hinzufügen" |
 | `_backup/` | 3 | Stand vor dem Mobil-Umbau, zum Vergleichen |
 | `Bilder & Kurz videos/` | 32 | Original-Downloads des Nutzers, **unangetastet lassen** |
@@ -63,7 +70,7 @@ in der passenden Liste eintragen, sonst nichts.
 2. **Trailer & Gameplay** — fährt als Karte über den Hero
 3. **Scroll-Video 1** — Lucia in Vice City
 4. **Story „Vice City, USA"** — Karte über dem Video
-5. **Charaktere** — Jason, Lucia + 6 Nebenfiguren
+5. **Charaktere** — Jason, Lucia + 6 Nebenfiguren; jede Karte verlinkt in einem neuen Tab auf ihre eigene Detailseite
 6. **Leonida** — 6 Regionen mit Tabs
 7. **Ultimate Edition** — Inhalte + drehbare 3D-Hülle
 8. **Scroll-Video 2** — Jason beim Überfall
@@ -81,12 +88,14 @@ in der passenden Liste eintragen, sonst nichts.
   läuft, Stoppen = Video steht. Beide blenden schon hinter dem vorherigen Abschnitt auf
 - **`.rise-card`-Übergänge:** der Folgeabschnitt fährt als abgerundete Box von unten über den
   gepinnten Abschnitt, die Kartenfläche blendet dabei ein, der Hintergrund geht auf Blau über
-- **Charakter-Akten:** Klick öffnet ein Modal mit Biografie, Metadaten und Bildergalerie.
-  Hover startet einen kurzen Videoloop (bei **allen** Karten, auch Jason und Lucia). Auf Touch übernimmt das ein IntersectionObserver, siehe Abschnitt „Mobil / Android"
+- **Charakter-Akten:** Klick öffnet `charakter.html?c=<id>` **in einem neuen Tab** — eine
+  eigene, scroll-erzählte Seite je Figur. Details im Abschnitt „Charakter-Detailseiten".
+  Hover startet auf der Karte einen kurzen Videoloop (bei **allen** Karten, auch Jason und
+  Lucia). Auf Touch übernimmt das ein IntersectionObserver, siehe „Mobil / Android"
 - **Orte:** Tab-Navigation über 6 Regionen mit Postkarte, Text und Thumbnails
 - **Ultimate Edition:** 16 Inhalte als Kacheln + Spielhülle in CSS-3D, die auf Mausbewegung
   reagiert und sich ziehen lässt
-- **Galerie:** 118 Bilder, 6 Filter, Lightbox mit Pfeiltasten und Wischgesten
+- **Galerie:** 136 Bilder, 7 Filter, Lightbox mit Pfeiltasten und Wischgesten
 - **News:** Rockstar Newswire, Leak-Chronik mit Quellen, X-Accounts
 - **Trailer:** Trailer 1 + 2 als YouTube-Overlay auf der Seite, Extended Look als externer Link
 - **Barrierefreiheit:** Skip-Link, Fokus-Ringe, ARIA-Labels, vollständiger `prefers-reduced-motion`-Zweig
@@ -188,6 +197,203 @@ CSS-Variablen, die das JS setzt: `--h-body`, `--h-logo`, `--h-out` (Hero) sowie 
   ffmpeg -i quelle.mp4 -vf "scale=1280:-2,minterpolate=fps=150:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=5*PTS,fps=30" -an -c:v libx264 -crf 24 -g 5 -keyint_min 5 -sc_threshold 0 -bf 0 -movflags +faststart ziel.mp4
   ```
   Die **dichten Keyframes (`-g 5`) sind Pflicht**, sonst ruckelt das Scrubben
+
+## Charakter-Detailseiten
+
+Jede Charakterkarte auf der Startseite ist ein **echter Link**, der
+`charakter.html?c=<id>` in einem neuen Tab öffnet — nachgebaut nach den
+Figurenseiten auf `rockstargames.com/VI`.
+
+**Eine Seite für alle acht.** Welche Figur gezeigt wird, steht in der Adresse.
+Eine unbekannte `id` liefert eine Fehlerseite mit Rückweg statt einer leeren Seite.
+
+| Datei | Rolle |
+|---|---|
+| `charakter.html` | nur Gerüst: Nav, leerer `#charRoot`, Footer, Lightbox |
+| `assets/js/char.js` | baut den Inhalt, Scroll-Video, Vollbild, Lightbox, Nav |
+| `assets/css/char.css` | alle `.c*`-Bausteine; erbt die Tokens aus `style.css` |
+| `CHAR_PAGES` in `data.js` | **hier stehen die Inhalte** — pro Figur ein Objekt |
+
+### Aufbau einer Seite
+
+1. **`.cv`** — Hero im Vollbild, Name darüber, blendet beim Scrollen aus.
+   **Jason und Lucia** bekommen ihren scroll-gesteuerten Clip (`scrub_jason.mp4`,
+   der Überfall; `scrub_lucia.mp4`, die Autofahrt — dieselben Dateien wie auf der
+   Startseite). **Alle anderen zeigen ein Standbild** (`page.heroImg`, das Artwork
+   in 1920×1080). Grund: Rockstars `loop_*.mp4` sind 1–1,5-Sekunden-Schnipsel,
+   fürs Scrubben hochinterpoliert — im Vollbild sieht man das sofort. Der Zweig
+   hängt an `page.scrub`: gesetzt = Video, sonst `heroImg`.
+2. **`.cintro`** — **fährt als `.rise-card` von unten über den Hero**, genau wie
+   Trailer → Story auf der Startseite: Kartenfläche blendet über `--card-bg` ein,
+   der Hero dahinter geht über `--s-out` auf die Grundfarbe (`.cv__out`).
+   Inhalt: Name, Lead-Satz in Pink, Fließtext, Metadaten; gegenüber ein Cluster
+   aus drei versetzt ineinandergeschobenen Bildern.
+3. **`.cquote`** — Zitatband quer über die Seite, Creme, `h-display`-Schnitt.
+4. **`.cband`** — zwei Spalten, eine Pink, eine Weiß, gegeneinander abgesackt.
+5. **`.cfull`** — Bild über die volle Breite. **Kein sticky, kein Parallax, kein
+   Zoom** — es gilt das natürliche 16:9 und das Bild scrollt normal mit, damit es
+   vollständig zu sehen ist. Jason: `chars/jason_07.jpg`, Lucia: `duo/duo_10.jpg`,
+   Nebenfiguren: ihr jeweiliges `chars/<id>_01.jpg`.
+6. **`.cquote` + `.cband`** noch einmal, Spalten getauscht.
+7. **`.cgal`** — Bilderraster, erstes Bild doppelt so groß.
+8. **`.coutro`** — Bilder + „Zurück zu den Charakteren".
+
+### Der `side`-Schalter
+
+`page.side` ist `"left"` oder `"right"` und dreht das komplette Layout:
+Textspalte, Bildercluster, Zitat-Ausrichtung und die Reihenfolge der beiden
+Textbänder. **Jason steht links, Lucia rechts** — dadurch spiegeln sich die
+beiden Hauptfiguren, statt zweimal dasselbe zu zeigen. Genau so macht es
+Rockstar auch. Für eine neue Figur reicht es, `side` zu setzen; der Rest folgt.
+
+### Neue Figur ergänzen
+
+Einen Eintrag in `CHARS` (Stammdaten) **und** einen in `CHAR_PAGES` anlegen.
+Fehlt der zweite, zeigt die Seite den Fehlerzustand. Pflichtfelder:
+`side, kicker, lead, intro, introShots, quote1, band, bandShots, full, fullAlt,
+fullCap, quote2, band2, gallery, outro` — dazu **entweder** `scrub` + `scrubPoster`
+(scroll-gesteuerter Clip) **oder** `heroImg` (Standbild).
+Bildangaben sind Paare `["pfad/ab/assets/img", "Alt-Text"]` — der Alt-Text ist
+gleichzeitig die Bildunterschrift in der Lightbox, also ganze Sätze schreiben.
+
+### Drei Fallstricke
+
+**Die Hero-Höhe steuert zwei Dinge gleichzeitig.**
+
+1. *Wie schnell der Clip läuft.* Die nutzbare Strecke ist `Höhe − 100svh` (die
+   ersten 100 svh klebt das Medium nur), davon spielt `PLAY_END` (0.90) den Clip
+   ab. Damit sich das Video genauso durchscrollen lässt wie das zwischen Trailer
+   und Story, spiegeln die Werte `.scrub` aus `style.css`: **400 svh** am Desktop,
+   250 / 215 svh in den Media-Queries. Gemessen ergibt das auf beiden Seiten
+   **329 px Scroll pro Videosekunde** — 2,70 Bildschirmhöhen für einen ganzen Clip.
+2. *Ob die Karte passt.* Die Höhe muss mindestens `--rise + 100svh` betragen,
+   sonst ragt die Intro-Karte schon beim Laden ins Bild und der Name steht
+   doppelt da — einmal im Hero, einmal auf der Karte. Genau das passierte, als
+   die Nebenfiguren-Heroes auf 190 svh gekürzt wurden.
+
+Beides hängt zusammen: weil die mobilen Höhen kleiner sind, geht `--rise` dort
+von 118 auf 100 zurück. Wer an einem der Werte dreht, muss die andere Bedingung
+nachrechnen; alles steht kommentiert in `char.css` bei `.cv` / `.cv--still`.
+
+Einzige Abweichung: im Querformat läuft der Clip minimal langsamer als auf der
+Startseite (1,03 statt 0,90 Bildschirmhöhen). Dort bräuchte die exakte Strecke
+200 svh, das lässt der Karte aber keinen Puffer mehr — 215 svh ist der Kompromiss.
+
+**Helle Artworks brauchen einen kräftigeren Verlauf.** Der Kicker über dem Hero
+kam auf Rauls hellem Artwork auf **1,37 : 1** — unlesbar. Der untere Teil von
+`.cv__vig` setzt jetzt früher an und erreicht am Fuß fast die Grundfarbe;
+zusätzlich ist der Kicker von `--vice-hot` auf das hellere `--pink` gewechselt.
+Gemessen danach: Kicker 7,1 : 1, Name 14 : 1. Wer den Verlauf abschwächt, muss
+gegen ein **helles** Artwork nachmessen, nicht gegen Jasons dunklen Clip.
+### Zwei weitere Fallstricke
+
+**`overflow:hidden` bricht `position:sticky`.** Das Elternelement wird dadurch zum
+eigenen Scroll-Container, das Kind klebt nicht mehr und der Inhalt scrollt einfach
+weg. Beschnitten wird deshalb immer eine Ebene tiefer (`.cv__sticky`), nie am
+Abschnitt selbst. `.cfull` hatte den Fehler auch, ist inzwischen aber gar nicht
+mehr gepinnt.
+
+**Der IntersectionObserver überspringt schnell durchlaufende Elemente.** Wischt
+man kräftig, liegt ein Absatz zwischen zwei Frames einmal komplett hinter dem
+Bild — der Observer meldet dafür nichts und der Absatz bleibt dauerhaft auf
+Deckkraft 0 stehen. Beide Seiten haben deshalb ein Sicherheitsnetz: pro Frame
+wird geprüft, was oben aus dem Bild heraus ist und noch nicht eingeblendet
+wurde. Die Liste ist kurz und schrumpft mit jedem Treffer.
+(`reveals()` in `char.js`, `watchReveals` in `main.js`.)
+
+### Bildbestand
+
+`assets/img/duo/` (13 Bilder) sind die Aufnahmen mit **beiden** Figuren,
+`chars/jason_07|08`, `chars/lucia_07|08|10` die neuen Einzelbilder. Alle aus
+Rockstars Downloadbereich, von 3840 px auf 1600 px verkleinert (die beiden
+Vollbilder auf 2560 px), JPEG-Qualität 84.
+
+`node` + ein kurzes Skript prüfen, ob alle in `CHAR_PAGES` genannten Pfade
+existieren — bei 84 Pfaden findet man einen Tippfehler sonst erst im Browser.
+
+## Hintergrund-Server & Autostart
+
+Der Server soll einmal gestartet werden und dann dauerhaft laufen — auch über einen
+Neustart hinweg. Drei Bausteine:
+
+| | |
+|---|---|
+| `Server starten.bat` | startet den Server unsichtbar, legt die Autostart-Verknüpfung an, öffnet den Browser, schließt sich nach 12 s |
+| `Server stoppen.bat` | beendet den Prozess **und** entfernt die Verknüpfung |
+| `%APPDATA%\...\Startup\GTA VI Server.lnk` | zeigt direkt auf `pythonw.exe` mit `serve.py --no-browser --port 5174 --log ...` |
+
+### Warum `pythonw.exe`
+
+Der entscheidende Punkt. Ein mit `python.exe` gestarteter Prozess hängt an der Konsole des
+aufrufenden Fensters — schließt sich das Fenster, stirbt er mit. `pythonw.exe` ist derselbe
+Interpreter **ohne Konsole**; der Prozess überlebt das Schließen und blitzt beim Hochfahren
+auch kein Fenster auf.
+
+Der Preis: unter `pythonw` sind `sys.stdout` und `sys.stderr` **`None`**. Ein nacktes
+`print()` bricht dort mit `AttributeError` ab — und zwar unsichtbar, weil auch die
+Fehlermeldung nirgends hin kann. Alle Ausgaben in `serve.py` laufen deshalb über `say()`,
+das die Konsole nimmt, wenn es eine gibt, und sonst nur in die Logdatei schreibt.
+`log_message` des Handlers ebenso. **Kein `print()` mehr direkt einbauen.**
+
+### Drei Fallstricke
+
+**Die Hero-Höhe steuert zwei Dinge gleichzeitig.**
+
+1. *Wie schnell der Clip läuft.* Die nutzbare Strecke ist `Höhe − 100svh` (die
+   ersten 100 svh klebt das Medium nur), davon spielt `PLAY_END` (0.90) den Clip
+   ab. Damit sich das Video genauso durchscrollen lässt wie das zwischen Trailer
+   und Story, spiegeln die Werte `.scrub` aus `style.css`: **400 svh** am Desktop,
+   250 / 215 svh in den Media-Queries. Gemessen ergibt das auf beiden Seiten
+   **329 px Scroll pro Videosekunde** — 2,70 Bildschirmhöhen für einen ganzen Clip.
+2. *Ob die Karte passt.* Die Höhe muss mindestens `--rise + 100svh` betragen,
+   sonst ragt die Intro-Karte schon beim Laden ins Bild und der Name steht
+   doppelt da — einmal im Hero, einmal auf der Karte. Genau das passierte, als
+   die Nebenfiguren-Heroes auf 190 svh gekürzt wurden.
+
+Beides hängt zusammen: weil die mobilen Höhen kleiner sind, geht `--rise` dort
+von 118 auf 100 zurück. Wer an einem der Werte dreht, muss die andere Bedingung
+nachrechnen; alles steht kommentiert in `char.css` bei `.cv` / `.cv--still`.
+
+Einzige Abweichung: im Querformat läuft der Clip minimal langsamer als auf der
+Startseite (1,03 statt 0,90 Bildschirmhöhen). Dort bräuchte die exakte Strecke
+200 svh, das lässt der Karte aber keinen Puffer mehr — 215 svh ist der Kompromiss.
+
+**Helle Artworks brauchen einen kräftigeren Verlauf.** Der Kicker über dem Hero
+kam auf Rauls hellem Artwork auf **1,37 : 1** — unlesbar. Der untere Teil von
+`.cv__vig` setzt jetzt früher an und erreicht am Fuß fast die Grundfarbe;
+zusätzlich ist der Kicker von `--vice-hot` auf das hellere `--pink` gewechselt.
+Gemessen danach: Kicker 7,1 : 1, Name 14 : 1. Wer den Verlauf abschwächt, muss
+gegen ein **helles** Artwork nachmessen, nicht gegen Jasons dunklen Clip.
+### Zwei weitere Fallstricke bei den .bat-Dateien
+
+1. **Zeilenenden und Zeichensatz.** Die Dateien müssen **reines ASCII mit CRLF** sein. Mit
+   Unix-Zeilenenden zerlegt der cmd-Parser die Datei an falschen Stellen und führt plötzlich
+   Kommentarzeilen als Befehle aus („Der Befehl `nt-lan-ip` ist entweder falsch
+   geschrieben…"). Umlaute und Rahmenzeichen im Kommentar reichen aus, um das auszulösen.
+   Ein Editor, der stillschweigend als UTF-8/LF speichert, macht die Dateien unbrauchbar.
+2. **Einfache Anführungszeichen in `for /f`.** `for /f ... in ('powershell … ('*'+$env:X+'*') …')`
+   funktioniert **nicht** — das erste `'` im PowerShell-Code beendet für cmd bereits die
+   Befehlszeichenkette. In `Server stoppen.bat` schreibt PowerShell seine Meldung deshalb
+   selbst, statt sie über `for /f` einzusammeln.
+
+Pfade werden grundsätzlich über **Umgebungsvariablen** (`%ROOT%`, `%SCRIPT%`, `%LOG%`) an
+PowerShell übergeben und dort als `$env:ROOT` gelesen. Das erspart die Anführungszeichen-Hölle
+zwischen cmd und PowerShell — der Projektpfad enthält ein Leerzeichen („Claude Projekte").
+Doppelte Anführungszeichen baut PowerShell mit `[char]34` zusammen.
+
+### Wie der Stopp den richtigen Prozess findet
+
+Über die Kommandozeile: nur Prozesse, deren Name mit `python` beginnt **und** deren
+Kommandozeile den vollen Pfad zu genau diesem `serve.py` enthält. Über den Port allein wäre
+es unsicher — ein fremdes Programm könnte 5174 belegen. Weil das Suchmuster erst zur Laufzeit
+aus `$env:SCRIPT` zusammengesetzt wird, steht der Pfad nicht in der eigenen Kommandozeile;
+der Stopp-Befehl kann sich also nicht selbst treffen.
+
+### Geprüft
+
+Fenster schließt sich, Server läuft weiter (`HTTP 200`), Verknüpfung liegt im Autostart-Ordner
+und startet den Server sauber neu, `Server stoppen.bat` beendet ihn und räumt die Verknüpfung
+weg. Doppelter Start erkennt den belegten Port und öffnet nur den Browser.
 
 ## Mobil / Android
 

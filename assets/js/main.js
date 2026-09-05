@@ -64,7 +64,12 @@ document.documentElement.classList.toggle("is-touch", coarse);
 /* ═══ 2 · REVEAL ON SCROLL ════════════════════════════════ */
 const revealIO = reduced ? null : new IntersectionObserver((entries) => {
   entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add("is-in"); revealIO.unobserve(e.target); }
+    // Sichtbar geworden — oder beim schnellen Scrollen schon nach oben
+    // durchgelaufen. Im zweiten Fall sofort zeigen statt unsichtbar lassen.
+    if (e.isIntersecting || e.boundingClientRect.bottom < 0) {
+      e.target.classList.add("is-in");
+      revealIO.unobserve(e.target);
+    }
   });
 }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
 
@@ -74,6 +79,28 @@ function watchReveals(root = document) {
     if (!el.style.getPropertyValue("--d")) el.style.setProperty("--d", (i % 6) * 70 + "ms");
     revealIO.observe(el);
   });
+}
+
+/* Sicherheitsnetz zum Observer. Läuft ein Element zwischen zwei Frames
+   komplett durch das Bild — kräftiger Mausrad-Schwung, Wisch auf dem
+   Handy —, meldet der Observer dafür gar nichts und der Block bliebe
+   dauerhaft auf Deckkraft 0 stehen. Was oben aus dem Bild heraus ist und
+   noch nicht eingeblendet wurde, wird deshalb pro Frame nachgezogen. */
+if (revealIO) {
+  let pending = false;
+  addEventListener("scroll", () => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      $$(".reveal:not(.is-in)").forEach(el => {
+        if (el.getBoundingClientRect().bottom < 0) {
+          el.classList.add("is-in");
+          revealIO.unobserve(el);
+        }
+      });
+    });
+  }, { passive: true });
 }
 
 /* ═══ 3 · NAV ═════════════════════════════════════════════ */
@@ -383,8 +410,12 @@ function cardRise(card) {
   const cast = $("#cast");
   const supporting = CHARS.filter(c => !["jason", "lucia"].includes(c.id));
 
+  /* Echte Links statt role="button": damit funktionieren Mittelklick,
+     Strg+Klick und das Kontextmenü von selbst, und die Tastatur-
+     bedienung kommt ohne eigenen Keydown-Handler aus. */
   cast.innerHTML = supporting.map(c => `
-    <article class="ccard reveal" data-char="${c.id}" tabindex="0" role="button" aria-label="Akte ${c.name} öffnen">
+    <a class="ccard reveal" href="charakter.html?c=${c.id}" target="_blank" rel="noopener"
+       aria-label="Akte ${c.name} öffnen (neuer Tab)">
       <img src="${c.poster}" alt="${c.name}" loading="lazy">
       <video src="${c.video}" muted loop playsinline preload="none" aria-hidden="true"></video>
       <span class="ccard__ring" aria-hidden="true">
@@ -394,7 +425,7 @@ function cardRise(card) {
         <h3>${c.name}</h3>
         <span>${c.sub}</span>
       </div>
-    </article>`).join("");
+    </a>`).join("");
 
   // Hover-/Fokus-Loops (auch auf den beiden großen Karten)
   const bindLoop = (card, video) => {
@@ -452,47 +483,11 @@ function cardRise(card) {
     $$(".ccard, .duo__card").forEach(c => io.observe(c));
   }
 
-  // Klick / Enter öffnet die Akte
-  const open = id => openChar(id);
-  document.addEventListener("click", e => {
-    const card = e.target.closest("[data-char]");
-    if (card) open(card.dataset.char);
-  });
-  document.addEventListener("keydown", e => {
-    if (e.key !== "Enter" && e.key !== " ") return;
-    const card = e.target.closest && e.target.closest("[data-char]");
-    if (card) { e.preventDefault(); open(card.dataset.char); }
-  });
-
   watchReveals(cast);
 })();
-
-function openChar(id) {
-  const c = CHARS.find(x => x.id === id);
-  if (!c) return;
-  const panel = $("#charModalPanel");
-  panel.innerHTML = `
-    <div class="cm__hero">
-      <img src="${c.hero}" alt="${c.name}">
-    </div>
-    <div class="cm__body">
-      <span class="cm__tag">${c.tag}</span>
-      <h2 id="charModalTitle" aria-label="${c.name}">${c.display}</h2>
-      <p class="cm__quote">${c.quote}</p>
-      <div class="cm__cols">${c.bio.map(p => `<p>${p}</p>`).join("")}</div>
-      <div class="cm__meta">${c.meta.map(([k, v]) => `<div><b>${k}</b><i>${v}</i></div>`).join("")}</div>
-      <div class="cm__shots">
-        ${c.shots.map((s, i) => `<button type="button" data-shot="${i}" aria-label="Bild ${i + 1} von ${c.name} vergrößern">
-          <img src="assets/img/${s}" alt="${c.name} — Bild ${i + 1}" loading="lazy"></button>`).join("")}
-      </div>
-    </div>`;
-
-  const list = c.shots.map((s, i) => ({ src: "assets/img/" + s, cap: c.name + " · " + String(i + 1).padStart(2, "0") }));
-  panel.querySelectorAll("[data-shot]").forEach(b =>
-    b.addEventListener("click", () => openLightbox(list, +b.dataset.shot))
-  );
-  openModal("#charModal");
-}
+/* Die Charakter-Akte ist seit dem Umbau eine eigene Seite:
+   charakter.html?c=<id>, siehe assets/js/char.js. Das frühere
+   Modal an dieser Stelle ist damit entfallen. */
 
 /* ═══ 7 · ORTE ════════════════════════════════════════════ */
 (function places() {

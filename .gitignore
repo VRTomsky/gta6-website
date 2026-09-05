@@ -1,0 +1,16 @@
+# Laufzeit- und Arbeitsdateien, die nicht auf die oeffentliche Seite gehoeren
+
+# Logdatei des lokalen Servers - enthaelt die WLAN-IP dieses Rechners
+server.log
+
+# Python-Bytecode
+__pycache__/
+*.pyc
+
+# Sicherungskopien vor groesseren Umbauten (nur lokal von Nutzen)
+_backup/
+
+# Windows / OneDrive
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -5,17 +5,24 @@ keine Abhängigkeiten außer Google Fonts.
 
 ## Starten
 
-**Doppelklick auf `Website starten.bat`.** Das startet den lokalen Server und öffnet die
-Seite im Browser. Zum Beenden das schwarze Fenster schließen. Voraussetzung ist eine
-Python-3-Installation; fehlt sie, sagt das Fenster es und nennt den Downloadlink.
+**Doppelklick auf `Server starten.bat`.** Einmal genügt:
 
-Von Hand geht es auch:
+- der Server startet im Hintergrund und läuft weiter, auch wenn das Fenster weg ist
+- das Fenster zeigt kurz beide Adressen und schließt sich dann von selbst
+- der Browser geht auf [http://localhost:5174](http://localhost:5174)
+- der **Autostart wird eingerichtet** — nach jedem Hochfahren läuft der Server von selbst
+
+**Doppelklick auf `Server stoppen.bat`** beendet ihn wieder und entfernt den Autostart.
+Er bleibt dann auch nach einem Neustart aus, bis `Server starten.bat` wieder ausgeführt wird.
+
+Voraussetzung ist eine Python-3-Installation; fehlt sie, sagt das Fenster es und nennt den
+Downloadlink.
+
+Von Hand geht es auch — dann mit Fenster und `Strg+C` zum Beenden:
 
 ```bash
 python serve.py
 ```
-
-Dann [http://localhost:5174](http://localhost:5174) im Browser aufrufen.
 
 `serve.py` kann drei Dinge, die `python -m http.server` nicht kann: es beantwortet
 Range-Requests (ohne die lässt sich kein MP4 spulen, siehe `HANDOVER.md`), es schickt
@@ -27,9 +34,13 @@ ruckeln.
 
 ## Auf dem Handy
 
-Server starten, im Fenster die Zeile **„Am Handy"** ablesen (z. B. `http://192.168.1.42:5174`)
-und diese Adresse am Handy im Browser öffnen. PC und Handy müssen im selben WLAN sein; beim
-ersten Start fragt die Windows-Firewall — „Privates Netzwerk" zulassen.
+Im Startfenster die Zeile **„Am Handy"** ablesen (z. B. `http://192.168.1.42:5174`) und diese
+Adresse am Handy im Browser öffnen. Wenn das Fenster schon weg ist: dieselbe Adresse steht in
+`server.log` im Projektordner.
+
+PC und Handy müssen im selben WLAN sein; beim ersten Start fragt die Windows-Firewall —
+„Privates Netzwerk" zulassen. Die Adresse kann sich ändern, wenn der Router dem PC eine neue
+IP gibt; dann noch einmal in `server.log` nachsehen.
 
 Über das Browser-Menü lässt sich die Seite auf Android als **„Zum Startbildschirm hinzufügen"**
 ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
@@ -38,16 +49,21 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 
 | Datei | Inhalt |
 |---|---|
-| `index.html` | Struktur aller Abschnitte |
+| `index.html` | Struktur aller Abschnitte der Startseite |
+| `charakter.html` | Detailseite je Charakter, aufgerufen als `charakter.html?c=jason` |
+| `assets/css/char.css` | Styles nur für die Detailseiten |
+| `assets/js/char.js` | Aufbau der Detailseiten, Scroll-Video, Lightbox |
 | `assets/css/style.css` | Design-Tokens, Layout, Responsive, Reduced-Motion |
 | `assets/js/data.js` | Texte und Bildlisten (Charaktere, Orte, Ultimate Edition, News) |
-| `assets/js/main.js` | Countdown, Scroll-Scrub, Modals, Galerie, 3D-Hülle |
-| `assets/img/` | 131 offizielle Screenshots und Artworks |
+| `assets/js/main.js` | Countdown, Scroll-Scrub, Trailer-Overlay, Galerie, 3D-Hülle |
+| `assets/img/` | 150 offizielle Screenshots und Artworks (`duo/` = Jason + Lucia) |
 | `assets/img/app/` | quadratische App-Symbole für den Startbildschirm |
 | `assets/video/` | 2 Scroll-Clips (Lucia, Jason) + 8 Charakter-Loops (web-optimiert) |
 | `Bilder & Kurz videos/` | Original-Downloads, unangetastet |
-| `Website starten.bat` | Startet Server und Browser per Doppelklick |
+| `Server starten.bat` | Startet den Hintergrund-Server und richtet den Autostart ein |
+| `Server stoppen.bat` | Beendet ihn und entfernt den Autostart |
 | `serve.py` | Der Server dahinter (Range-Requests, kein Cache, WLAN) |
+| `server.log` | Startzeiten und Adressen; wird automatisch angelegt |
 | `manifest.webmanifest` | Name und Symbol für „Zum Startbildschirm hinzufügen" |
 | `_backup/` | Stand von `index.html`, `style.css` und `main.js` vor dem Mobil-Umbau |
 
@@ -62,7 +78,9 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 3. **Scroll-Video 1** – Lucia in Vice City. Blendet schon hinter den letzten
    Trailer-Karten auf und läuft dabei von Anfang an mit.
 4. **Story** – Vice City, USA, als Karte über dem Video
-5. **Charaktere** – Jason, Lucia und sechs Nebenfiguren, jeweils mit Akte und Galerie
+5. **Charaktere** – Jason, Lucia und sechs Nebenfiguren. Ein Klick öffnet die Akte
+   in einem **neuen Tab**: eigene Seite mit Scroll-Video, Zitatbändern, Vollbild und
+   Bildergalerie. Jason steht links, Lucia gespiegelt rechts.
 6. **Leonida** – sechs Regionen mit Bildern
 7. **Ultimate Edition** – Inhalte plus drehbare 3D-Hülle
 8. **Scroll-Video 2** – Jason beim Überfall, gleiche Mechanik
@@ -80,11 +98,14 @@ steht die Karte auf dem normalen Blau, nicht mehr auf dem Video.
 Alle Texte und Bildzuordnungen stehen in `assets/js/data.js`:
 
 - `RELEASE` – Zieldatum des Countdowns
-- `CHARS` – Charakterakten (`bio`, `meta`, `shots`)
+- `CHARS` – Charakter-Stammdaten (`bio`, `meta`, `shots`)
+- `CHAR_PAGES` – Aufbau der Detailseiten (Video, Zitate, Bildercluster, `side`)
 - `PLACES` – Orte
 - `ULTIMATE` – Inhalte der Ultimate Edition
 - `XACCOUNTS` – verlinkte X-Accounts
-- `GALLERY` / `GAL_CATS` – Galerie und Filter
+- `GALLERY` / `GAL_CATS` – Galerie und Filter. Ein Eintrag ist entweder nur der
+  Dateiname (Beschriftung wird durchnummeriert) oder `["datei.jpg", "Was drauf ist"]` —
+  das Paar ist besser, es liefert Alt-Text und Lightbox-Zeile
 
 Ein neues Bild kommt nach `assets/img/<ordner>/` und wird in der passenden Liste eingetragen —
 sonst ist nichts zu tun.
