@@ -78,13 +78,14 @@ function shot(src, alt, cls) {
 const rightSide = page.side === "right";
 
 /* ── Nachbarn in der Reihenfolge aus CHARS ──
-   Die Kette läuft im Kreis: hinter Brian Heder kommt wieder Jason,
-   vor Jason steht Brian. Dadurch endet keine Akte in einer Sackgasse
-   und man kann sich durch alle acht durchklicken. */
+   Die Kette läuft geradeaus, nicht im Kreis: Jason hat keinen Vorgänger,
+   Brian Heder keinen Nachfolger. Ein Sprung vom letzten zurück zum ersten
+   wäre inhaltlich unlogisch — vor Brian steht Raul, sonst niemand.
+   Bleibt an einem Ende nur eine Karte übrig, nimmt sie die volle Breite. */
 const reihe = CHARS.filter(c => CHAR_PAGES[c.id]);
 const jetzt = reihe.findIndex(c => c.id === id);
-const vorher  = reihe[(jetzt - 1 + reihe.length) % reihe.length];
-const nachher = reihe[(jetzt + 1) % reihe.length];
+const vorher  = jetzt > 0 ? reihe[jetzt - 1] : null;
+const nachher = jetzt < reihe.length - 1 ? reihe[jetzt + 1] : null;
 
 /* Vorschaukarte auf eine andere Akte. Als Bild dient das Artwork der
    Nebenfiguren bzw. das Porträt von Jason und Lucia — beides 16:9 und
@@ -213,7 +214,7 @@ root.innerHTML = `
 
     <h2 class="coutro__h cin">Weiter in Leonida</h2>
 
-    <nav class="cnav" aria-label="Weitere Charakter-Akten">
+    <nav class="cnav ${(vorher && nachher) ? "" : "cnav--einzeln"}" aria-label="Weitere Charakter-Akten">
       ${navKarte(vorher, "vor")}
       ${navKarte(nachher, "zurueck")}
     </nav>

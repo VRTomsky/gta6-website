@@ -238,11 +238,12 @@ Eine unbekannte `id` liefert eine Fehlerseite mit Rückweg statt einer leeren Se
 7. **`.cgal`** — Bilderraster, erstes Bild doppelt so groß.
 8. **`.coutro`** — Bilder, dann **`.cnav`**: zwei Vorschaukarten auf die
    vorherige und die nächste Figur, darunter „Zurück zu den Charakteren" und
-   „Zur Startseite". Die Reihenfolge kommt aus `CHARS` und läuft **im Kreis** —
-   hinter Brian Heder steht wieder Jason. Dadurch endet keine Akte in einer
-   Sackgasse und man kann sich durch alle acht durchklicken. Als Kartenbild
-   dient `page.heroImg` bzw. `base.thumb`, nie ein Duo-Motiv — sonst zeigt die
-   Karte die falsche Person.
+   „Zur Startseite". Die Reihenfolge kommt aus `CHARS` und läuft **geradeaus,
+   nicht im Kreis**: Jason hat keinen Vorgänger, Brian Heder keinen Nachfolger.
+   An diesen beiden Enden bleibt nur eine Karte übrig — sie bekommt über
+   `.cnav--einzeln` die volle Breite, damit das Raster nicht halb leer wirkt.
+   Als Kartenbild dient `page.heroImg` bzw. `base.thumb`, nie ein Duo-Motiv —
+   sonst zeigt die Karte die falsche Person.
 
 ### Der `side`-Schalter
 

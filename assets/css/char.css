@@ -324,8 +324,10 @@
 
 /* ══════════ 7 · Blättern zwischen den Akten ══════════ */
 /* Zwei Vorschaukarten statt schlichter Textlinks: links die vorherige
-   Figur, rechts die nächste. Die Kette läuft im Kreis (hinter Brian
-   kommt wieder Jason), damit keine Akte in einer Sackgasse endet.
+   Figur, rechts die nächste. Die Kette laeuft geradeaus, nicht im Kreis —
+   Jason hat keinen Vorgaenger, Brian Heder keinen Nachfolger. An diesen
+   beiden Enden bleibt nur eine Karte uebrig; sie nimmt dann die volle
+   Breite, damit das Raster nicht halb leer aussieht.
    Als Bild dient das Artwork bzw. das Porträt — nie ein Duo-Motiv,
    sonst zeigt die Karte die falsche Person. */
 .cnav{
@@ -334,6 +336,9 @@
   margin:clamp(28px,5svh,56px) 0 clamp(34px,6svh,68px);
   text-align:left;
 }
+.cnav--einzeln{ grid-template-columns:1fr; }
+/* Ueber die volle Breite wirkt 21:9 zu flach */
+.cnav--einzeln .cnav__card{ aspect-ratio:32/9; }
 .cnav__card{
   position:relative; display:block; overflow:hidden;
   aspect-ratio:21/9;
@@ -449,7 +454,8 @@
 }
 @media (max-width:560px){
   .cnav{ grid-template-columns:1fr; }
-  .cnav__card{ aspect-ratio:16/7; }
+  .cnav__card,
+  .cnav--einzeln .cnav__card{ aspect-ratio:16/7; }
   .cv{ height:215svh; }
   .cv--still{ height:215svh; }
   .cv__title{ padding-bottom:calc(38px + env(safe-area-inset-bottom)); }
