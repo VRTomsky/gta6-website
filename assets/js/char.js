@@ -37,7 +37,7 @@ if (!base || !page) {
       <h1 class="coutro__h">Akte nicht gefunden</h1>
       <p class="cbody" style="margin:0 auto var(--s4);max-width:44ch">
         Zu <strong>${esc(id) || "diesem Eintrag"}</strong> gibt es keine Akte.
-        Die Uebersicht listet alle Charaktere.
+        Die Übersicht listet alle Charaktere.
       </p>
       <div class="coutro__acts">
         <a class="btn btn--pink btn--lg" href="index.html#charaktere">Zu den Charakteren</a>
@@ -65,7 +65,7 @@ function shot(src, alt, cls) {
   return `
     <figure class="cshot ${cls || ""} cin">
       <img src="${url}" alt="${esc(alt)}" loading="lazy" decoding="async">
-      <button class="cshot__zoom" type="button" data-lb="${i}" aria-label="${esc(alt)} vergroessern">
+      <button class="cshot__zoom" type="button" data-lb="${i}" aria-label="${esc(alt)} vergrößern">
         <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
           <path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"
                 stroke="currentColor" stroke-width="2" fill="none"
@@ -76,6 +76,44 @@ function shot(src, alt, cls) {
 }
 
 const rightSide = page.side === "right";
+
+/* ── Nachbarn in der Reihenfolge aus CHARS ──
+   Die Kette läuft im Kreis: hinter Brian Heder kommt wieder Jason,
+   vor Jason steht Brian. Dadurch endet keine Akte in einer Sackgasse
+   und man kann sich durch alle acht durchklicken. */
+const reihe = CHARS.filter(c => CHAR_PAGES[c.id]);
+const jetzt = reihe.findIndex(c => c.id === id);
+const vorher  = reihe[(jetzt - 1 + reihe.length) % reihe.length];
+const nachher = reihe[(jetzt + 1) % reihe.length];
+
+/* Vorschaukarte auf eine andere Akte. Als Bild dient das Artwork der
+   Nebenfiguren bzw. das Porträt von Jason und Lucia — beides 16:9 und
+   ohne die Duo-Motive, damit die Karte die richtige Person zeigt. */
+function navKarte(figur, richtung) {
+  if (!figur) return "";
+  const seite = CHAR_PAGES[figur.id];
+  const bild = seite.heroImg || figur.thumb;
+  const zurueck = richtung === "zurueck";
+  const label = zurueck ? "Nächste Akte" : "Vorherige Akte";
+  const pfeil = zurueck
+    ? '<path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  return `
+    <a class="cnav__card ${zurueck ? "cnav__card--next" : "cnav__card--prev"} cin"
+       href="charakter.html?c=${figur.id}"
+       aria-label="${label}: ${esc(figur.name)}">
+      <img src="${bild}" alt="" loading="lazy" decoding="async">
+      <span class="cnav__grad" aria-hidden="true"></span>
+      <span class="cnav__txt">
+        <span class="cnav__label">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">${pfeil}</svg>
+          ${label}
+        </span>
+        <span class="cnav__name">${esc(figur.name)}</span>
+        <span class="cnav__sub">${esc(figur.sub)}</span>
+      </span>
+    </a>`;
+}
 
 /* Jason und Lucia bekommen ihren scroll-gesteuerten Clip. Für die
    Nebenfiguren gibt es keinen: Rockstars Charakter-Loops sind
@@ -172,11 +210,18 @@ root.innerHTML = `
     <div class="coutro__shots">
       ${page.outro.map(([s, a]) => shot(s, a)).join("")}
     </div>
+
     <h2 class="coutro__h cin">Weiter in Leonida</h2>
+
+    <nav class="cnav" aria-label="Weitere Charakter-Akten">
+      ${navKarte(vorher, "vor")}
+      ${navKarte(nachher, "zurueck")}
+    </nav>
+
     <div class="coutro__acts cin">
       <a class="btn btn--pink btn--lg" href="index.html#charaktere">
         <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Zurueck zu den Charakteren
+        Zurück zu den Charakteren
       </a>
       <a class="btn btn--ghost btn--lg" href="index.html">Zur Startseite</a>
     </div>

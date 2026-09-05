@@ -236,7 +236,13 @@ Eine unbekannte `id` liefert eine Fehlerseite mit Rückweg statt einer leeren Se
    Nebenfiguren: ihr jeweiliges `chars/<id>_01.jpg`.
 6. **`.cquote` + `.cband`** noch einmal, Spalten getauscht.
 7. **`.cgal`** — Bilderraster, erstes Bild doppelt so groß.
-8. **`.coutro`** — Bilder + „Zurück zu den Charakteren".
+8. **`.coutro`** — Bilder, dann **`.cnav`**: zwei Vorschaukarten auf die
+   vorherige und die nächste Figur, darunter „Zurück zu den Charakteren" und
+   „Zur Startseite". Die Reihenfolge kommt aus `CHARS` und läuft **im Kreis** —
+   hinter Brian Heder steht wieder Jason. Dadurch endet keine Akte in einer
+   Sackgasse und man kann sich durch alle acht durchklicken. Als Kartenbild
+   dient `page.heroImg` bzw. `base.thumb`, nie ein Duo-Motiv — sonst zeigt die
+   Karte die falsche Person.
 
 ### Der `side`-Schalter
 
