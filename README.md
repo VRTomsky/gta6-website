@@ -32,6 +32,27 @@ erreichbar — die Adresse fürs Handy steht beim Start im Fenster.
 `index.html` per Doppelklick funktioniert in Chrome ebenfalls, das Scroll-Video kann dabei aber
 ruckeln.
 
+## Veröffentlichen
+
+Die Seite läuft öffentlich auf **https://luciajason.de** über GitHub Pages
+(Repository `VRTomsky/gta6-website`).
+
+**Doppelklick auf `Auf GitHub hochladen.bat`** — spiegelt den Projektordner ins
+Repository, committet und lädt hoch. Ein bis zwei Minuten später ist der neue
+Stand online. Im Browser einmal mit `Strg+F5` neu laden, sonst zeigt er die alte
+Fassung aus dem Cache.
+
+Optional mit eigener Beschreibung:
+
+```bash
+"Auf GitHub hochladen.bat" Neue Bilder in der Galerie
+```
+
+Gearbeitet wird in diesem Ordner, das Repository liegt unter
+`C:\Users\young\gta6-website` — bewusst außerhalb von OneDrive, weil OneDrive
+sonst den `.git`-Ordner mitsynchronisiert und dabei beschädigen kann.
+`server.log`, `_backup/` und `__pycache__/` bleiben lokal.
+
 ## Auf dem Handy
 
 Im Startfenster die Zeile **„Am Handy"** ablesen (z. B. `http://192.168.1.42:5174`) und diese
@@ -65,7 +86,10 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 | `serve.py` | Der Server dahinter (Range-Requests, kein Cache, WLAN) |
 | `server.log` | Startzeiten und Adressen; wird automatisch angelegt |
 | `manifest.webmanifest` | Name und Symbol für „Zum Startbildschirm hinzufügen" |
-| `_backup/` | Stand von `index.html`, `style.css` und `main.js` vor dem Mobil-Umbau |
+| `_backup/` | Sicherungen vor größeren Umbauten (bleibt lokal, nicht auf GitHub) |
+| `Auf GitHub hochladen.bat` | Veröffentlicht den aktuellen Stand auf luciajason.de |
+| `CNAME` | Die Domain für GitHub Pages — nicht löschen |
+| `CLAUDE.md` | Arbeitsanweisungen für Claude (u. a. automatisch veröffentlichen) |
 
 ## Abschnitte
 
