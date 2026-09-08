@@ -481,9 +481,10 @@ Marke: Creme `#fff9cb` (Headlines), Pink `#ffb2c6` (Primär-Buttons), Vice-Magen
 
 ## Altersangaben der Figuren
 
-**Rockstar nennt zu keiner Figur ein Alter.** Die Spanne unter „Alter (geschätzt)" in
-`CHARS[].meta` ist aus der jeweiligen Biografie abgeleitet — sie ist bewusst als Schätzung
-gekennzeichnet und darf nicht als offizielle Angabe ausgegeben werden.
+**Rockstar nennt zu keiner Figur ein Alter.** Die Spanne unter „Alter" in `CHARS[].meta`
+ist aus der jeweiligen Biografie abgeleitet. Auf Wunsch des Nutzers steht auf der Seite
+nur „Alter" ohne Zusatz — die Spanne statt einer festen Zahl trägt die Unsicherheit.
+Trotzdem gilt: **keine offizielle Angabe**, nicht als solche weitergeben.
 
 | Figur | Spanne | Woraus abgeleitet |
 |---|---|---|
