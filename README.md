@@ -71,7 +71,7 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Struktur aller Abschnitte der Startseite |
-| `charakter.html` | Detailseite je Charakter, aufgerufen als `charakter.html?c=jason` |
+| `charakter.html` | Alle acht Akten auf einer Seite; `?c=jason` wählt den Einstieg |
 | `assets/css/char.css` | Styles nur für die Detailseiten |
 | `assets/js/char.js` | Aufbau der Detailseiten, Scroll-Video, Lightbox |
 | `assets/css/style.css` | Design-Tokens, Layout, Responsive, Reduced-Motion |
@@ -102,9 +102,10 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 3. **Scroll-Video 1** – Lucia in Vice City. Blendet schon hinter den letzten
    Trailer-Karten auf und läuft dabei von Anfang an mit.
 4. **Story** – Vice City, USA, als Karte über dem Video
-5. **Charaktere** – Jason, Lucia und sechs Nebenfiguren. Ein Klick öffnet die Akte
-   in einem **neuen Tab**: eigene Seite mit Scroll-Video, Zitatbändern, Vollbild und
-   Bildergalerie. Jason steht links, Lucia gespiegelt rechts.
+5. **Charaktere** – Jason, Lucia und sechs Nebenfiguren. Ein Klick öffnet in einem
+   **neuen Tab** eine durchgehende Seite mit **allen acht Akten untereinander**:
+   von Jason scrollt man direkt weiter zu Lucia, Cal Hampton und den übrigen.
+   Der Link bestimmt nur den Einstieg. Jason steht links, Lucia gespiegelt rechts.
 6. **Leonida** – sechs Regionen mit Bildern
 7. **Ultimate Edition** – Inhalte plus drehbare 3D-Hülle
 8. **Scroll-Video 2** – Jason beim Überfall, gleiche Mechanik

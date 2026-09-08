@@ -44,12 +44,12 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.l
 | Datei | Zeilen | Inhalt |
 |---|---:|---|
 | `index.html` | 481 | Struktur aller Abschnitte der Startseite |
-| `charakter.html` | 104 | **Gerüst der Charakter-Detailseiten** — eine Seite für alle acht |
+| `charakter.html` | 100 | **Gerüst aller Akten** — alle acht auf einer durchgehenden Seite |
 | `assets/css/style.css` | 1351 | Design-Tokens, Layout, Responsive, Reduced-Motion, **Mobil-Block M1–M9** |
-| `assets/css/char.css` | 506 | **Nur die Detailseiten** — Editorial-Raster, Zitatbänder, Vollbild |
+| `assets/css/char.css` | 476 | **Nur die Detailseiten** — Editorial-Raster, Zitatbänder, Vollbild |
 | `assets/js/data.js` | 670 | **Alle Texte und Bildlisten**; `CHARS` (Stammdaten) + `CHAR_PAGES` (Seitenaufbau) |
 | `assets/js/main.js` | 810 | Countdown, Scroll-Motor, Videos, Galerie, 3D-Hülle |
-| `assets/js/char.js` | 591 | Aufbau der Detailseiten, Scroll-Video, Vollbild, Lightbox |
+| `assets/js/char.js` | 691 | Baut alle acht Akten, ein Scroll-Motor für alle, Einstiegssprung, Lightbox |
 | `assets/img/` | 150 | `art/` 20, `chars/` 49, `duo/` 13, `places/` 42, `ultimate/` 26 |
 | `assets/img/app/` | 4 | quadratische Symbole für den Android-Startbildschirm |
 | `assets/video/` | 10 | 2 Scroll-Clips + 8 Charakter-Loops |
@@ -219,8 +219,19 @@ Jede Charakterkarte auf der Startseite ist ein **echter Link**, der
 `charakter.html?c=<id>` in einem neuen Tab öffnet — nachgebaut nach den
 Figurenseiten auf `rockstargames.com/VI`.
 
-**Eine Seite für alle acht.** Welche Figur gezeigt wird, steht in der Adresse.
-Eine unbekannte `id` liefert eine Fehlerseite mit Rückweg statt einer leeren Seite.
+**Alle acht Akten stehen untereinander auf einer durchgehenden Seite.** Unten bei
+Jason geht es ohne Klick direkt in Lucias Hero über, danach Cal Hampton und so
+weiter bis Brian Heder. `?c=<id>` bestimmt nur, **wo man einsteigt**; beim Scrollen
+läuft die Adresse mit, damit sich jede Akte einzeln teilen lässt. Eine unbekannte
+`id` startet schlicht bei Jason.
+
+Daraus folgen drei Dinge, die man beim Weiterbauen kennen muss:
+
+| | |
+|---|---|
+| **Länge** | rund 47.000 px am Desktop, 38.000 px auf dem Handy — etwa 65 bzw. 47 Bildschirme |
+| **Orientierung** | die Nav zeigt Name und Zähler („03 / 08"), das Menü ist eine Kapitelliste. Ohne beides wäre die Strecke nicht zu bewältigen |
+| **Ein Scroll-Motor** | acht Bühnen hängen an **einer** Schleife, nicht an acht eigenen — Messung: 0,057 ms pro Frame, 0,3 % des 60-fps-Budgets |
 
 | Datei | Rolle |
 |---|---|
@@ -251,14 +262,11 @@ Eine unbekannte `id` liefert eine Fehlerseite mit Rückweg statt einer leeren Se
    Nebenfiguren: ihr jeweiliges `chars/<id>_01.jpg`.
 6. **`.cquote` + `.cband`** noch einmal, Spalten getauscht.
 7. **`.cgal`** — Bilderraster, erstes Bild doppelt so groß.
-8. **`.coutro`** — Bilder, dann **`.cnav`**: zwei Vorschaukarten auf die
-   vorherige und die nächste Figur, darunter „Zurück zu den Charakteren" und
-   „Zur Startseite". Die Reihenfolge kommt aus `CHARS` und läuft **geradeaus,
-   nicht im Kreis**: Jason hat keinen Vorgänger, Brian Heder keinen Nachfolger.
-   An diesen beiden Enden bleibt nur eine Karte übrig — sie bekommt über
-   `.cnav--einzeln` die volle Breite, damit das Raster nicht halb leer wirkt.
-   Als Kartenbild dient `page.heroImg` bzw. `base.thumb`, nie ein Duo-Motiv —
-   sonst zeigt die Karte die falsche Person.
+8. **`.coutro`** — nur noch die Abschlussbilder. Danach beginnt direkt der Hero
+   der nächsten Figur; die früheren Blätter-Karten sind entfallen, weil man
+   ohnehin weiterscrollt. Ganz unten hinter Brian Heder steht einmalig
+   **`.cende`** mit „Zurück zu den Charakteren", „Zur Startseite" und
+   „Nach oben".
 
 ### Der `side`-Schalter
 
@@ -277,6 +285,23 @@ fullCap, quote2, band2, gallery, outro` — dazu **entweder** `scrub` + `scrubPo
 (scroll-gesteuerter Clip) **oder** `heroImg` (Standbild).
 Bildangaben sind Paare `["pfad/ab/assets/img", "Alt-Text"]` — der Alt-Text ist
 gleichzeitig die Bildunterschrift in der Lightbox, also ganze Sätze schreiben.
+
+### Der Einstieg per `?c=`
+
+Der Sprung zur richtigen Figur ist heikler, als er aussieht — zwei Dinge stehen
+ihm im Weg:
+
+1. **Der Browser stellt die alte Scrollposition wieder her**, und zwar *nach*
+   unserem Sprung. `history.scrollRestoration = "manual"` schaltet das ab.
+2. **`scroll-behavior: smooth`** steht in `style.css` auf `<html>`. Ohne
+   Aushebeln würde der Sprung als weiche Fahrt über zehntausende Pixel
+   losrollen. Während des Sprungs wird es per Inline-Style auf `auto` gesetzt.
+
+Dazu kommt: Die Zielhöhe verschiebt sich noch, während Schriften und die ersten
+Bilder ankommen. Mit einem Durchgang landete der Sprung **169 px daneben**,
+mit einer festen Zahl von Frames sogar **33.665 px**. Deshalb drei Runden —
+sofort, nach `load` und wenn die Schriften stehen. Sobald der Nutzer selbst
+scrollt, wird abgebrochen; sonst zöge die Seite ihn zurück.
 
 ### Drei Fallstricke
 
@@ -356,6 +381,23 @@ Der Preis: unter `pythonw` sind `sys.stdout` und `sys.stderr` **`None`**. Ein na
 Fehlermeldung nirgends hin kann. Alle Ausgaben in `serve.py` laufen deshalb über `say()`,
 das die Konsole nimmt, wenn es eine gibt, und sonst nur in die Logdatei schreibt.
 `log_message` des Handlers ebenso. **Kein `print()` mehr direkt einbauen.**
+
+### Der Einstieg per `?c=`
+
+Der Sprung zur richtigen Figur ist heikler, als er aussieht — zwei Dinge stehen
+ihm im Weg:
+
+1. **Der Browser stellt die alte Scrollposition wieder her**, und zwar *nach*
+   unserem Sprung. `history.scrollRestoration = "manual"` schaltet das ab.
+2. **`scroll-behavior: smooth`** steht in `style.css` auf `<html>`. Ohne
+   Aushebeln würde der Sprung als weiche Fahrt über zehntausende Pixel
+   losrollen. Während des Sprungs wird es per Inline-Style auf `auto` gesetzt.
+
+Dazu kommt: Die Zielhöhe verschiebt sich noch, während Schriften und die ersten
+Bilder ankommen. Mit einem Durchgang landete der Sprung **169 px daneben**,
+mit einer festen Zahl von Frames sogar **33.665 px**. Deshalb drei Runden —
+sofort, nach `load` und wenn die Schriften stehen. Sobald der Nutzer selbst
+scrollt, wird abgebrochen; sonst zöge die Seite ihn zurück.
 
 ### Drei Fallstricke
 

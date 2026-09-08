@@ -29,12 +29,14 @@
     </svg>
   </a>
   <span class="nav__sep" aria-hidden="true"></span>
-  <p class="nav__where" id="navWhere">Only in Leonida</p>
+  <p class="nav__where" id="navWhere">Charaktere</p>
 
   <div class="nav__right">
+    <!-- Bei rund 55.000 px Seitenlänge braucht es eine Ortsangabe -->
+    <span class="nav__fortschritt" id="navFortschritt" aria-hidden="true">01 / 08</span>
     <a class="btn btn--pink btn--sm nav__back" href="index.html#charaktere">
       <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Alle Charaktere
+      <span>Alle Charaktere</span>
     </a>
     <button class="nav__burger" id="burger" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobileMenu">
       <span></span><span></span>
@@ -42,28 +44,26 @@
   </div>
 </header>
 
-<div class="mobile-menu" id="mobileMenu" hidden>
-  <nav aria-label="Mobile Navigation">
-    <a href="index.html#charaktere">Alle Charaktere</a>
-    <a href="index.html#trailer">Trailer</a>
-    <a href="index.html#story">Story</a>
-    <a href="index.html#leonida">Leonida</a>
-    <a href="index.html#ultimate">Ultimate Edition</a>
-    <a href="index.html#news">News &amp; Leaks</a>
-    <a href="index.html#galerie">Medien</a>
-  </nav>
+<!-- Kapitelliste. Der Inhalt kommt aus char.js, damit Reihenfolge und
+     Namen aus CHARS stammen und nicht doppelt gepflegt werden müssen. -->
+<div class="mobile-menu mobile-menu--kapitel" id="mobileMenu" hidden>
+  <nav aria-label="Charaktere auf dieser Seite"></nav>
   <p class="mobile-menu__cd"><span id="navMiniMobile">—</span> bis zum Release</p>
 </div>
 
 <main id="main" tabindex="-1">
+  <!-- Die acht Figurennamen sind h2, weil auf einer Seite nur eine erste
+       Überschrift stehen darf. Diese hier trägt sie — sichtbar ist sie
+       nicht, den Titel zeigt der Hero der jeweiligen Figur. -->
+  <h1 class="sr-only">Charakter-Akten zu Grand Theft Auto VI</h1>
   <div id="charRoot" class="char-root" aria-busy="true">
-    <p class="char-loading">Akte wird geladen …</p>
+    <p class="char-loading">Akten werden geladen …</p>
   </div>
 </main>
 
 <noscript>
   <p style="padding:120px 24px 24px;max-width:60ch;margin:0 auto">
-    Diese Akte wird per JavaScript aufgebaut. Ohne JavaScript bleibt die Seite leer —
+    Die Akten werden per JavaScript aufgebaut. Ohne JavaScript bleibt die Seite leer —
     <a href="index.html#charaktere">zurück zur Charakterübersicht</a>.
   </p>
 </noscript>

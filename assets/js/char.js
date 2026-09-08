@@ -1,13 +1,20 @@
 /* ═══════════════════════════════════════════════════════════
-   Charakter-Detailseite — Aufbau und Interaktion
+   Charakter-Akten — eine durchgehende Seite
 
-   Eine Seite fuer alle Charaktere. Welcher gezeigt wird, steht in
-   der Adresse: charakter.html?c=jason. Die Inhalte kommen aus
-   CHARS (Stammdaten) und CHAR_PAGES (Seitenaufbau) in data.js.
+   Alle acht Figuren stehen untereinander: unten bei Jason geht es
+   ohne Klick direkt in Lucias Hero über, danach Cal Hampton und so
+   weiter bis Brian Heder.
 
-   Die Scroll-Mechanik ist bewusst dieselbe wie auf der Startseite:
-   ein Wert pro Frame, weich nachgezogen. Wer dort etwas aendert,
-   sollte hier mitziehen.
+   `charakter.html?c=lucia` springt beim Laden zur passenden Figur;
+   beim Scrollen läuft die Adresse mit, damit sich jede Akte einzeln
+   teilen lässt.
+
+   Die Seite ist dadurch sehr lang (rund 55.000 px). Deshalb:
+     · ein einziger Scroll-Motor für alle Bühnen statt 16 einzelner
+     · weit entfernte Abschnitte werden pro Frame übersprungen
+     · Videos laden erst in Reichweite, Bilder hängen an loading="lazy"
+     · Navigation mit Kapitelliste und Fortschritt, sonst ist die
+       Strecke nicht zu bewältigen
    ═══════════════════════════════════════════════════════════ */
 (() => {
 "use strict";
@@ -22,41 +29,33 @@ document.documentElement.classList.toggle("is-touch", coarse);
 const smooth = t => t * t * (3 - 2 * t);
 const seg = (p, a, b) => clamp((p - a) / (b - a), 0, 1);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const zwei = n => String(n).padStart(2, "0");
 
-/* ═══ 1 · WELCHER CHARAKTER? ══════════════════════════════ */
-const params = new URLSearchParams(location.search);
-const id = (params.get("c") || "").toLowerCase();
-const base = typeof CHARS !== "undefined" ? CHARS.find(c => c.id === id) : null;
-const page = typeof CHAR_PAGES !== "undefined" ? CHAR_PAGES[id] : null;
 const root = $("#charRoot");
+const reihe = (typeof CHARS !== "undefined" ? CHARS : []).filter(c => CHAR_PAGES[c.id]);
 
-if (!base || !page) {
+if (!reihe.length) {
   root.removeAttribute("aria-busy");
   root.innerHTML = `
     <section class="coutro" style="padding-top:34svh">
-      <h1 class="coutro__h">Akte nicht gefunden</h1>
-      <p class="cbody" style="margin:0 auto var(--s4);max-width:44ch">
-        Zu <strong>${esc(id) || "diesem Eintrag"}</strong> gibt es keine Akte.
-        Die Übersicht listet alle Charaktere.
-      </p>
+      <h1 class="coutro__h">Keine Akten vorhanden</h1>
       <div class="coutro__acts">
-        <a class="btn btn--pink btn--lg" href="index.html#charaktere">Zu den Charakteren</a>
+        <a class="btn btn--pink btn--lg" href="index.html">Zur Startseite</a>
       </div>
     </section>`;
-  document.title = "Akte nicht gefunden — Grand Theft Auto VI";
   return;
 }
 
-/* ═══ 2 · SEITE AUFBAUEN ══════════════════════════════════ */
-document.title = base.name + " — Grand Theft Auto VI";
-const where = $("#navWhere");
-if (where) where.textContent = base.name;
+/* Welche Figur ist gemeint? Unbekannte oder fehlende Angabe landet bei
+   der ersten — die Seite enthält ohnehin alle. */
+const params = new URLSearchParams(location.search);
+const wunsch = (params.get("c") || "").toLowerCase();
+const startIndex = Math.max(0, reihe.findIndex(c => c.id === wunsch));
 
-const meta = $('meta[name="description"]');
-if (meta) meta.setAttribute("content", base.name + " — Akte zu Grand Theft Auto VI: " + base.sub + ".");
+/* ═══ 1 · AUFBAU ══════════════════════════════════════════ */
 
-/* Jedes Bild bekommt eine laufende Nummer, damit die Lightbox in der
-   Reihenfolge blaettert, in der die Bilder auf der Seite stehen. */
+/* Alle Bilder der ganzen Seite in einer Liste — die Lightbox blättert
+   dadurch über Figurengrenzen hinweg in der Reihenfolge der Seite. */
 const lbList = [];
 function shot(src, alt, cls) {
   const i = lbList.length;
@@ -75,85 +74,48 @@ function shot(src, alt, cls) {
     </figure>`;
 }
 
-const rightSide = page.side === "right";
+function figurHTML(base, nr) {
+  const page = CHAR_PAGES[base.id];
+  const rechts = page.side === "right";
+  const hatVideo = !!page.scrub;
 
-/* ── Nachbarn in der Reihenfolge aus CHARS ──
-   Die Kette läuft geradeaus, nicht im Kreis: Jason hat keinen Vorgänger,
-   Brian Heder keinen Nachfolger. Ein Sprung vom letzten zurück zum ersten
-   wäre inhaltlich unlogisch — vor Brian steht Raul, sonst niemand.
-   Bleibt an einem Ende nur eine Karte übrig, nimmt sie die volle Breite. */
-const reihe = CHARS.filter(c => CHAR_PAGES[c.id]);
-const jetzt = reihe.findIndex(c => c.id === id);
-const vorher  = jetzt > 0 ? reihe[jetzt - 1] : null;
-const nachher = jetzt < reihe.length - 1 ? reihe[jetzt + 1] : null;
+  /* Jason und Lucia bekommen ihren scroll-gesteuerten Clip. Für die
+     Nebenfiguren gibt es keinen: Rockstars Charakter-Loops sind
+     1–1,5-Sekunden-Schnipsel, fürs Scrubben hochinterpoliert — im
+     Vollbild sieht man das sofort. Dort steht das Artwork. */
+  const medium = hatVideo
+    ? `<video class="cv__video" data-scrub
+              src="${page.scrub}" poster="${page.scrubPoster}"
+              muted playsinline preload="none" disablepictureinpicture
+              aria-label="Clip zu ${esc(base.name)}, läuft über die Scrollposition"></video>`
+    : `<img class="cv__video" src="${page.heroImg}"
+            alt="${esc(base.name)} — ${esc(base.sub)}" loading="lazy" decoding="async">`;
 
-/* Vorschaukarte auf eine andere Akte. Als Bild dient das Artwork der
-   Nebenfiguren bzw. das Porträt von Jason und Lucia — beides 16:9 und
-   ohne die Duo-Motive, damit die Karte die richtige Person zeigt. */
-function navKarte(figur, richtung) {
-  if (!figur) return "";
-  const seite = CHAR_PAGES[figur.id];
-  const bild = seite.heroImg || figur.thumb;
-  const zurueck = richtung === "zurueck";
-  const label = zurueck ? "Nächste Akte" : "Vorherige Akte";
-  const pfeil = zurueck
-    ? '<path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-    : '<path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
   return `
-    <a class="cnav__card ${zurueck ? "cnav__card--next" : "cnav__card--prev"} cin"
-       href="charakter.html?c=${figur.id}"
-       aria-label="${label}: ${esc(figur.name)}">
-      <img src="${bild}" alt="" loading="lazy" decoding="async">
-      <span class="cnav__grad" aria-hidden="true"></span>
-      <span class="cnav__txt">
-        <span class="cnav__label">
-          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">${pfeil}</svg>
-          ${label}
-        </span>
-        <span class="cnav__name">${esc(figur.name)}</span>
-        <span class="cnav__sub">${esc(figur.sub)}</span>
-      </span>
-    </a>`;
-}
+<article class="cfigur" id="c-${base.id}" data-figur="${base.id}" data-nr="${nr}"
+         aria-labelledby="titel-${base.id}">
 
-/* Jason und Lucia bekommen ihren scroll-gesteuerten Clip. Für die
-   Nebenfiguren gibt es keinen: Rockstars Charakter-Loops sind
-   1–1,5-Sekunden-Schnipsel, für das Scrubben hochinterpoliert — im
-   Vollbild sieht man das sofort. Dort steht stattdessen das Artwork
-   in 1920×1080. Der Rest der Seite bleibt identisch. */
-const hatVideo = !!page.scrub;
-
-const heroMedium = hatVideo
-  ? `<video class="cv__video" id="cvVideo"
-            src="${page.scrub}" poster="${page.scrubPoster}"
-            muted playsinline preload="auto" disablepictureinpicture
-            aria-label="Clip zu ${esc(base.name)}, läuft über die Scrollposition"></video>`
-  : `<img class="cv__video" id="cvImg" src="${page.heroImg}"
-          alt="${esc(base.name)} — ${esc(base.sub)}" fetchpriority="high" decoding="async">`;
-
-root.innerHTML = `
-  <!-- 1 · Hero: Scroll-Video (Jason, Lucia) oder Artwork (alle anderen) -->
-  <section class="cv ${hatVideo ? "" : "cv--still"}" id="cv">
+  <!-- Hero: Scroll-Video (Jason, Lucia) oder Artwork -->
+  <section class="cv ${hatVideo ? "" : "cv--still"}" data-cv>
     <div class="cv__sticky">
-      <div class="cv__frame" id="cvFrame">${heroMedium}</div>
+      <div class="cv__frame" data-frame>${medium}</div>
       <div class="cv__vig" aria-hidden="true"></div>
-      <div class="cv__title ${rightSide ? "cv__title--right" : ""}" id="cvTitle">
-        <p class="cv__kicker">${esc(page.kicker)}</p>
-        <h1 class="cv__name">${base.display}</h1>
+      <div class="cv__title ${rechts ? "cv__title--right" : ""}" data-titel>
+        <p class="cv__kicker">${esc(page.kicker)} &middot; ${zwei(nr)} / ${zwei(reihe.length)}</p>
+        <h2 class="cv__name" id="titel-${base.id}">${base.display}</h2>
         <p class="cv__hint">
           <span>Scroll</span>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </p>
       </div>
-      <!-- Blendet den Hero auf die Grundfarbe ab, während die Karte hochfährt -->
       <div class="cv__out" aria-hidden="true"></div>
     </div>
   </section>
 
-  <!-- 2 · Intro — fährt als Karte von unten über den Hero -->
-  <section class="cintro rise-card ${rightSide ? "cintro--right" : ""}" id="cintro">
+  <!-- Intro — fährt als Karte von unten über den Hero -->
+  <section class="cintro rise-card ${rechts ? "cintro--right" : ""}" data-intro>
     <div class="cintro__copy">
-      <h2 class="cintro__name cin">${base.display}</h2>
+      <p class="cintro__name cin">${base.display}</p>
       <p class="clead cin">${page.lead}</p>
       <div class="cbody cin">${page.intro.map(p => `<p>${p}</p>`).join("")}</div>
       <div class="cmeta cin">
@@ -165,14 +127,12 @@ root.innerHTML = `
     </div>
   </section>
 
-  <!-- 3 · Zitat -->
-  <section class="cquote ${rightSide ? "cquote--right" : ""}">
+  <section class="cquote ${rechts ? "cquote--right" : ""}">
     <blockquote class="cin">&bdquo;${page.quote1}&ldquo;</blockquote>
   </section>
 
-  <!-- 4 · Textband -->
-  <section class="cband ${rightSide ? "cband--right" : ""}">
-    ${rightSide
+  <section class="cband ${rechts ? "cband--right" : ""}">
+    ${rechts
       ? `<p class="cband__body cin">${page.band.body}</p><p class="cband__pink cin">${page.band.pink}</p>`
       : `<p class="cband__pink cin">${page.band.pink}</p><p class="cband__body cin">${page.band.body}</p>`}
     <div class="cband__shots">
@@ -180,187 +140,205 @@ root.innerHTML = `
     </div>
   </section>
 
-  <!-- 5 · Vollbild — über die volle Breite, ohne Zuschnitt und ohne Zoom -->
-  <figure class="cfull" id="cfull">
-    <img src="assets/img/${page.full}" alt="${esc(page.fullAlt)}" id="cfullImg" loading="lazy" decoding="async">
+  <!-- Vollbild über die volle Breite, ohne Zuschnitt und ohne Zoom -->
+  <figure class="cfull">
+    <img src="assets/img/${page.full}" alt="${esc(page.fullAlt)}" loading="lazy" decoding="async">
     <figcaption class="cfull__cap">${esc(page.fullCap)}</figcaption>
   </figure>
 
-  <!-- 6 · Zweites Zitat -->
-  <section class="cquote ${rightSide ? "" : "cquote--right"}">
+  <section class="cquote ${rechts ? "" : "cquote--right"}">
     <blockquote class="cin">${page.quote2}</blockquote>
   </section>
 
-  <!-- 7 · Zweites Textband, Spalten getauscht -->
-  <section class="cband ${rightSide ? "" : "cband--right"}">
-    ${rightSide
+  <section class="cband ${rechts ? "" : "cband--right"}">
+    ${rechts
       ? `<p class="cband__pink cin">${page.band2.pink}</p><p class="cband__body cin">${page.band2.body}</p>`
       : `<p class="cband__body cin">${page.band2.body}</p><p class="cband__pink cin">${page.band2.pink}</p>`}
   </section>
 
-  <!-- 8 · Bilderraster -->
   <section class="cgal">
-    <h2 class="cgal__head cin">Bilder &middot; ${esc(base.name)}</h2>
+    <h3 class="cgal__head cin">Bilder &middot; ${esc(base.name)}</h3>
     <div class="cgal__grid">
       ${page.gallery.map(([s, a]) => shot(s, a)).join("")}
     </div>
   </section>
 
-  <!-- 9 · Abschluss -->
   <section class="coutro">
     <div class="coutro__shots">
       ${page.outro.map(([s, a]) => shot(s, a)).join("")}
     </div>
+  </section>
+</article>`;
+}
 
-    <h2 class="coutro__h cin">Weiter in Leonida</h2>
+/* Der Abschluss steht nur einmal ganz unten, hinter Brian Heder. */
+const abschlussHTML = `
+<section class="cende">
+  <p class="cende__kicker cin">Alle ${zwei(reihe.length)} Akten gelesen</p>
+  <h2 class="cende__h cin">Bis dahin<br>bleibt nur Warten.</h2>
+  <div class="coutro__acts cin">
+    <a class="btn btn--pink btn--lg" href="index.html#charaktere">
+      <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Zurück zu den Charakteren
+    </a>
+    <a class="btn btn--ghost btn--lg" href="index.html">Zur Startseite</a>
+    <button class="btn btn--ghost btn--lg" type="button" id="nachOben">
+      <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 20V6m0 0l-6 6m6-6l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Nach oben
+    </button>
+  </div>
+</section>`;
 
-    <nav class="cnav ${(vorher && nachher) ? "" : "cnav--einzeln"}" aria-label="Weitere Charakter-Akten">
-      ${navKarte(vorher, "vor")}
-      ${navKarte(nachher, "zurueck")}
-    </nav>
-
-    <div class="coutro__acts cin">
-      <a class="btn btn--pink btn--lg" href="index.html#charaktere">
-        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Zurück zu den Charakteren
-      </a>
-      <a class="btn btn--ghost btn--lg" href="index.html">Zur Startseite</a>
-    </div>
-  </section>`;
-
+root.innerHTML = reihe.map((c, i) => figurHTML(c, i + 1)).join("") + abschlussHTML;
 root.removeAttribute("aria-busy");
 
-/* ═══ 3 · SCROLL-MOTOR ════════════════════════════════════ */
-/* Liest die Position eines Abschnitts einmal pro Frame und zieht den
-   Wert weich nach — ohne das springen die Werte im Takt der
-   Mausrad-Schritte. Gleiche Funktion wie in main.js. */
-function scrollStage(el, onUpdate, ease = 0.16) {
-  let target = 0, current = 0, rafId = null;
-  let lastFrame = performance.now();
+const figuren = $$(".cfigur");
 
-  const read = () => {
-    const range = el.offsetHeight - innerHeight;
-    if (range <= 0) return 0;
-    return clamp(-el.getBoundingClientRect().top / range, 0, 1);
-  };
+/* ═══ 2 · SCROLL-MOTOR ════════════════════════════════════ */
+/* Eine einzige Schleife für alle Bühnen. Bei acht Figuren hingen sonst
+   16 eigene scroll-Listener und 16 rAF-Schleifen an der Seite — auf dem
+   Handy deutlich spürbar. Abschnitte weiter als zwei Bildschirmhöhen weg
+   werden übersprungen und einmalig auf ihren Endwert gesetzt. */
+const buehnen = [];
 
-  const frame = () => {
-    lastFrame = performance.now();
-    current += (target - current) * ease;
-    if (Math.abs(target - current) < 0.0004) current = target;
-    onUpdate(current, target);
-    rafId = current !== target ? requestAnimationFrame(frame) : null;
-  };
-
-  const kick = () => {
-    target = read();
-    if (rafId === null) rafId = requestAnimationFrame(frame);
-    if (performance.now() - lastFrame > 260) { current = target; onUpdate(current, target); }
-  };
-
-  addEventListener("scroll", kick, { passive: true });
-
-  /* Auf dem Handy blendet der Browser beim Scrollen die URL-Leiste aus.
-     Das loest ein resize aus, obwohl sich am Layout nichts geaendert
-     hat — bei einer reinen Hoehenaenderung nur das Ziel nachziehen. */
-  let lastW = innerWidth, lastH = innerHeight;
-  addEventListener("resize", () => {
-    const dw = Math.abs(innerWidth - lastW), dh = Math.abs(innerHeight - lastH);
-    lastW = innerWidth; lastH = innerHeight;
-    if (coarse && dw === 0 && dh < 200) { kick(); return; }
-    target = current = read();
-    onUpdate(current, target);
-  });
-
-  target = current = read();
-  onUpdate(current, target);
-  return kick;
+function fortschritt(el, r) {
+  const range = el.offsetHeight - innerHeight;
+  if (range <= 0) return 0;
+  return clamp(-r.top / range, 0, 1);
 }
+
+function scrollStage(el, onUpdate, ease = 0.16) {
+  const st = { el, onUpdate, ease, target: 0, current: 0, gesetzt: false };
+  buehnen.push(st);
+  const r = el.getBoundingClientRect();
+  st.target = st.current = fortschritt(el, r);
+  onUpdate(st.current, st.target);
+  return () => { anstossen(); };
+}
+
+let rafId = null, letzterFrame = performance.now();
+
+function frame() {
+  letzterFrame = performance.now();
+  const vh = innerHeight;
+  let weiter = false;
+
+  for (const st of buehnen) {
+    const r = st.el.getBoundingClientRect();
+    st.target = fortschritt(st.el, r);
+
+    // Weit weg: nicht weich nachziehen, nur einmal auf Endwert setzen
+    if (r.top > vh * 2 || r.bottom < -vh) {
+      if (!st.gesetzt || st.current !== st.target) {
+        st.current = st.target;
+        st.onUpdate(st.current, st.target);
+        st.gesetzt = true;
+      }
+      continue;
+    }
+    st.gesetzt = false;
+
+    st.current += (st.target - st.current) * st.ease;
+    if (Math.abs(st.target - st.current) < 0.0004) st.current = st.target;
+    st.onUpdate(st.current, st.target);
+    if (st.current !== st.target) weiter = true;
+  }
+
+  rafId = weiter ? requestAnimationFrame(frame) : null;
+}
+
+function anstossen() {
+  if (rafId === null) rafId = requestAnimationFrame(frame);
+  // Fallback, falls requestAnimationFrame gedrosselt ist
+  if (performance.now() - letzterFrame > 260) frame();
+}
+
+addEventListener("scroll", anstossen, { passive: true });
+
+/* Auf dem Handy blendet der Browser beim Scrollen die URL-Leiste aus.
+   Das löst ein resize aus, obwohl sich am Layout nichts geändert hat —
+   bei einer reinen Höhenänderung nur nachziehen statt hart setzen. */
+let letzteB = innerWidth, letzteH = innerHeight;
+addEventListener("resize", () => {
+  const db = Math.abs(innerWidth - letzteB), dh = Math.abs(innerHeight - letzteH);
+  letzteB = innerWidth; letzteH = innerHeight;
+  if (!(coarse && db === 0 && dh < 200)) {
+    for (const st of buehnen) st.current = st.target = fortschritt(st.el, st.el.getBoundingClientRect());
+  }
+  anstossen();
+});
 
 /* Wie weit ist die Karte darunter hochgefahren?
    0 = Oberkante am unteren Bildschirmrand, 1 = Karte füllt das Bild.
-   Gleiche Rechnung wie auf der Startseite. */
+
+   Die Prüfung auf `innerHeight` ist kein Zierrat: ist das Fenster (noch)
+   0 px hoch — etwa während die Seite in einem versteckten Tab aufgebaut
+   wird —, käme sonst eine Division durch null heraus und `--card-bg: NaN`
+   landete im CSS. Die Kartenfläche bliebe dann unsichtbar. */
 function cardRise(card) {
-  if (!card) return 0;
+  if (!card || !innerHeight) return 0;
   return clamp((innerHeight - card.getBoundingClientRect().top) / innerHeight, 0, 1);
 }
 
-/* ═══ 4 · HERO ════════════════════════════════════════════ */
-/* Drei Dinge hängen an derselben Scrollstrecke:
-   1. der Name blendet aus,
-   2. die Intro-Karte fährt von unten darüber und ihre Fläche blendet ein,
-   3. der Hero dahinter geht auf die Grundfarbe über.
-   Bei Jason und Lucia läuft zusätzlich das Video über die Scrollposition. */
-(function hero() {
-  const sec = $("#cv");
-  const vid = $("#cvVideo");          // nur bei Jason und Lucia
-  const frame = $("#cvFrame");
-  const title = $("#cvTitle");
-  const card = $("#cintro");
+/* ═══ 3 · HERO JE FIGUR ═══════════════════════════════════ */
+/* Drei Dinge an derselben Scrollstrecke: der Name blendet aus, die
+   Intro-Karte fährt darüber, der Hero geht auf die Grundfarbe. Bei Jason
+   und Lucia läuft zusätzlich das Video über die Scrollposition. */
+function heroAufsetzen(figur) {
+  const sec = figur.querySelector("[data-cv]");
+  const vid = figur.querySelector("[data-scrub]");
+  const frameEl = figur.querySelector("[data-frame]");
+  const titel = figur.querySelector("[data-titel]");
+  const karte = figur.querySelector("[data-intro]");
   if (!sec) return;
+
+  const titelUndKarte = p => {
+    const raus = smooth(seg(p, 0.06, 0.42));
+    if (titel) {
+      titel.style.setProperty("--t-out", (1 - raus).toFixed(3));
+      titel.style.setProperty("--t-y", (-raus * 40).toFixed(1) + "px");
+    }
+    const q = cardRise(karte);
+    sec.style.setProperty("--s-out", smooth(clamp(q / 0.9, 0, 1)).toFixed(3));
+    if (karte) karte.style.setProperty("--card-bg", smooth(clamp(q / 0.55, 0, 1)).toFixed(3));
+  };
 
   if (reduced) {
     if (vid) { vid.loop = true; vid.muted = true; vid.play().catch(() => {}); }
     return;
   }
 
-  /* Ohne Video braucht es keine Spul-Maschinerie — nur die Karten- und
-     Titel-Werte pro Frame. */
-  if (!vid) {
-    scrollStage(sec, p => {
-      const out = smooth(seg(p, 0.06, 0.42));
-      if (title) {
-        title.style.setProperty("--t-out", (1 - out).toFixed(3));
-        title.style.setProperty("--t-y", (-out * 40).toFixed(1) + "px");
-      }
-      const q = cardRise(card);
-      sec.style.setProperty("--s-out", smooth(clamp(q / 0.9, 0, 1)).toFixed(3));
-      if (card) card.style.setProperty("--card-bg", smooth(clamp(q / 0.55, 0, 1)).toFixed(3));
-    });
+  if (!vid) {                       // Standbild: nur Titel und Karte
+    scrollStage(sec, titelUndKarte);
     return;
   }
 
-  // Derselbe Wert wie in main.js: bis hierhin ist der Clip durchgelaufen.
-  // Zusammen mit der Hoehe von .cv ergibt das dieselbe Scrollgeschwindigkeit
-  // wie beim Video zwischen Trailer und Story auf der Startseite.
   const PLAY_END = 0.90;
-  let duration = 0, target = 0, current = 0, rafId = null, looping = false;
-  let lastFrame = performance.now();
+  let dauer = 0, ziel = 0, ist = 0, spulRaf = null, schleife = false;
+  let letzteSpur = performance.now();
 
-  const waitFor = (evt, ms) => new Promise(res => {
-    let done = false;
-    const fin = () => { if (!done) { done = true; res(); } };
+  const wartAuf = (evt, ms) => new Promise(res => {
+    let fertig = false;
+    const fin = () => { if (!fertig) { fertig = true; res(); } };
     vid.addEventListener(evt, fin, { once: true });
     setTimeout(fin, ms);
   });
 
-  const canSeek = () =>
+  const spulbar = () =>
     vid.seekable && vid.seekable.length > 0 &&
     vid.seekable.end(vid.seekable.length - 1) > 0.5;
 
-  const fallBackToLoop = () => {
-    if (looping) return;
-    looping = true;
+  const alsSchleife = () => {
+    if (schleife) return;
+    schleife = true;
     vid.loop = true; vid.muted = true;
     vid.play().catch(() => {});
   };
 
-  const seek = t => {
-    if (looping || !duration) return;
-    try { vid.currentTime = clamp(t, 0, duration - 0.05); } catch (e) {}
-  };
-
-  /* Dieselbe Leiter wie auf der Startseite:
-     1) Direktquelle, wenn der Server Range-Requests kann
-     2) sonst als Blob laden, damit currentTime ueberhaupt greift
-     3) sonst als Loop laufen lassen statt einzufrieren  */
-  /* Weckt den Video-Decoder.
-
-     Android und iOS liefern für ein <video>, das noch nie abgespielt wurde,
-     keine dekodierten Bilder: `currentTime` lässt sich setzen und `seekable`
-     meldet die volle Länge, die Fläche bleibt aber schwarz. Ein einmaliges
-     stummes Anspielen weckt ihn; danach spult das Video wie am Desktop.
-     Am Desktop ist `readyState` meist schon ≥ 2, dann passiert nichts. */
+  /* Android und iOS liefern für ein <video>, das nie abgespielt wurde,
+     keine dekodierten Bilder: currentTime lässt sich setzen, die Fläche
+     bleibt aber schwarz. Ein einmaliges stummes Anspielen weckt den
+     Decoder — daran fehlte auf dem Handy die ganze Animation. */
   const weckeDecoder = async () => {
     if (vid.readyState >= 2) return;
     try {
@@ -370,222 +348,344 @@ function cardRise(card) {
       if (p && p.then) await p;
       vid.pause();
       vid.currentTime = 0;
-    } catch (e) { /* klappt es nicht, greift unten der Loop-Rückfall */ }
-    if (vid.readyState < 2) await waitFor("loadeddata", 4000);
+    } catch (e) { /* dann greift der Schleifen-Rückfall */ }
+    if (vid.readyState < 2) await wartAuf("loadeddata", 4000);
   };
 
-  const load = async () => {
+  const spule = t => {
+    if (schleife || !dauer) return;
+    try { vid.currentTime = clamp(t, 0, dauer - 0.05); } catch (e) {}
+  };
+
+  const spurLauf = () => {
+    letzteSpur = performance.now();
+    ist += (ziel - ist) * 0.16;
+    if (Math.abs(ziel - ist) > 0.012) {
+      spule(ist);
+      spulRaf = requestAnimationFrame(spurLauf);
+    } else {
+      ist = ziel; spule(ziel); spulRaf = null;
+    }
+  };
+
+  const laden = async () => {
     const url = vid.getAttribute("src");
     if (!url || url.startsWith("blob:")) return;
-
     if (vid.preload !== "auto") { vid.preload = "auto"; vid.load(); }
 
-    if (vid.readyState < 1) await waitFor("loadedmetadata", 6000);
-    if (vid.duration && canSeek()) {
-      duration = vid.duration;
+    /* 1 · Direktquelle — beherrscht der Server Range-Requests, ist die
+       Datei ohne Umweg spulbar (serve.py und GitHub Pages tun das). */
+    if (vid.readyState < 1) await wartAuf("loadedmetadata", 6000);
+    if (vid.duration && spulbar()) {
+      dauer = vid.duration;
       await weckeDecoder();
-      if (vid.readyState >= 2) {
-        vid.removeAttribute("poster");
-        kick();
-        return;
-      }
+      if (vid.readyState >= 2) { vid.removeAttribute("poster"); anstossen(); return; }
     }
+
+    /* 2 · Blob-Umweg — ohne Range-Support meldet der Browser
+       seekable = 0–0 und ignoriert currentTime stillschweigend.
+       NICHT ENTFERNEN. */
     try {
       const blob = await (await fetch(url)).blob();
       vid.src = URL.createObjectURL(blob);
       vid.load();
-      await waitFor("loadeddata", 8000);
+      await wartAuf("loadeddata", 8000);
     } catch (e) { /* Direktquelle behalten */ }
 
-    duration = vid.duration || 0;
+    dauer = vid.duration || 0;
     await weckeDecoder();
-    /* Ohne dekodierte Bilder wäre die Fläche schwarz — dann lieber der
-       stille Loop als ein leerer Rahmen. */
-    if (!duration || !canSeek() || vid.readyState < 2) fallBackToLoop();
+    /* 3 · Ohne Bilder wäre die Fläche schwarz — dann lieber die Schleife. */
+    if (!dauer || !spulbar() || vid.readyState < 2) alsSchleife();
     else vid.removeAttribute("poster");
-    kick();
+    anstossen();
   };
 
-  const loop = () => {
-    lastFrame = performance.now();
-    current += (target - current) * 0.16;
-    if (Math.abs(target - current) > 0.012) {
-      seek(current);
-      rafId = requestAnimationFrame(loop);
-    } else {
-      current = target; seek(target); rafId = null;
-    }
+  let ladenBegonnen = false;
+  const ladeEinmal = () => {
+    if (ladenBegonnen) return;
+    ladenBegonnen = true;
+    laden();
   };
 
-  const kick = scrollStage(sec, (p, raw) => {
-    // Der Name blendet auf dem ersten Drittel aus und wandert leicht hoch
-    const out = smooth(seg(p, 0.06, 0.42));
-    if (title) {
-      title.style.setProperty("--t-out", (1 - out).toFixed(3));
-      title.style.setProperty("--t-y", (-out * 40).toFixed(1) + "px");
-    }
-    if (frame) frame.style.setProperty("--z", (1 + p * 0.07).toFixed(3));
+  scrollStage(sec, (p, roh) => {
+    if (p > 0) ladeEinmal();
+    titelUndKarte(p);
+    if (frameEl) frameEl.style.setProperty("--z", (1 + p * 0.07).toFixed(3));
 
-    // Karte fährt hoch, der Hero dahinter geht auf die Grundfarbe über
-    const q = cardRise(card);
-    sec.style.setProperty("--s-out", smooth(clamp(q / 0.9, 0, 1)).toFixed(3));
-    if (card) card.style.setProperty("--card-bg", smooth(clamp(q / 0.55, 0, 1)).toFixed(3));
-
-    if (looping) {
+    if (schleife) {
       const r = sec.getBoundingClientRect();
-      const on = r.top < innerHeight && r.bottom > 0;
-      if (on && vid.paused) vid.play().catch(() => {});
-      else if (!on && !vid.paused) vid.pause();
+      const sichtbar = r.top < innerHeight && r.bottom > 0;
+      if (sichtbar && vid.paused) vid.play().catch(() => {});
+      else if (!sichtbar && !vid.paused) vid.pause();
       return;
     }
 
-    target = clamp(raw / PLAY_END, 0, 1) * duration;
-    if (rafId === null) rafId = requestAnimationFrame(loop);
-    if (performance.now() - lastFrame > 260) { current = target; seek(target); }
+    ziel = clamp(roh / PLAY_END, 0, 1) * dauer;
+    if (spulRaf === null) spulRaf = requestAnimationFrame(spurLauf);
+    if (performance.now() - letzteSpur > 260) { ist = ziel; spule(ziel); }
   });
 
-  load();
-})();
+  /* Vorladen, sobald die Figur in Reichweite kommt — spart auf dem Handy
+     rund 5 MB, solange man weiter oben unterwegs ist. */
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(es => {
+      if (!es.some(e => e.isIntersecting)) return;
+      io.disconnect();
+      ladeEinmal();
+    }, { rootMargin: "150% 0px 150% 0px" });
+    io.observe(sec);
+  } else {
+    ladeEinmal();
+  }
+}
 
-/* Das Vollbild hatte einmal einen Parallax-Versatz mit leichtem Zoom.
-   Beides ist raus: es zeigt jetzt schlicht das ganze Bild über die volle
-   Breite und scrollt normal mit. Reiner CSS-Fall, kein JS nötig. */
+figuren.forEach(heroAufsetzen);
 
-/* ═══ 5 · EINBLENDEN BEIM SCROLLEN ════════════════════════ */
+/* ═══ 4 · EINBLENDEN BEIM SCROLLEN ════════════════════════ */
 (function reveals() {
   if (reduced) { $$(".cin").forEach(el => el.classList.add("is-in")); return; }
 
-  const show = el => { el.classList.add("is-in"); io.unobserve(el); };
+  const zeigen = el => { el.classList.add("is-in"); io.unobserve(el); };
 
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => {
-      // Sichtbar geworden — oder beim schnellen Scrollen schon nach oben
-      // durchgelaufen. Im zweiten Fall sofort zeigen, sonst bliebe der
-      // Absatz unsichtbar stehen.
-      if (e.isIntersecting || e.boundingClientRect.bottom < 0) show(e.target);
+      // Sichtbar geworden — oder beim schnellen Scrollen durchgelaufen
+      if (e.isIntersecting || e.boundingClientRect.bottom < 0) zeigen(e.target);
     });
   }, { rootMargin: "0px 0px -10% 0px", threshold: 0.06 });
 
-  // Gestaffelt, aber nur innerhalb einer Gruppe — sonst wartet man zu lang
   $$(".cin").forEach(el => {
-    const sibs = Array.from(el.parentElement.children).filter(c => c.classList.contains("cin"));
-    el.style.setProperty("--d", (sibs.indexOf(el) % 4) * 70 + "ms");
+    const nachbarn = Array.from(el.parentElement.children).filter(c => c.classList.contains("cin"));
+    el.style.setProperty("--d", (nachbarn.indexOf(el) % 4) * 70 + "ms");
     io.observe(el);
   });
 
-  /* Sicherheitsnetz. Läuft ein Element zwischen zwei Frames komplett
-     durch das Bild — bei einem kräftigen Mausrad-Schwung oder einem
-     Wisch auf dem Handy —, meldet der Observer dafür gar nichts und der
-     Absatz bliebe dauerhaft auf Deckkraft 0 stehen. Was oben aus dem
-     Bild heraus ist und noch nicht eingeblendet wurde, wird deshalb pro
-     Frame nachgezogen. Die Liste ist kurz, sie schrumpft mit jedem
-     Treffer. */
-  let pending = false;
-  const sweep = () => {
-    pending = false;
+  /* Sicherheitsnetz: läuft ein Element zwischen zwei Frames komplett durch
+     das Bild, meldet der Observer nichts und der Absatz bliebe unsichtbar. */
+  let offen = false;
+  const nachziehen = () => {
+    offen = false;
     const rest = $$(".cin:not(.is-in)");
-    if (!rest.length) return removeEventListener("scroll", onScroll);
-    rest.forEach(el => { if (el.getBoundingClientRect().bottom < 0) show(el); });
+    if (!rest.length) return removeEventListener("scroll", beiScroll);
+    rest.forEach(el => { if (el.getBoundingClientRect().bottom < 0) zeigen(el); });
   };
-  const onScroll = () => {
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(sweep);
+  const beiScroll = () => {
+    if (offen) return;
+    offen = true;
+    requestAnimationFrame(nachziehen);
   };
-  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("scroll", beiScroll, { passive: true });
 })();
 
-/* ═══ 6 · LIGHTBOX ════════════════════════════════════════ */
+/* ═══ 5 · LIGHTBOX ════════════════════════════════════════ */
 (function lightbox() {
   const lb = $("#lightbox");
   const img = $("#lbImg"), cap = $("#lbCap");
-  let idx = 0, lastFocus = null;
+  let idx = 0, vorherFokus = null;
 
-  const paint = () => {
+  const zeichne = () => {
     const it = lbList[idx];
     img.src = it.src;
     img.alt = it.cap || "";
     cap.textContent = `${it.cap || ""}  ·  ${idx + 1} / ${lbList.length}`;
-    const multi = lbList.length > 1;
-    $("#lbPrev").hidden = !multi;
-    $("#lbNext").hidden = !multi;
+    const mehrere = lbList.length > 1;
+    $("#lbPrev").hidden = !mehrere;
+    $("#lbNext").hidden = !mehrere;
   };
-  const open = i => {
-    lastFocus = document.activeElement;
-    idx = i; paint();
+  const oeffne = i => {
+    vorherFokus = document.activeElement;
+    idx = i; zeichne();
     lb.hidden = false;
     document.body.classList.add("is-locked");
     $("#lightbox .modal__close").focus();
   };
-  const close = () => {
+  const schliesse = () => {
     if (lb.hidden) return;
     lb.hidden = true;
     document.body.classList.remove("is-locked");
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
+    if (vorherFokus && vorherFokus.focus) vorherFokus.focus();
   };
-  const step = d => { idx = (idx + d + lbList.length) % lbList.length; paint(); };
+  const schritt = d => { idx = (idx + d + lbList.length) % lbList.length; zeichne(); };
 
   document.addEventListener("click", e => {
     const z = e.target.closest("[data-lb]");
-    if (z) return open(+z.dataset.lb);
-    if (e.target.closest("[data-close]")) return close();
-    if (e.target === lb) close();
+    if (z) return oeffne(+z.dataset.lb);
+    if (e.target.closest("[data-close]")) return schliesse();
+    if (e.target === lb) schliesse();
   });
-  $("#lbPrev").addEventListener("click", () => step(-1));
-  $("#lbNext").addEventListener("click", () => step(1));
+  $("#lbPrev").addEventListener("click", () => schritt(-1));
+  $("#lbNext").addEventListener("click", () => schritt(1));
   addEventListener("keydown", e => {
     if (lb.hidden) return;
-    if (e.key === "Escape") close();
-    if (e.key === "ArrowLeft") step(-1);
-    if (e.key === "ArrowRight") step(1);
+    if (e.key === "Escape") schliesse();
+    if (e.key === "ArrowLeft") schritt(-1);
+    if (e.key === "ArrowRight") schritt(1);
   });
 
-  // Wischen auf Touch
   let x0 = null;
   lb.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, { passive: true });
   lb.addEventListener("touchend", e => {
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0;
-    if (Math.abs(dx) > 55) step(dx > 0 ? -1 : 1);
+    if (Math.abs(dx) > 55) schritt(dx > 0 ? -1 : 1);
     x0 = null;
   }, { passive: true });
 })();
 
-/* ═══ 7 · NAV ═════════════════════════════════════════════ */
+/* ═══ 6 · NAVIGATION ══════════════════════════════════════ */
+/* Die Seite ist rund 55.000 px lang. Ohne Kapitelliste und Fortschritt
+   wüsste man nie, wo man ist und käme nur durch Scrollen weiter. */
 (function nav() {
-  const burger = $("#burger"), menu = $("#mobileMenu");
-  if (!burger || !menu) return;
+  const wo = $("#navWhere");
+  const fortschrittEl = $("#navFortschritt");
+  const menue = $("#mobileMenu");
+  const burger = $("#burger");
 
-  const closeMenu = () => {
-    menu.hidden = true;
+  // Kapitelliste ins Menü
+  const liste = menue && menue.querySelector("nav");
+  if (liste) {
+    liste.innerHTML =
+      reihe.map((c, i) => `
+        <a href="#c-${c.id}" data-kapitel="${c.id}">
+          <span class="mm__nr">${zwei(i + 1)}</span>${esc(c.name)}
+        </a>`).join("") +
+      `<a class="mm__extra" href="index.html#charaktere">Zurück zur Übersicht</a>
+       <a class="mm__extra" href="index.html">Startseite</a>`;
+  }
+
+  const schliesseMenue = () => {
+    if (!menue || !burger) return;
+    menue.hidden = true;
     burger.setAttribute("aria-expanded", "false");
     burger.setAttribute("aria-label", "Menü öffnen");
     document.body.classList.remove("is-locked");
   };
-  burger.addEventListener("click", () => {
-    if (burger.getAttribute("aria-expanded") === "true") return closeMenu();
-    menu.hidden = false;
-    burger.setAttribute("aria-expanded", "true");
-    burger.setAttribute("aria-label", "Menü schließen");
-    document.body.classList.add("is-locked");
-  });
-  menu.addEventListener("click", e => { if (e.target.closest("a")) closeMenu(); });
-  addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) closeMenu(); });
+  if (burger && menue) {
+    burger.addEventListener("click", () => {
+      if (burger.getAttribute("aria-expanded") === "true") return schliesseMenue();
+      menue.hidden = false;
+      burger.setAttribute("aria-expanded", "true");
+      burger.setAttribute("aria-label", "Menü schließen");
+      document.body.classList.add("is-locked");
+    });
+    menue.addEventListener("click", e => { if (e.target.closest("a")) schliesseMenue(); });
+    addEventListener("keydown", e => { if (e.key === "Escape" && !menue.hidden) schliesseMenue(); });
+  }
 
-  const wide = matchMedia("(min-width: 1025px)");
-  const onWide = e => { if (e.matches && !menu.hidden) closeMenu(); };
-  if (wide.addEventListener) wide.addEventListener("change", onWide);
-  else wide.addListener(onWide);
-
-  // Countdown-Pille im Mobile-Menü
-  const out = $("#navMiniMobile");
-  if (!out || typeof RELEASE === "undefined") return;
-  const tick = () => {
-    const d = Math.floor(Math.max(0, RELEASE - Date.now()) / 86400000);
-    out.textContent = d;
+  /* Welche Figur ist gerade dran? Der Beobachter meldet den Wechsel,
+     Name, Zähler und Adresse laufen mit. Die Adresse wird ersetzt, nicht
+     angehängt — sonst wäre der Zurück-Knopf des Browsers nach einer
+     langen Seite mit Dutzenden Einträgen unbrauchbar. */
+  const setzeAktiv = figur => {
+    const id = figur.dataset.figur;
+    const nr = +figur.dataset.nr;
+    const c = reihe.find(x => x.id === id);
+    if (!c) return;
+    if (wo) wo.textContent = c.name;
+    if (fortschrittEl) fortschrittEl.textContent = `${zwei(nr)} / ${zwei(reihe.length)}`;
+    document.title = c.name + " — Grand Theft Auto VI";
+    if (liste) {
+      $$("[data-kapitel]", liste).forEach(a =>
+        a.classList.toggle("is-active", a.dataset.kapitel === id));
+    }
+    const neu = location.pathname + "?c=" + id;
+    if (location.pathname + location.search !== neu) history.replaceState(null, "", neu);
   };
-  tick();
-  setInterval(tick, 60000);
+
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) setzeAktiv(e.target); });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    figuren.forEach(f => io.observe(f));
+  }
+  setzeAktiv(figuren[startIndex]);
+
+  const obenKnopf = $("#nachOben");
+  if (obenKnopf) obenKnopf.addEventListener("click", () => {
+    scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+  });
+
+  // Countdown-Pille im Menü
+  const tage = $("#navMiniMobile");
+  if (tage && typeof RELEASE !== "undefined") {
+    const tick = () => { tage.textContent = Math.floor(Math.max(0, RELEASE - Date.now()) / 86400000); };
+    tick();
+    setInterval(tick, 60000);
+  }
 })();
+
+/* ═══ 7 · EINSTIEG ════════════════════════════════════════ */
+/* `?c=raul` soll direkt bei Raul landen, nicht oben bei Jason.
+
+   Zwei Dinge stehen dem im Weg:
+
+   1. Der Browser stellt beim Neuladen die vorherige Scrollposition wieder
+      her — und zwar **nach** unserem Sprung, der damit wirkungslos wäre.
+      `scrollRestoration = "manual"` schaltet das ab.
+   2. Die Zielhöhe steht erst, wenn Schriften und Layout fertig sind. Ein
+      einzelner Sprung landet sonst daneben, deshalb wird nachgesetzt,
+      bis die Position stimmt.
+
+   Ohne weiche Bewegung: bei 47.000 px liefe die minutenlang. */
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+if (startIndex > 0) {
+  const ziel = figuren[startIndex];
+  const html = document.documentElement;
+  const altesVerhalten = html.style.scrollBehavior;
+
+  /* `scroll-behavior: smooth` steht in style.css auf <html>. Ohne dieses
+     Aushebeln würde der Sprung als weiche Fahrt über zehntausende Pixel
+     losrollen statt sofort zu sitzen. */
+  html.style.scrollBehavior = "auto";
+
+  /* Sobald der Nutzer selbst scrollt, wird nicht mehr nachgesetzt — sonst
+     zöge die Seite ihn gegen seinen Willen zurück. */
+  let nutzerScrollt = false;
+  const merke = () => { nutzerScrollt = true; };
+  addEventListener("wheel", merke, { passive: true, once: true });
+  addEventListener("touchstart", merke, { passive: true, once: true });
+  addEventListener("keydown", merke, { once: true });
+
+  /* Nachgesetzt wird über Zeit statt über eine feste Anzahl Frames: die
+     Zielhöhe verschiebt sich noch, während Schriften und die ersten Bilder
+     ankommen. Bei sechs Figuren oberhalb summiert sich das — mit nur einem
+     Durchgang landete der Sprung 169 px daneben.
+
+     Deshalb drei Runden: sofort, nach `load` und wenn die Schriften stehen.
+     Jede Runde läuft, bis sie nichts mehr zu korrigieren findet. */
+  let bis = 0, laeuft = false;
+
+  const aufraeumen = () => {
+    laeuft = false;
+    html.style.scrollBehavior = altesVerhalten;
+  };
+
+  const lauf = () => {
+    if (nutzerScrollt) return aufraeumen();
+    const abstand = ziel.getBoundingClientRect().top;
+    if (Math.abs(abstand) > 2) {
+      scrollTo(0, scrollY + abstand);
+      anstossen();
+    }
+    if (performance.now() < bis) requestAnimationFrame(lauf);
+    else aufraeumen();
+  };
+
+  const nachsetzen = ms => {
+    if (nutzerScrollt) return;
+    bis = performance.now() + ms;
+    html.style.scrollBehavior = "auto";
+    if (laeuft) return;          // laufende Runde verlängert sich nur
+    laeuft = true;
+    lauf();
+  };
+
+  nachsetzen(2500);
+  addEventListener("load", () => nachsetzen(1200), { once: true });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => nachsetzen(1200));
+  }
+}
 
 })();
