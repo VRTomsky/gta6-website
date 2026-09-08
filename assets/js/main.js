@@ -286,21 +286,54 @@ function cardRise(card) {
       vid.play().catch(() => {});
     };
 
+    /* Weckt den Video-Decoder.
+
+       Android und iOS liefern für ein <video>, das noch nie abgespielt
+       wurde, keine dekodierten Bilder: `currentTime` lässt sich setzen und
+       `seekable` meldet die volle Länge, die Fläche bleibt aber schwarz.
+       Genau daran fehlte auf dem Handy die ganze Scroll-Animation — das
+       Poster war entfernt, ein Bild kam nie.
+
+       Ein einmaliges stummes Anspielen weckt den Decoder; danach spult das
+       Video wie am Desktop. Stumm ist Pflicht, sonst verweigert der Browser
+       die Wiedergabe ohne Nutzergeste. Am Desktop ist `readyState` meist
+       schon ≥ 2, dann passiert hier nichts. */
+    const weckeDecoder = async () => {
+      if (vid.readyState >= 2) return;
+      try {
+        vid.muted = true;
+        vid.playsInline = true;
+        const p = vid.play();
+        if (p && p.then) await p;
+        vid.pause();
+        vid.currentTime = 0;
+      } catch (e) { /* klappt es nicht, greift unten der Loop-Rückfall */ }
+      if (vid.readyState < 2) await waitFor("loadeddata", 4000);
+    };
+
     const load = async () => {
       const url = vid.getAttribute("src");
       if (!url || url.startsWith("blob:")) return;
 
+      /* Ab hier wird wirklich gespult, also die Datei ganz holen. Mit
+         preload="metadata" müsste der Browser bei jedem Sprung erst Daten
+         nachladen — das ruckelt sichtbar. */
+      if (vid.preload !== "auto") { vid.preload = "auto"; vid.load(); }
+
       /* Schritt 1 — Direktquelle prüfen.
          Beherrscht der Server Range-Requests (206 Partial Content, siehe
-         serve.py), meldet der Browser seekable: 0–<dauer> und die Datei ist
-         ohne Umweg spulbar. Auf dem Handy spart das den vollständigen
-         Download in den Arbeitsspeicher. */
+         serve.py und GitHub Pages), meldet der Browser seekable: 0–<dauer>
+         und die Datei ist ohne Umweg spulbar. Auf dem Handy spart das den
+         vollständigen Download in den Arbeitsspeicher. */
       if (vid.readyState < 1) await waitFor("loadedmetadata", 6000);
       if (vid.duration && canSeek()) {
         duration = vid.duration;
-        vid.removeAttribute("poster");
-        kick();
-        return;
+        await weckeDecoder();
+        if (vid.readyState >= 2) {
+          vid.removeAttribute("poster");
+          kick();
+          return;
+        }
       }
 
       /* Schritt 2 — Blob-Umweg.
@@ -317,9 +350,23 @@ function cardRise(card) {
       } catch (e) { /* Direktquelle behalten */ }
 
       duration = vid.duration || 0;
-      vid.removeAttribute("poster");
-      if (!duration || !canSeek()) fallBackToLoop();
+      await weckeDecoder();
+      /* Ohne dekodierte Bilder wäre die Fläche schwarz — dann lieber der
+         stille Loop als ein leerer Rahmen. */
+      if (!duration || !canSeek() || vid.readyState < 2) fallBackToLoop();
+      else vid.removeAttribute("poster");
       kick();
+    };
+
+    /* Genau einmal laden, egal wer es anstößt: der IntersectionObserver
+       weiter unten oder der Scroll-Motor, sobald der Abschnitt ins Bild
+       kommt. Zwei Auslöser, damit ein ausbleibender Beobachter die
+       Animation nicht komplett verhindert. */
+    let ladenBegonnen = false;
+    const ladeEinmal = () => {
+      if (ladenBegonnen) return;
+      ladenBegonnen = true;
+      load();
     };
 
     const seek = t => {
@@ -343,6 +390,8 @@ function cardRise(card) {
     if (reduced) { sec.style.setProperty("--v-in", "1"); return; }
 
     const kick = scrollStage(sec, (p, raw) => {
+      // Sobald der Abschnitt überhaupt ins Bild kommt, muss das Video her
+      if (p > 0) ladeEinmal();
       // Video taucht hinter dem vorherigen Abschnitt auf …
       sec.style.setProperty("--v-in", smooth(clamp(p / FADE_IN, 0, 1)).toFixed(3));
       // … und läuft von Anfang an mit. Die Rohposition steuert das Video,
@@ -371,17 +420,22 @@ function cardRise(card) {
 
     /* Auf dem Handy erst laden, wenn der Abschnitt in die Nähe kommt. Sonst
        gehen beim Seitenaufruf rund 5 MB Video ins Netz, bevor der Hero
-       überhaupt zu Ende gescrollt ist. */
+       überhaupt zu Ende gescrollt ist.
+
+       Der Beobachter ist dabei nur der frühe Auslöser, nicht die einzige
+       Bedingung: `ladeEinmal` hängt zusätzlich am Scroll-Motor. Bliebe das
+       Laden allein am IntersectionObserver hängen und der meldet sich nicht,
+       stünde an der Stelle dauerhaft das Standbild statt der Animation. */
     if (coarse && "IntersectionObserver" in window) {
-      vid.preload = "metadata";
+      vid.preload = "none";
       const io = new IntersectionObserver(entries => {
         if (!entries.some(e => e.isIntersecting)) return;
         io.disconnect();
-        load();
+        ladeEinmal();
       }, { rootMargin: "120% 0px 120% 0px" });
       io.observe(sec);
     } else {
-      load();
+      ladeEinmal();
     }
   });
 })();

@@ -23,7 +23,7 @@ const CHARS = [
       "Jason will ein einfaches Leben — nur werden die Dinge einfach nicht einfacher. Aufgewachsen ist er zwischen Trickbetrügern und Kleinkriminellen. Nach einer Zeit bei der Army, mit der er seine schwierige Jugend abschütteln wollte, landete er in den Keys und macht das, was er am besten kann: für die örtlichen Drogenkuriere arbeiten.",
       "Lucia zu treffen könnte das Beste oder das Schlimmste sein, was ihm je passiert ist. Jason weiß ziemlich genau, wie er es gern hätte — aber im Moment ist schwer zu sagen, wohin das läuft. Vielleicht ist es Zeit, etwas Neues zu probieren."
     ],
-    meta: [["Basis", "Leonida Keys"], ["Vorgeschichte", "US Army"], ["Beziehung", "Lucia Caminos"], ["Rolle", "Spielbar"]],
+    meta: [["Alter (geschätzt)", "≈ 28–32"], ["Basis", "Leonida Keys"], ["Vorgeschichte", "US Army"], ["Beziehung", "Lucia Caminos"], ["Rolle", "Spielbar"]],
     shots: ["chars/jason_01.jpg","chars/jason_02.jpg","chars/jason_03.jpg","chars/jason_04.jpg","chars/jason_05.jpg","chars/jason_06.jpg","art/jason_lucia_motel.jpg","art/jason_lucia_01.jpg"]
   },
   {
@@ -41,7 +41,7 @@ const CHARS = [
       "Lucias Vater brachte ihr das Kämpfen bei, sobald sie laufen konnte. Seitdem schlägt das Leben zurück. Weil sie für ihre Familie kämpfte, landete sie im Leonida Penitentiary. Reines Glück holte sie wieder heraus. Lucia hat ihre Lektion gelernt — ab jetzt nur noch kluge Entscheidungen.",
       "Frisch aus dem Knast und fest entschlossen, die Chancen zu ihren Gunsten zu drehen, hält Lucia an ihrem Plan fest — egal, was es kostet. Ein Leben mit Jason könnte ihr Weg raus sein."
     ],
-    meta: [["Basis", "Vice City"], ["Vorgeschichte", "Leonida Penitentiary"], ["Beziehung", "Jason Duval"], ["Rolle", "Spielbar"]],
+    meta: [["Alter (geschätzt)", "≈ 24–27"], ["Basis", "Vice City"], ["Vorgeschichte", "Leonida Penitentiary"], ["Beziehung", "Jason Duval"], ["Rolle", "Spielbar"]],
     shots: ["chars/lucia_01.jpg","chars/lucia_02.jpg","chars/lucia_03.jpg","chars/lucia_04.jpg","chars/lucia_05.jpg","chars/lucia_06.jpg","art/jason_lucia_02.jpg","art/user_lucia_jason.jpg"]
   },
   {
@@ -59,7 +59,7 @@ const CHARS = [
       "Cal ist Jasons Freund und am glücklichsten, wenn er allein mit seinem Polizeiscanner ist. Wer wissen will, wo gerade eine Streife steht, welcher Kanal abgehört wird oder wo man ungestört etwas abwickelt, fragt Cal.",
       "Der Preis dafür: Man bekommt seine Theorien gleich mit dazu. Über die Regierung, über das, was über Leonida fliegt, und darüber, wer angeblich wirklich das Sagen hat. Nützlich ist er trotzdem."
     ],
-    meta: [["Basis", "Leonida Keys"], ["Spezialgebiet", "Funk & Elektronik"], ["Verbindung", "Jason"], ["Rolle", "Nebenfigur"]],
+    meta: [["Alter (geschätzt)", "≈ 27–32"], ["Basis", "Leonida Keys"], ["Spezialgebiet", "Funk & Elektronik"], ["Verbindung", "Jason"], ["Rolle", "Nebenfigur"]],
     shots: ["chars/cal_01.jpg","chars/cal_02.jpg","chars/cal_03.jpg","chars/cal_04.jpg"]
   },
   {
@@ -77,7 +77,7 @@ const CHARS = [
       "Boobie hat seine Zeit auf der Straße abgesessen und den Hustle danach in etwas Belastbares verwandelt: einen Club, ein Tonstudio, Immobilien. In Vice City kennt ihn jeder, der irgendwo Geld unterbringen muss.",
       "Er ist nicht mehr derjenige, der selbst die Drecksarbeit macht — aber er weiß immer noch genau, wie sie funktioniert. Und wer ihm etwas schuldet, merkt das ziemlich schnell."
     ],
-    meta: [["Basis", "Vice City"], ["Geschäft", "Club & Studio"], ["Netzwerk", "Dre'Quan Priest"], ["Rolle", "Nebenfigur"]],
+    meta: [["Alter (geschätzt)", "≈ 38–45"], ["Basis", "Vice City"], ["Geschäft", "Club & Studio"], ["Netzwerk", "Dre'Quan Priest"], ["Rolle", "Nebenfigur"]],
     shots: ["chars/boobie_01.jpg","chars/boobie_02.jpg","chars/boobie_03.jpg","chars/boobie_04.jpg"]
   },
   {
@@ -95,7 +95,7 @@ const CHARS = [
       "Dre'Quan kam über selbstgebaute Beats und Mixtapes nach oben und betreibt heute sein eigenes Label, Only Raw Records. Sein Ziel ist simpel: einen echten Hit landen, bevor ihm jemand anderes zuvorkommt.",
       "Bei ihm unter Vertrag: Real Dimez. Wenn Bae-Luxe und Roxy noch einmal einschlagen, ist Dre'Quan der Mann, der davon am meisten hat — und der am meisten zu verlieren hat, wenn nicht."
     ],
-    meta: [["Basis", "Vice City"], ["Label", "Only Raw Records"], ["Act", "Real Dimez"], ["Rolle", "Nebenfigur"]],
+    meta: [["Alter (geschätzt)", "≈ 28–33"], ["Basis", "Vice City"], ["Label", "Only Raw Records"], ["Act", "Real Dimez"], ["Rolle", "Nebenfigur"]],
     shots: ["chars/drequan_01.jpg","chars/drequan_02.jpg","chars/drequan_03.jpg","chars/drequan_04.jpg"]
   },
   {
@@ -113,7 +113,7 @@ const CHARS = [
       "Bae-Luxe und Roxy, zusammen Real Dimez, sind seit der Highschool befreundet — clever genug, ihre Zeit als Abzockerinnen lokaler Dealer in bares Geld zu verwandeln: über deftige Rap-Tracks und eine Social-Media-Präsenz, die nie stillsteht.",
       "Ein früher Hit mit dem Rapper DWNPLY brachte sie ganz nach oben. Nach fünf Jahren und einer Menge Ärger stehen sie jetzt bei Only Raw Records unter Vertrag und hoffen, dass der Blitz zweimal einschlägt."
     ],
-    meta: [["Basis", "Vice City"], ["Label", "Only Raw Records"], ["Feature", "DWNPLY"], ["Rolle", "Nebenfiguren"]],
+    meta: [["Alter (geschätzt)", "≈ 25–29"], ["Basis", "Vice City"], ["Label", "Only Raw Records"], ["Feature", "DWNPLY"], ["Rolle", "Nebenfiguren"]],
     shots: ["chars/dimez_01.jpg","chars/dimez_02.jpg","chars/dimez_03.jpg","chars/dimez_04.jpg"]
   },
   {
@@ -131,7 +131,7 @@ const CHARS = [
       "Selbstbewusstsein, Charme und Gerissenheit — Raul ist ein erfahrener Bankräuber, ständig auf der Suche nach Leuten, die bereit sind, für den ganz großen Ertrag das ganz große Risiko zu nehmen.",
       "Seine Rücksichtslosigkeit erhöht mit jedem Coup den Einsatz. Früher oder später muss seine Crew entscheiden: nachlegen — oder die Chips vom Tisch nehmen."
     ],
-    meta: [["Region", "Port Gellhorn"], ["Fach", "Banküberfälle"], ["Merkmal", "Zu hohes Risiko"], ["Rolle", "Nebenfigur"]],
+    meta: [["Alter (geschätzt)", "≈ 45–55"], ["Region", "Port Gellhorn"], ["Fach", "Banküberfälle"], ["Merkmal", "Zu hohes Risiko"], ["Rolle", "Nebenfigur"]],
     shots: ["chars/raul_01.jpg","chars/raul_02.jpg","chars/raul_03.jpg","chars/raul_04.jpg"]
   },
   {
@@ -149,7 +149,7 @@ const CHARS = [
       "Brian ist ein klassischer Drogenschmuggler aus der goldenen Ära des Schmuggels in den Keys. Über seine Bootswerft läuft mit seiner dritten Frau Lori noch immer Ware — nur lässt er die schmutzige Arbeit inzwischen andere machen.",
       "Sieht aus wie ein Strandpenner aus Leonida, bewegt sich aber wie ein Weißer Hai. Jason darf mietfrei in einer seiner Immobilien wohnen — solange er bei den lokalen Abzocken hilft und ab und zu auf Loris Sangria vorbeischaut."
     ],
-    meta: [["Basis", "Leonida Keys"], ["Geschäft", "Bootswerft"], ["Vermieter von", "Jason"], ["Rolle", "Nebenfigur"]],
+    meta: [["Alter (geschätzt)", "≈ 55–65"], ["Basis", "Leonida Keys"], ["Geschäft", "Bootswerft"], ["Vermieter von", "Jason"], ["Rolle", "Nebenfigur"]],
     shots: ["chars/brian_01.jpg","chars/brian_02.jpg","chars/brian_03.jpg","chars/brian_04.jpg"]
   }
 ];

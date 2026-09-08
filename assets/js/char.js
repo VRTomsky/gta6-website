@@ -354,16 +354,41 @@ function cardRise(card) {
      1) Direktquelle, wenn der Server Range-Requests kann
      2) sonst als Blob laden, damit currentTime ueberhaupt greift
      3) sonst als Loop laufen lassen statt einzufrieren  */
+  /* Weckt den Video-Decoder.
+
+     Android und iOS liefern für ein <video>, das noch nie abgespielt wurde,
+     keine dekodierten Bilder: `currentTime` lässt sich setzen und `seekable`
+     meldet die volle Länge, die Fläche bleibt aber schwarz. Ein einmaliges
+     stummes Anspielen weckt ihn; danach spult das Video wie am Desktop.
+     Am Desktop ist `readyState` meist schon ≥ 2, dann passiert nichts. */
+  const weckeDecoder = async () => {
+    if (vid.readyState >= 2) return;
+    try {
+      vid.muted = true;
+      vid.playsInline = true;
+      const p = vid.play();
+      if (p && p.then) await p;
+      vid.pause();
+      vid.currentTime = 0;
+    } catch (e) { /* klappt es nicht, greift unten der Loop-Rückfall */ }
+    if (vid.readyState < 2) await waitFor("loadeddata", 4000);
+  };
+
   const load = async () => {
     const url = vid.getAttribute("src");
     if (!url || url.startsWith("blob:")) return;
 
+    if (vid.preload !== "auto") { vid.preload = "auto"; vid.load(); }
+
     if (vid.readyState < 1) await waitFor("loadedmetadata", 6000);
     if (vid.duration && canSeek()) {
       duration = vid.duration;
-      vid.removeAttribute("poster");
-      kick();
-      return;
+      await weckeDecoder();
+      if (vid.readyState >= 2) {
+        vid.removeAttribute("poster");
+        kick();
+        return;
+      }
     }
     try {
       const blob = await (await fetch(url)).blob();
@@ -373,8 +398,11 @@ function cardRise(card) {
     } catch (e) { /* Direktquelle behalten */ }
 
     duration = vid.duration || 0;
-    vid.removeAttribute("poster");
-    if (!duration || !canSeek()) fallBackToLoop();
+    await weckeDecoder();
+    /* Ohne dekodierte Bilder wäre die Fläche schwarz — dann lieber der
+       stille Loop als ein leerer Rahmen. */
+    if (!duration || !canSeek() || vid.readyState < 2) fallBackToLoop();
+    else vid.removeAttribute("poster");
     kick();
   };
 

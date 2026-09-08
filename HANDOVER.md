@@ -46,10 +46,10 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.l
 | `index.html` | 481 | Struktur aller Abschnitte der Startseite |
 | `charakter.html` | 104 | **Gerüst der Charakter-Detailseiten** — eine Seite für alle acht |
 | `assets/css/style.css` | 1351 | Design-Tokens, Layout, Responsive, Reduced-Motion, **Mobil-Block M1–M9** |
-| `assets/css/char.css` | 403 | **Nur die Detailseiten** — Editorial-Raster, Zitatbänder, Vollbild |
+| `assets/css/char.css` | 506 | **Nur die Detailseiten** — Editorial-Raster, Zitatbänder, Vollbild |
 | `assets/js/data.js` | 670 | **Alle Texte und Bildlisten**; `CHARS` (Stammdaten) + `CHAR_PAGES` (Seitenaufbau) |
-| `assets/js/main.js` | 756 | Countdown, Scroll-Motor, Videos, Galerie, 3D-Hülle |
-| `assets/js/char.js` | 514 | Aufbau der Detailseiten, Scroll-Video, Vollbild, Lightbox |
+| `assets/js/main.js` | 810 | Countdown, Scroll-Motor, Videos, Galerie, 3D-Hülle |
+| `assets/js/char.js` | 591 | Aufbau der Detailseiten, Scroll-Video, Vollbild, Lightbox |
 | `assets/img/` | 150 | `art/` 20, `chars/` 49, `duo/` 13, `places/` 42, `ultimate/` 26 |
 | `assets/img/app/` | 4 | quadratische Symbole für den Android-Startbildschirm |
 | `assets/video/` | 10 | 2 Scroll-Clips + 8 Charakter-Loops |
@@ -121,6 +121,21 @@ dabei trotzdem die volle Länge, die Fehlersuche führt also leicht in die Irre.
    Server ohne Range-Support.
 3. **Loop-Rückfall.** Klappt beides nicht, läuft der Clip stumm in der Schleife statt als
    eingefrorenes Standbild (`looping`-Zweig, pausiert außerhalb des Bilds).
+
+**Zusätzlich, und auf dem Handy entscheidend: der Decoder muss geweckt werden.**
+Android und iOS liefern für ein `<video>`, das noch nie abgespielt wurde, **keine
+dekodierten Bilder**. `currentTime` lässt sich setzen, `seekable` meldet die volle Länge,
+`readyState` steht sogar auf 4 — die Fläche bleibt trotzdem schwarz. Da der Code an der
+Stelle das Poster entfernt, sah man auf dem Handy gar nichts: keine Animation zwischen
+Trailer und Story, keine zwischen Ultimate und News. `weckeDecoder()` spielt das Video
+deshalb einmal stumm an und pausiert sofort wieder; danach spult es wie am Desktop.
+Stumm ist Pflicht, sonst verweigert der Browser die Wiedergabe ohne Nutzergeste.
+Das Poster fällt erst, wenn `readyState >= 2` ist — sonst bliebe ein leerer Rahmen.
+
+**Zwei Auslöser fürs Laden.** Auf Touch startet der Download erst, wenn der Abschnitt in
+die Nähe kommt (spart rund 5 MB beim Seitenaufruf). Ausgelöst wird das vom
+IntersectionObserver **und** vom Scroll-Motor (`ladeEinmal`). Hinge es allein am
+Beobachter und der meldet sich nicht, stünde dort dauerhaft das Standbild.
 
 ### 2 · Schriften
 
@@ -463,6 +478,27 @@ Abgeleitet: `--bg2 #111a33`, `--surf #17203d`, `--surf2 #1e294a`, `--surf3 #2734
 
 Marke: Creme `#fff9cb` (Headlines), Pink `#ffb2c6` (Primär-Buttons), Vice-Magenta `#e8548c`
 (Kicker), Netflix-Rot `#e50914`.
+
+## Altersangaben der Figuren
+
+**Rockstar nennt zu keiner Figur ein Alter.** Die Spanne unter „Alter (geschätzt)" in
+`CHARS[].meta` ist aus der jeweiligen Biografie abgeleitet — sie ist bewusst als Schätzung
+gekennzeichnet und darf nicht als offizielle Angabe ausgegeben werden.
+
+| Figur | Spanne | Woraus abgeleitet |
+|---|---|---|
+| Jason Duval | 28–32 | Army-Dienst plus die Jahre danach als Kurier in den Keys |
+| Lucia Caminos | 24–27 | frisch aus dem Leonida Penitentiary, Erscheinung in Trailer 2 |
+| Cal Hampton | 27–32 | Jasons langjähriger Freund, also ähnlicher Jahrgang |
+| Boobie Ike | 38–45 | Straße abgesessen, danach Club, Studio und Immobilien aufgebaut |
+| Dre'Quan Priest | 28–33 | über Mixtapes hochgekommen, sucht noch den ersten großen Hit |
+| Real Dimez | 25–29 | seit der Highschool befreundet, der frühe Hit liegt fünf Jahre zurück |
+| Raul Bautista | 45–55 | „Experience counts", langjähriger Bankräuber mit eigener Crew |
+| Brian Heder | 55–65 | goldene Ära des Schmuggels in den Keys, inzwischen dritte Ehe |
+
+Es kursiert eine Fan-Rechnung, die Jason und Lucia über die Bonnie-und-Clyde-Parallele auf
+je 24–25 setzt. Sie hängt an einer einzelnen Annahme und passt schlecht zu Jasons
+Army-Vorgeschichte, deshalb liegen die Werte hier etwas höher.
 
 ## Herkunft der Inhalte
 
