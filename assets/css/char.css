@@ -89,10 +89,12 @@
    die grosse und svh die kleine Ansicht). Standbild-Heroes brauchen keine
    Spulstrecke und bleiben deshalb kuerzer.
 
-   Die Werte in den Media-Queries weiter unten spiegeln `.scrub` aus
-   style.css, damit sich das Video auf jedem Geraet gleich schnell
-   durchscrollen laesst wie auf der Startseite. Dort ist `--rise` kleiner,
-   weil die kuerzeren Hoehen sonst Bedingung 2 verletzen. */
+   Die 400svh gelten auf jedem Geraet, genau wie `.scrub` in style.css —
+   dadurch laeuft das Video ueberall gleich schnell. Kuerzere Werte fuer das
+   Handy gab es einmal; auf der Startseite haben sie das Video unsichtbar
+   gemacht (Rechnung in style.css, M6), deshalb gibt es sie auch hier nicht
+   mehr. Nur die Standbild-Heroes (.cv--still) werden mobil kuerzer, dort ist
+   `--rise` passend auf 100 gesenkt. */
 .cv{ position:relative; z-index:0; height:400svh; }
 .cv--still{ height:250svh; }
 .cv__sticky{
@@ -419,7 +421,6 @@
   /* Ab hier ueberlappt die Karte weniger, damit die kuerzeren Hero-Hoehen
      die Bedingung `Hoehe >= --rise + 100svh` noch erfuellen. */
   #cintro{ --rise:100; }
-  .cv{ height:250svh; }
   .cv--still{ height:230svh; }
   .cband{ grid-template-columns:1fr; }
   .cband > *:nth-child(2){ margin-top:0; }
@@ -430,7 +431,6 @@
   .nav__sep{ display:none; }
 }
 @media (max-width:560px){
-  .cv{ height:215svh; }
   .cv--still{ height:215svh; }
   .cv__title{ padding-bottom:calc(38px + env(safe-area-inset-bottom)); }
   .clead{ font-size:1.32rem; max-width:none; }
@@ -447,7 +447,6 @@
   /* Quer ist wenig Hoehe da — die Karte ueberlappt hier weniger, damit
      die Sektion nicht endlos lang wird. */
   #cintro{ --rise:100; }
-  .cv{ height:215svh; }
   .cv--still{ height:215svh; }
   .cv__name{ font-size:clamp(2rem,7vw,3.4rem); }
   .cv__hint{ display:none; }

@@ -309,22 +309,13 @@ scrollt, wird abgebrochen; sonst zöge die Seite ihn zurück.
 
 1. *Wie schnell der Clip läuft.* Die nutzbare Strecke ist `Höhe − 100svh` (die
    ersten 100 svh klebt das Medium nur), davon spielt `PLAY_END` (0.90) den Clip
-   ab. Damit sich das Video genauso durchscrollen lässt wie das zwischen Trailer
-   und Story, spiegeln die Werte `.scrub` aus `style.css`: **400 svh** am Desktop,
-   250 / 215 svh in den Media-Queries. Gemessen ergibt das auf beiden Seiten
-   **329 px Scroll pro Videosekunde** — 2,70 Bildschirmhöhen für einen ganzen Clip.
+   ab. `.cv` steht wie `.scrub` auf der Startseite **überall auf 400 svh** —
+   Desktop, Tablet, Handy, Querformat. Gemessen: 2,70 Bildschirmhöhen für einen
+   ganzen Clip, auf beiden Seiten und jedem Gerät gleich.
 2. *Ob die Karte passt.* Die Höhe muss mindestens `--rise + 100svh` betragen,
    sonst ragt die Intro-Karte schon beim Laden ins Bild und der Name steht
-   doppelt da — einmal im Hero, einmal auf der Karte. Genau das passierte, als
-   die Nebenfiguren-Heroes auf 190 svh gekürzt wurden.
-
-Beides hängt zusammen: weil die mobilen Höhen kleiner sind, geht `--rise` dort
-von 118 auf 100 zurück. Wer an einem der Werte dreht, muss die andere Bedingung
-nachrechnen; alles steht kommentiert in `char.css` bei `.cv` / `.cv--still`.
-
-Einzige Abweichung: im Querformat läuft der Clip minimal langsamer als auf der
-Startseite (1,03 statt 0,90 Bildschirmhöhen). Dort bräuchte die exakte Strecke
-200 svh, das lässt der Karte aber keinen Puffer mehr — 215 svh ist der Kompromiss.
+   doppelt da. Betrifft heute nur noch die kürzeren Standbild-Heroes
+   (`.cv--still`); dort ist `--rise` mobil auf 100 gesenkt.
 
 **Helle Artworks brauchen einen kräftigeren Verlauf.** Der Kicker über dem Hero
 kam auf Rauls hellem Artwork auf **1,37 : 1** — unlesbar. Der untere Teil von
@@ -405,22 +396,13 @@ scrollt, wird abgebrochen; sonst zöge die Seite ihn zurück.
 
 1. *Wie schnell der Clip läuft.* Die nutzbare Strecke ist `Höhe − 100svh` (die
    ersten 100 svh klebt das Medium nur), davon spielt `PLAY_END` (0.90) den Clip
-   ab. Damit sich das Video genauso durchscrollen lässt wie das zwischen Trailer
-   und Story, spiegeln die Werte `.scrub` aus `style.css`: **400 svh** am Desktop,
-   250 / 215 svh in den Media-Queries. Gemessen ergibt das auf beiden Seiten
-   **329 px Scroll pro Videosekunde** — 2,70 Bildschirmhöhen für einen ganzen Clip.
+   ab. `.cv` steht wie `.scrub` auf der Startseite **überall auf 400 svh** —
+   Desktop, Tablet, Handy, Querformat. Gemessen: 2,70 Bildschirmhöhen für einen
+   ganzen Clip, auf beiden Seiten und jedem Gerät gleich.
 2. *Ob die Karte passt.* Die Höhe muss mindestens `--rise + 100svh` betragen,
    sonst ragt die Intro-Karte schon beim Laden ins Bild und der Name steht
-   doppelt da — einmal im Hero, einmal auf der Karte. Genau das passierte, als
-   die Nebenfiguren-Heroes auf 190 svh gekürzt wurden.
-
-Beides hängt zusammen: weil die mobilen Höhen kleiner sind, geht `--rise` dort
-von 118 auf 100 zurück. Wer an einem der Werte dreht, muss die andere Bedingung
-nachrechnen; alles steht kommentiert in `char.css` bei `.cv` / `.cv--still`.
-
-Einzige Abweichung: im Querformat läuft der Clip minimal langsamer als auf der
-Startseite (1,03 statt 0,90 Bildschirmhöhen). Dort bräuchte die exakte Strecke
-200 svh, das lässt der Karte aber keinen Puffer mehr — 215 svh ist der Kompromiss.
+   doppelt da. Betrifft heute nur noch die kürzeren Standbild-Heroes
+   (`.cv--still`); dort ist `--rise` mobil auf 100 gesenkt.
 
 **Helle Artworks brauchen einen kräftigeren Verlauf.** Der Kicker über dem Hero
 kam auf Rauls hellem Artwork auf **1,37 : 1** — unlesbar. Der untere Teil von
@@ -487,7 +469,8 @@ Verhaltenszweig. Zwei Schalter steuern alles:
    ist dort die *große* Ansicht, `100svh` die kleine. `.hero__pin` und `.scrub__sticky`
    rechnen in `svh`, die Gesamthöhen standen aber in `vh` — dadurch passte die Ausblend-Staffel
    nicht zur tatsächlichen Scrollstrecke. Im Mobil-Block stehen beide Höhen in `svh`
-   (Hero 240/205 svh, Scrub 250/215 svh; am Desktop unverändert 320/400 vh).
+   (Hero 240/205 svh). **Die Scroll-Videos sind davon ausgenommen** — siehe unten,
+   „Scroll-Videos brauchen überall 400 svh".
 2. **`resize` beim Ein- und Ausblenden der URL-Leiste.** Dasselbe Ausblenden löst ein `resize`
    aus, obwohl sich am Layout nichts geändert hat. `scrollStage` setzte dabei Ist- und Sollwert
    hart gleich — sichtbarer Sprung bei jedem Richtungswechsel. Jetzt wird bei einer **reinen
@@ -498,6 +481,29 @@ Verhaltenszweig. Zwei Schalter steuern alles:
 4. **Video-Dekoder.** Android-Geräte halten nur eine Handvoll gleichzeitiger Video-Dekoder
    bereit; danach bleibt das nächste Video schwarz. Deshalb das Limit von 2 Charakter-Loops
    plus den einen Scroll-Clip.
+
+### Scroll-Videos brauchen überall 400 svh
+
+Auf dem Handy waren die Scroll-Videos eine Zeit lang auf 250 bzw. 215 svh gekürzt.
+Ergebnis: **Die Animation war auf dem Handy nicht zu sehen** — Trailer und Story lagen
+direkt übereinander, das Video dazwischen im Verborgenen. Im Desktop-Modus des Handys
+ging es, weil dort die breiten Regeln greifen.
+
+Das freie Fenster, in dem das Video weder vom Abschnitt davor noch von der Karte
+danach verdeckt wird:
+
+```
+frei = Höhe − 200svh − --rise
+```
+
+| | Höhe | `--rise` | frei |
+|---|---:|---:|---:|
+| Desktop | 400 | 130 | **+70 svh** |
+| Handy (vorher) | 215 | 130 | **−115 svh** — Überlappung |
+| Handy (jetzt) | 400 | 130 | **+70 svh** |
+
+Gemessen danach auf sechs Ansichten (Desktop bis Handy quer): überall 0,70 Bildschirme.
+Wer die Höhe kürzt, muss `--rise` bei `#story` und `#news` im selben Zug senken.
 
 ### Startbildschirm
 

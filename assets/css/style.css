@@ -372,7 +372,10 @@ p strong{ color:var(--fg); font-weight:700; }
 /* Der Abschnitt beginnt eine Bildschirmhöhe früher als der Trailer endet.
    Dadurch liegt das Video schon hinter den letzten Trailer-Karten und wird
    beim Scrollen langsam eingeblendet. */
-.scrub{ position:relative; z-index:0; height:400vh; margin-top:-100svh; }
+/* svh statt vh: auf dem Desktop identisch, auf dem Handy passt die Höhe
+   dann zum margin-top in svh. Bei gemischten Einheiten hinge das freie
+   Fenster für das Video an der URL-Leiste. Rechnung dazu siehe M6. */
+.scrub{ position:relative; z-index:0; height:400svh; margin-top:-100svh; }
 .scrub__sticky{
   position:sticky; top:0; height:100svh; overflow:hidden;
   opacity:var(--v-in, 1);
@@ -1017,7 +1020,6 @@ p strong{ color:var(--fg); font-weight:700; }
   .ue-grid{ grid-template-columns:repeat(2,1fr); }
   .gallery{ grid-template-columns:repeat(2,1fr); }
 
-  .scrub{ height:340vh; }
   .hero{ height:280vh; }
 }
 @media (max-width:560px){
@@ -1217,14 +1219,24 @@ html{ overscroll-behavior-y:none; }
 }
 
 /* ══════════ M6 · Scroll-Videos auf dem Handy ══════════ */
-/* Gleiche Rechnung wie beim Hero: alles in svh, und die Strecke kürzer,
-   damit ein kurzer Clip nicht vier Bildschirmhöhen Wischen kostet. */
-@media (max-width:860px){
-  .scrub{ height:250svh; margin-top:-100svh; }
-}
-@media (max-width:560px){
-  .scrub{ height:215svh; }
-}
+/* Bewusst KEINE kürzere Strecke auf dem Handy — die gab es hier einmal
+   (250 bzw. 215 svh) und sie hat das Video komplett unsichtbar gemacht.
+
+   Das freie Fenster, in dem das Video weder vom Abschnitt davor noch von
+   der Karte danach verdeckt wird, ist:
+
+       frei = Höhe − 200svh − --rise
+
+   (100 svh gehen an den negativen margin-top, weitere 100 an die Karte,
+   die schon ins Bild kommt, bevor sie oben ansteht.) Mit --rise 130 aus
+   #story/#news ergab das auf dem Handy 215 − 200 − 130 = −115 svh: die
+   Story lag über eine Bildschirmhöhe lang schon über dem Trailer, das
+   Video dazwischen war nie zu sehen. Am Desktop — und im Desktop-Modus
+   des Handys — sind es 400 − 200 − 130 = +70 svh.
+
+   Die Höhe steht deshalb überall auf 400svh (siehe .scrub oben). Wer sie
+   kürzen will, muss --rise im selben Zug senken, sonst verschwindet das
+   Video wieder. */
 
 /* ══════════ M7 · Inhalte ══════════ */
 /* Filter- und Tab-Leisten werden zum wischbaren Streifen statt zu einem
@@ -1344,7 +1356,8 @@ html{ overscroll-behavior-y:none; }
   .hero__platforms{ display:none; }
   .hero__scroll{ display:none; }
 
-  .scrub{ height:200svh; }
+  /* Kein kürzeres .scrub im Querformat — 200 svh ergäben ein freies
+     Fenster von −130 svh, das Video wäre unsichtbar (Rechnung in M6). */
   .lb__fig img{ max-height:70dvh; }
   .modal, .lightbox{ padding-top:calc(var(--nav-h) + 4px); }
 
