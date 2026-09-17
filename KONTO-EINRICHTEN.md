@@ -11,6 +11,18 @@ Solange das nicht eingerichtet ist:
 - **localhost** (eigener Rechner) läuft ein **Demo-Modus**: alles funktioniert,
   gespeichert wird aber nur im Browser, und es gehen keine Mails raus
 
+## 0 · Vorher: HTTPS für luciajason.de einschalten
+
+Am 17.09.2026 lief die Seite nur über **http://** — unter https:// lieferte GitHub ein
+Zertifikat für github.com statt für luciajason.de (der Browser warnt dann). Mit Passwörtern
+darf das so nicht live gehen.
+
+1. <https://github.com/VRTomsky/gta6-website/settings/pages> öffnen
+2. Steht dort ein Hinweis, dass das Zertifikat noch nicht fertig ist: unter
+   **Custom domain** die Domain entfernen, speichern, wieder `luciajason.de` eintragen,
+   speichern — GitHub stellt das Zertifikat dann neu aus (dauert bis zu einer Stunde)
+3. Sobald möglich: Haken bei **Enforce HTTPS** setzen
+
 ## 1 · Projekt anlegen
 
 1. <https://console.firebase.google.com> öffnen, mit dem Google-Konto anmelden
