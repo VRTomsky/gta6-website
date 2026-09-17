@@ -144,12 +144,11 @@ WAS BISHER GEMACHT WURDE
 8. News aktualisiert auf den 17.09.2026: GTA-VI-Controller von
    PlayStation, "keine Mikrotransaktionen", Stand der Leaks.
 
-9. Kontosystem (17.09.2026): Fertig gebaut und getestet, läuft über
-   Firebase (Google, kostenlos). NOCH NICHT LIVE - der Nutzer muss
-   dafür einmal ein Firebase-Projekt anlegen, Anleitung in
-   KONTO-EINRICHTEN.md. Bis dahin ist auf luciajason.de nichts davon
-   zu sehen; auf dem eigenen Rechner läuft ein Demo-Modus.
-   Außerdem neu: datenschutz.html (Name/Anschrift fehlen noch).
+9. Kontosystem (17.09.2026): Live auf luciajason.de, läuft über
+   Firebase (Google, kostenlos, Projekt luciajason-27a74). Einrichtung
+   und Verwaltung in KONTO-EINRICHTEN.md.
+   Außerdem neu: datenschutz.html - bewusst ohne Name und Anschrift,
+   weil die Seite nur für den Nutzer und seine Freunde ist.
    Newsletter-Anmeldungen werden gesammelt, verschickt wird noch
    nichts - dafür braucht es später einen Mail-Dienst.
 

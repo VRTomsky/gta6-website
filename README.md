@@ -77,7 +77,7 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 | `datenschutz.html` | Datenschutzerklärung (DE/EN) |
 | `assets/js/i18n.js` | Sprachwahl Deutsch/Englisch, steht im `<head>` jeder Seite |
 | `assets/js/data.en.js` | Englische Fassung der Inhalte aus `data.js` |
-| `assets/js/konto-config.js` | Firebase-Zugangsdaten und Verantwortlicher (Datenschutz) |
+| `assets/js/konto-config.js` | Firebase-Zugangsdaten und Schalter `live` |
 | `assets/js/konto/` | Kontosystem: `backend.js`, `konto.js` (Nav + Dialog), `profil.js` |
 | `assets/js/seite.js` | Gemeinsames für `konto.html` und `datenschutz.html` |
 | `assets/css/konto.css` | Anmelde-Knopf, Dialog, Kontoseite, Datenschutzseite |
@@ -168,10 +168,10 @@ Freiwillig und kostenlos: Registrieren mit E-Mail oder Google, Profil mit Benutz
 Beschreibung, Lieblingsfigur und Profilbild (eigenes Foto oder eine von neun Vorlagen),
 Newsletter-Anmeldung, Konto selbst löschen. Oben rechts in der Nav sitzt der Anmelde-Knopf.
 
-Das läuft über **Firebase** (Google). Solange `assets/js/konto-config.js` keine
-Firebase-Werte enthält, zeigt luciajason.de **keinen** Anmelde-Knopf; auf dem eigenen Rechner
-läuft stattdessen ein **Demo-Modus**, der alles nur im Browser speichert. Einrichten:
-**`KONTO-EINRICHTEN.md`**.
+Das läuft über **Firebase** (Google, Projekt `luciajason-27a74`) und ist seit 17.09.2026
+live. `live: false` in `assets/js/konto-config.js` nimmt den Anmelde-Knopf wieder von der
+öffentlichen Seite. Ohne Firebase-Werte liefe auf dem eigenen Rechner ein **Demo-Modus**.
+Einrichtung und Verwaltung: **`KONTO-EINRICHTEN.md`**.
 
 ## Schriften
 

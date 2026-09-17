@@ -511,14 +511,9 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 .ds__abschnitt ul{ margin:0 0 1.1em; padding-left:1.2em; }
 .ds__abschnitt li{ margin-bottom:.4em; }
 .ds a{ color:var(--pink); }
-.ds__adresse{
-  padding:16px 20px; border-radius:16px; line-height:1.75;
-  background:var(--surf); border:1px solid var(--line); color:var(--fg);
-}
-.ds__offen{ padding:1px 7px; border-radius:6px; background:rgba(255,154,77,.12); color:#ffc796; }
 
-/* Der Footer-Link zum Datenschutz erscheint erst mit dem Kontosystem —
-   bis dahin stehen dort noch Platzhalter für den Verantwortlichen. */
+/* Der Footer-Link zum Datenschutz erscheint nur mit dem Kontosystem —
+   ohne Konten gibt es nichts, worüber die Seite aufklären müsste. */
 .footer a[href="datenschutz.html"]{ display:none; }
 html.konto-an .footer a[href="datenschutz.html"]{ display:inline; }
 

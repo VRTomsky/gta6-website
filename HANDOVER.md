@@ -56,8 +56,8 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.l
 | `assets/js/char.js` | 700 | Baut alle acht Akten, ein Scroll-Motor für alle, Einstiegssprung, Lightbox |
 | `assets/js/i18n.js` | 125 | Sprachwahl, `data-en`-Einsetzen, `L()` — im `<head>` jeder Seite |
 | `assets/js/data.en.js` | 480 | Englische Texte zu `data.js` |
-| `assets/js/seite.js` | 70 | Menü, Countdown-Pille, Verantwortlicher — für `konto.html` und `datenschutz.html` |
-| `assets/js/konto-config.js` | 55 | Firebase-Werte, Schalter `live` (noch `false`) und Verantwortlicher |
+| `assets/js/seite.js` | 55 | Menü, Countdown-Pille — für `konto.html` und `datenschutz.html` |
+| `assets/js/konto-config.js` | 50 | Firebase-Werte und Schalter `live` |
 | `assets/js/konto/backend.js` | 430 | Firebase **oder** Demo-Modus hinter derselben Schnittstelle |
 | `assets/js/konto/konto.js` | 590 | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
 | `assets/js/konto/profil.js` | 570 | Kontoseite |
@@ -116,7 +116,7 @@ in der passenden Liste eintragen, sonst nichts.
 - **Mobil:** eigener Verhaltenszweig für Touch — Details im Abschnitt „Mobil / Android"
 - **Deutsch / Englisch:** Schalter oben rechts, Direktlink `?lang=en` — Abschnitt „Sprache"
 - **Benutzerkonten:** Anmelden per E-Mail oder Google, Profil, Newsletter — Abschnitt
-  „Benutzerkonten" (gebaut, wartet auf das Firebase-Projekt)
+  „Benutzerkonten" (live seit 17.09.2026)
 - Geprüft auf 375×812, 812×375 (quer), 1280 und 1440 px
 
 ## Technische Fallstricke — das Wichtigste für Nachfolger
@@ -540,17 +540,17 @@ selbst löschen. Anmelde-Knopf bzw. Profilbild oben rechts in der Nav, Kontoseit
 
 ### Stand
 
-**Gebaut und getestet, aber noch nicht live.** Firebase-Projekt `luciajason-27a74` existiert,
-die Werte stehen in `konto-config.js`, dort aber `live: false`. In der Konsole fehlen noch
-Anmeldung, Datenbank und Regeln — aktueller Stand als Tabelle in `KONTO-EINRICHTEN.md`.
-Nachprüfen ohne Anmeldung (nur lesend):
+**Live seit 17.09.2026.** Firebase-Projekt `luciajason-27a74`: E-Mail/Passwort und Google
+aktiv, autorisierte Domains `luciajason.de` und `www.luciajason.de`, Firestore in Frankfurt mit
+den Regeln aus `firestore.rules`, bei GitHub „Enforce HTTPS" an. `konto-config.js` steht auf
+`live: true`. Nachprüfen ohne Anmeldung (nur lesend):
 `identitytoolkit/v3/relyingparty/getProjectConfig?key=…` (Anmeldung eingerichtet?) und
 `firestore.googleapis.com/v1/projects/luciajason-27a74/databases/(default)/documents/usernames/x?key=…`
 (richtige Regeln: 404 bei `usernames`, 403 bei `users`).
 
 Firestore wartet bei fehlender Datenbank oder Verbindung still und endlos — jede
 Firestore-Anfrage hat deshalb eine Frist (12 s lesen, 15 s schreiben), danach „Server nicht
-erreichbar". Echte Konten gibt es nie über http:// (außer localhost). Bis `live: true`:
+erreichbar". Echte Konten gibt es nie über http:// (außer localhost). Mit `live: false`:
 
 | Wo | Verhalten |
 |---|---|
@@ -563,8 +563,9 @@ Geprüft im Demo-Modus: Registrieren, falsches Passwort, Anmelden, Google, Namen
 Profil speichern, Namensprüfung live, eigenes Bild (1,3 MB PNG → 35 KB JPEG), Newsletter mit
 und ohne bestätigte Adresse, Konto löschen, Englisch, 390 px und 1440 px, Nav-Breiten
 1040/1181/1281 px. Gegen Firebase selbst nur mit einem ungültigen Schlüssel: Module laden vom
-CDN, Anmeldestatus kommt, Anfragen erreichen Google. **Die Sicherheitsregeln sind noch nicht
-gegen einen echten Server gelaufen** — nach dem Einrichten einmal alles durchklicken.
+CDN, Anmeldestatus kommt, Anfragen erreichen Google. Gegen das echte Projekt nur lesend
+(Regeln: `usernames` 404, `users`/`newsletter` 403; Google-Anbieter aktiv). **Registrieren mit
+echtem Konto testet der Nutzer selbst** — Testkonten legt Claude nicht an.
 
 ### Aufbau
 
@@ -676,9 +677,11 @@ Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. Die Sei
 aber privat und nicht kommerziell. Der Footer trägt den entsprechenden Hinweis samt
 Alterskennzeichnung.
 
-**Datenschutz:** `datenschutz.html` ist geschrieben, unter „Wer verantwortlich ist" fehlen aber
-noch **Name, Anschrift und E-Mail** des Betreibers (`konto-config.js → betreiber`). Bis dahin
-steht dort ein Platzhalter, die Seite trägt `noindex`, und der Footer-Link erscheint erst, wenn
-das Kontosystem aktiv ist (`html.konto-an`). Keine Rechtsberatung — vor dem Start der Konten
-gegenlesen lassen. Offener Punkt: Google Fonts wird von Googles Servern geladen; selbst
-gehostete Schriften wären datenschutzrechtlich sauberer.
+**Datenschutz:** `datenschutz.html` beschreibt Hosting, Schriften, Videos, Speicherung im
+Browser, Konten und Newsletter. **Name, Anschrift und E-Mail eines Verantwortlichen stehen dort
+auf Wunsch des Nutzers nicht** — die Seite ist privat, nicht bei Google gelistet und nur für
+Freunde gedacht. Die DSGVO verlangt die Angabe bei öffentlich erreichbaren Seiten mit Konten
+eigentlich trotzdem; darauf wurde hingewiesen, der Nutzer hat sich dagegen entschieden. Der
+Footer-Link erscheint nur bei aktivem Kontosystem (`html.konto-an`). Keine Rechtsberatung.
+Offener Punkt: Google Fonts wird von Googles Servern geladen; selbst gehostete Schriften wären
+datenschutzrechtlich sauberer.

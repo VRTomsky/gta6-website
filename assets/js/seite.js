@@ -51,20 +51,4 @@ if (typeof RELEASE !== "undefined") {
   setInterval(tick, 60000);
 }
 
-/* ── Verantwortlicher auf der Datenschutzseite ── */
-const betreiber = (window.KONTO_CONFIG && KONTO_CONFIG.betreiber) || {};
-document.querySelectorAll("[data-betreiber]").forEach(el => {
-  const feld = el.getAttribute("data-betreiber");
-  const wert = String(betreiber[feld] || "").trim();
-  if (!wert) return;
-  el.classList.remove("ds__offen");
-  if (feld === "email") {
-    const a = document.createElement("a");
-    a.href = "mailto:" + wert;
-    a.textContent = wert;
-    el.replaceChildren(a);
-  } else {
-    el.textContent = wert;
-  }
-});
 })();

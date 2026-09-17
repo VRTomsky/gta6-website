@@ -44,17 +44,7 @@ window.KONTO_CONFIG = {
     appId: "1:1066000420072:web:110afd1d9d5c2479fe8d5d"
   },
 
-  /* Konten auf luciajason.de zeigen. Erst einschalten, wenn in der
-     Firebase-Konsole Anmeldung, Datenbank und Regeln stehen
-     (KONTO-EINRICHTEN.md, Schritte 3–5) und der Verantwortliche unten
-     eingetragen ist. */
-  live: false,
-
-  /* Verantwortlicher für die Datenschutzerklärung (datenschutz.html).
-     Pflicht, bevor die Konten öffentlich starten. */
-  betreiber: {
-    name: "",
-    anschrift: "",
-    email: ""
-  }
+  /* Konten auf luciajason.de zeigen. Auf false gesetzt verschwindet der
+     Anmelde-Knopf wieder von der öffentlichen Seite (localhost bleibt an). */
+  live: true
 };

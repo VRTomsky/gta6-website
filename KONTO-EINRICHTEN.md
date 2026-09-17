@@ -23,11 +23,11 @@ Solange das nicht eingerichtet ist:
 | 4 · Datenbank anlegen | ✅ |
 | 5 · Sicherheitsregeln | ✅ geprüft: `usernames` lesbar, `users`/`newsletter` gesperrt |
 | 6 · Öffentlicher Name | ✅ |
-| 7 · Verantwortlicher für den Datenschutz | ⬜ |
-| `live: true` in `konto-config.js` | ⬜ erst wenn 3–7 stehen |
+| 7 · Verantwortlicher für den Datenschutz | — bewusst weggelassen (Entscheidung des Nutzers, privat für Freunde) |
+| `live: true` in `konto-config.js` | ✅ seit 17.09.2026 |
 
-Solange `live: false` steht, sieht auf luciajason.de niemand etwas vom Kontosystem. Auf
-**localhost** spricht die Seite schon mit dem echten Firebase-Projekt.
+Mit `live: false` verschwindet der Anmelde-Knopf wieder von luciajason.de; **localhost**
+spricht in beiden Fällen mit dem echten Firebase-Projekt.
 
 ## 0 · HTTPS erzwingen
 
@@ -136,15 +136,14 @@ Ist in Schritt 3 unter Punkt 8 schon erledigt. Falls dort nicht zu sehen:
 **<https://console.firebase.google.com/project/luciajason-27a74/settings/general>** →
 **„Öffentlicher Name"** → Stift-Symbol → `luciajason.de` → Speichern
 
-## 7 · Datenschutz vervollständigen
+## 7 · Datenschutz
 
-Mit Konten und Newsletter verarbeitet die Seite personenbezogene Daten — die
-Datenschutzerklärung (`datenschutz.html`) braucht deshalb **Name, Anschrift und
-E-Mail** des Verantwortlichen. Einzutragen in `assets/js/konto-config.js` unter
-`betreiber`. Danach in `datenschutz.html` die Zeile
-`<meta name="robots" content="noindex">` entfernen.
-
-Die Erklärung ist sorgfältig formuliert, aber **keine Rechtsberatung**.
+`datenschutz.html` beschreibt, was die Seite speichert. Name und Anschrift eines
+Verantwortlichen stehen dort **auf Wunsch des Nutzers nicht** — die Seite ist privat und
+nur für Freunde gedacht. Rechtlich verlangt die DSGVO diese Angabe bei einer öffentlich
+erreichbaren Seite mit Konten eigentlich trotzdem; soll die Seite breiter bekannt werden,
+Abschnitt 1 der Datenschutzerklärung um Name, Anschrift und E-Mail ergänzen.
+Keine Rechtsberatung.
 
 ## Danach
 
@@ -164,7 +163,7 @@ Datenschutzerklärung ergänzt werden.
 
 | Datei | Rolle |
 |---|---|
-| `assets/js/konto-config.js` | Firebase-Werte und Verantwortlicher |
+| `assets/js/konto-config.js` | Firebase-Werte und Schalter `live` |
 | `assets/js/konto/backend.js` | Firebase **oder** Demo-Modus, gleiche Schnittstelle |
 | `assets/js/konto/konto.js` | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
 | `assets/js/konto/profil.js` | die Kontoseite `konto.html` |
