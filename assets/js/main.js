@@ -729,7 +729,6 @@ function cardRise(card) {
   if (!liste || !window.Newswire) return;
   const ANZAHL = 4;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const sichereUrl = u => /^https:\/\/(www\.)?rockstargames\.com\//.test(u) ? u : "https://www.rockstargames.com/newswire";
   const sicheresBild = u => /^https:\/\/media-rockstargames-com\.akamaized\.net\//.test(u) ? u : "";
 
   Newswire.beobachten((daten, vorher) => {
@@ -739,7 +738,7 @@ function cardRise(card) {
       const bild = sicheresBild(m.bild);
       const frisch = vorher && !vorher.includes(m.id);
       return `
-        <a class="nitem ${bild ? "nitem--bild" : ""} ${frisch ? "nitem--frisch" : ""}" href="${esc(sichereUrl(m.url))}" target="_blank" rel="noopener noreferrer">
+        <a class="nitem ${bild ? "nitem--bild" : ""} ${frisch ? "nitem--frisch" : ""}" href="${esc(Newswire.url(m))}" target="_blank" rel="noopener noreferrer">
           ${bild ? `<img class="nitem__bild" src="${esc(bild)}" alt="" loading="lazy" decoding="async">` : ""}
           <span>
             <time datetime="${esc(m.datum)}">${esc(t.datum)}</time>${Newswire.istNeu(m) ? `<span class="nitem__neu">${L("NEU", "NEW")}</span>` : ""}

@@ -65,7 +65,9 @@ service cloud.firestore {
         && d.cover is string && d.cover.matches('^(preset:[a-z-]{2,20}|eigen)$')
         && d.plattform in ['', 'ps5', 'xbox']
         && d.edition in ['', 'standard', 'ultimate']
-        && d.vorfreude in ['', 'story', 'vice-city', 'ueberfaelle', 'autos', 'online', 'musik']
+        // Kennungen statt fester Liste: Neue Auswahlmöglichkeiten kosten
+        // dann keine neue Veröffentlichung der Regeln
+        && d.vorfreude is string && d.vorfreude.matches('^([a-z-]{2,20})?$')
         && d.lieblingsort is string && d.lieblingsort.matches('^([a-z-]{2,20})?$')
         && d.gamertag is string && d.gamertag.matches('^[A-Za-z0-9 _.-]{0,24}$');
     }

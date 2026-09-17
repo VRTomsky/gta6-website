@@ -24,6 +24,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { backendWaehlen, istDemo, KontoFehler } from "./backend.js";
+import { titelVergessen } from "./titelcache.js";
 
 export const L = window.L || (de => de);
 export const LANG = window.LANG || "de";
@@ -202,6 +203,8 @@ export function kontoWechseln(slot, ziel) {
 export async function kontoEntfernen(slot) {
   const liste = kontenLesen();
   const warAktiv = slot === zustand.slot;
+  const weg = liste.konten.find(k => k.slot === slot);
+  if (weg) titelVergessen(weg.uid);
   liste.konten = liste.konten.filter(k => k.slot !== slot);
   if (warAktiv) liste.aktiv = liste.konten.length ? liste.konten[0].slot : "standard";
   kontenSchreiben(liste);
@@ -281,6 +284,8 @@ async function start() {
     if (!nutzer) {
       const liste = kontenLesen();
       if (liste.konten.some(k => k.slot === zustand.slot)) {
+        const weg = liste.konten.find(k => k.slot === zustand.slot);
+        if (weg) titelVergessen(weg.uid);
         liste.konten = liste.konten.filter(k => k.slot !== zustand.slot);
         if (liste.konten.length) {
           liste.aktiv = liste.konten[0].slot;

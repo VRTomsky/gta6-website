@@ -9,7 +9,9 @@
 
    ── Profil ansehen (konto.html) ──
    Das eigene Titelbild liegt fest hinter der ganzen Seite; beim Scrollen
-   läuft nur der Inhalt darüber. Oben Profilbild, Name, Beschreibung, dann
+   läuft nur der Inhalt darüber. Es steht außerhalb von kontoRoot und
+   kommt aus dem Zwischenspeicher (titelcache.js), damit es sofort da ist
+   und nicht erst die Vorlage zu sehen war. Oben Profilbild, Name, Beschreibung, dann
    Countdown und Steckbrief, Lieblingsfigur und -ort, Gamertag, Vorfreude
    und die neuesten Meldungen vom Rockstar Newswire.
 
@@ -27,9 +29,10 @@
 
 import {
   zustand, abonnieren, profilSetzen, L, LANG, esc, avatarUrl, titelUrl, meldung,
-  datumMonat, VORLAGEN, TITEL_VORLAGEN, TITEL_STANDARD, NAME_MUSTER, BIO_MAX
+  datumMonat, kontenLesen, VORLAGEN, TITEL_VORLAGEN, TITEL_STANDARD, NAME_MUSTER, BIO_MAX
 } from "./konto.js";
 import { zuschneiden } from "./zuschnitt.js";
+import { titelLesen, titelMerken, titelVergessen, titelAufraeumen } from "./titelcache.js";
 
 const root = document.getElementById("kontoRoot");
 const FIGUREN = typeof CHARS !== "undefined" ? CHARS : [];
@@ -52,8 +55,56 @@ const VORFREUDE = [
   { id: "ueberfaelle", name: L("Überfälle planen", "Planning heists"),                    bild: "art/jason_lucia_robbery.jpg" },
   { id: "autos",       name: L("Autos & Tuning", "Cars & tuning"),                        bild: "ultimate/ue_cheetah_01.jpg" },
   { id: "online",      name: "GTA Online",                                                 bild: "places/vice_city_05.jpg" },
-  { id: "musik",       name: L("Radio & Soundtrack", "Radio & soundtrack"),               bild: "news/album.jpg" }
+  { id: "musik",       name: L("Radio & Soundtrack", "Radio & soundtrack"),               bild: "news/album.jpg" },
+  { id: "jiggle",      name: "Lucia Jiggle Physics",                                        bild: "duo/duo_10.jpg" }
 ];
+
+/* Ein Ort, den es in der Leonida-Übersicht nicht gibt — Spaß-Eintrag */
+const SPASS_ORTE = [
+  {
+    id: "jack-of-hearts",
+    name: "Jack of Hearts",
+    sub: L("Stripclub", "Strip club"),
+    badge: L("Crosstown · Vice City", "Crosstown · Vice City"),
+    text: L("Boobie Ikes Club in Crosstown und der bekannteste Stripclub in Vice City — aus beiden Trailern und den offiziellen Bildern. Mit dem, was hier hereinkommt, finanziert er sein Tonstudio Only Raw Records. Ein zweiter, kleinerer Laden außerhalb der Stadt ist bisher nur aus Leaks bekannt.",
+            "Boobie Ike’s club in Crosstown and the best-known strip club in Vice City — seen in both trailers and the official screenshots. What comes in here funds his recording studio, Only Raw Records. A second, smaller place outside the city so far only shows up in leaks."),
+    shots: ["places/vice_city_07.jpg"],
+    ziel: "charakter.html?c=boobie",
+    zielText: L("Boobies Akte", "Boobie’s file")
+  }
+];
+const ALLE_ORTE = () => ORTE.concat(SPASS_ORTE);
+
+/* ── Titelbild-Hintergrund ──
+   Eigenes Element neben der Seite: So bleibt das Bild stehen, wenn
+   kontoRoot neu gezeichnet wird, und es kann schon hängen, bevor
+   Firebase geantwortet hat. */
+const hintergrund = document.createElement("div");
+hintergrund.className = "kbg";
+hintergrund.setAttribute("aria-hidden", "true");
+hintergrund.hidden = true;
+const seite = document.getElementById("main");
+if (seite && seite.parentNode) seite.parentNode.insertBefore(hintergrund, seite);
+
+let hintergrundUrl = "";
+function hintergrundSetzen(url) {
+  if (!url) {
+    hintergrund.hidden = true;
+    hintergrund.textContent = "";
+    hintergrundUrl = "";
+    return;
+  }
+  if (url !== hintergrundUrl) {
+    hintergrundUrl = url;
+    const bild = new Image();
+    bild.alt = "";
+    bild.decoding = "async";
+    bild.src = url;
+    hintergrund.textContent = "";
+    hintergrund.appendChild(bild);
+  }
+  hintergrund.hidden = false;
+}
 
 let gebautFuer = null;       // uid, für den die Seite gerade steht
 let newsletterAn = false;
@@ -68,6 +119,23 @@ let eigen = { avatar: "", titel: "" };
 let quellen = { avatar: null, titel: null };
 let titelGespeichert = "";   // eigenes Titelbild, wie es in der Datenbank liegt
 let titelGeladen = false;
+let zwischen = null;         // Titelbild aus dem Zwischenspeicher: { uid, cover, daten, stand }
+
+/* Noch bevor klar ist, wer angemeldet ist: das zuletzt gesehene Titelbild
+   des aktiven Kontos zeigen. Die uid dazu steht in der Kontoliste. */
+(function sofortZeigen() {
+  const liste = kontenLesen();
+  titelAufraeumen(liste.konten.map(k => k.uid));
+  const aktiv = liste.konten.find(k => k.slot === liste.aktiv) || liste.konten[0];
+  if (!aktiv || !aktiv.uid) return;
+  titelLesen(aktiv.uid).then(e => {
+    if (!e) return;
+    zwischen = { uid: aktiv.uid, cover: e.cover, daten: e.daten, stand: e.stand };
+    if (gebautFuer) return;                       // Seite steht schon
+    document.body.classList.add("hat-titelbild");
+    hintergrundSetzen(titelUrl(e.cover, e.daten));
+  });
+})();
 
 abonnieren(zeichnen);
 addEventListener("hashchange", () => { if (gebautFuer) modusSetzen(true); });
@@ -92,6 +160,7 @@ function leer(art) {
   gebautFuer = null;
   clearInterval(uhr);
   document.body.classList.remove("hat-titelbild");
+  hintergrundSetzen("");
   document.title = L("Mein Konto", "My account") + " — Grand Theft Auto VI";
 
   if (art === "aus") {
@@ -172,9 +241,17 @@ function seiteBauen(z) {
   titelGeladen = false;
   document.body.classList.add("hat-titelbild");
 
-  root.innerHTML = `
-    <div class="kbg" aria-hidden="true"><img data-k="titel" src="${esc(titelUrl(wahl.titel, ""))}" alt=""></div>
+  /* Bild aus dem Zwischenspeicher gilt sofort. Hat sich das Profil seither
+     nicht geändert, muss aus der Datenbank gar nichts mehr kommen. */
+  if (zwischen && zwischen.uid === nutzer.uid) {
+    eigen.titel = zwischen.daten || "";
+    if (zwischen.stand && profil.stand && zwischen.stand === profil.stand) {
+      titelGespeichert = eigen.titel;
+      titelGeladen = true;
+    }
+  }
 
+  root.innerHTML = `
     <section class="khero">
       <div class="khero__inner">
         <img class="khero__av" data-k="av" src="" alt="" width="164" height="164">
@@ -232,7 +309,7 @@ function seiteBauen(z) {
             <legend class="kf__l">${L("Über dich", "About you")}</legend>
             <div class="kfelder">
               ${auswahlFeld("favChar", L("Lieblingsfigur", "Favorite character"), FIGUREN.map(f => ({ id: f.id, name: f.name })), profil.favChar)}
-              ${auswahlFeld("lieblingsort", L("Lieblingsort", "Favorite place"), ORTE.map(o => ({ id: o.id, name: o.name })), profil.lieblingsort)}
+              ${auswahlFeld("lieblingsort", L("Lieblingsort", "Favorite place"), ALLE_ORTE().map(o => ({ id: o.id, name: o.name })), profil.lieblingsort)}
               ${auswahlFeld("plattform", L("Plattform", "Platform"), PLATTFORMEN, profil.plattform)}
               ${auswahlFeld("edition", L("Edition", "Edition"), EDITIONEN, profil.edition)}
               ${auswahlFeld("vorfreude", L("Am meisten freue ich mich auf", "Most excited about"), VORFREUDE, profil.vorfreude)}
@@ -299,8 +376,17 @@ function seiteBauen(z) {
     });
   }
 
-  /* Das eigene Titelbild liegt getrennt und kommt nach */
+  /* Das eigene Titelbild liegt getrennt. Steht es schon aus dem
+     Zwischenspeicher und hat sich das Profil nicht geändert, sparen wir
+     uns das Laden ganz. */
   const uid = nutzer.uid;
+  if (titelGeladen) {
+    if (wahl.titel === "eigen" && !eigen.titel) wahl.titel = STANDARD.titel;
+    bildAuswahlZeichnen("titel");
+    kopfAuffrischen(zustand);
+    titelMerken(uid, { cover: profil.cover, daten: eigen.titel, stand: profil.stand });
+    return;
+  }
   zustand.backend.titelbildLaden(uid).then(daten => {
     if (gebautFuer !== uid) return;
     eigen.titel = daten || "";
@@ -309,6 +395,7 @@ function seiteBauen(z) {
     if (wahl.titel === "eigen" && !eigen.titel) wahl.titel = STANDARD.titel;
     bildAuswahlZeichnen("titel");
     kopfAuffrischen(zustand);
+    titelMerken(uid, { cover: zustand.profil.cover, daten: eigen.titel, stand: zustand.profil.stand });
   }).catch(() => {
     if (gebautFuer !== uid) return;
     bildAuswahlZeichnen("titel");
@@ -344,8 +431,9 @@ function kopfAuffrischen({ nutzer, profil }) {
   document.title = profil.username + " — Grand Theft Auto VI";
   /* Bilder aus der aktuellen Auswahl — Vorschau vor dem Speichern */
   q("av").src = avatarUrl(wahl.avatar, eigen.avatar);
-  const titel = titelUrl(wahl.titel, eigen.titel);
-  if (q("titel").getAttribute("src") !== titel) q("titel").src = titel;
+  /* Eigenes Bild gewählt, aber noch nicht da? Dann lieber nur den dunklen
+     Grund zeigen, statt kurz eine fremde Vorlage. */
+  hintergrundSetzen(wahl.titel === "eigen" && !eigen.titel ? "" : titelUrl(wahl.titel, eigen.titel));
   q("name").textContent = profil.username;
   q("bio").textContent = profil.bio || "";
   q("seit").textContent = profil.createdAt
@@ -381,7 +469,7 @@ function ansichtZeichnen() {
   const plattform = PLATTFORMEN.find(x => x.id === p.plattform);
   const edition = EDITIONEN.find(x => x.id === p.edition);
   const figur = FIGUREN.find(f => f.id === p.favChar);
-  const ort = ORTE.find(o => o.id === p.lieblingsort);
+  const ort = ALLE_ORTE().find(o => o.id === p.lieblingsort);
   const vorfreude = VORFREUDE.find(v => v.id === p.vorfreude);
   const dabei = p.createdAt ? tageZwischen(new Date(p.createdAt), Date.now()) : 0;
   const leerKarte = (kicker, text) => `
@@ -440,7 +528,7 @@ function ansichtZeichnen() {
             <h2 class="kkarte__titel">${esc(ort.name)}</h2>
             <p class="kkarte__zeile">${esc(ort.sub)} · ${esc(ort.badge)}</p>
             <p class="kkarte__text">${esc(ort.text)}</p>
-            <a class="btn btn--ghost" href="index.html#leonida">${L("Nach Leonida", "Explore Leonida")}</a>
+            <a class="btn btn--ghost" href="${esc(ort.ziel || "index.html#leonida")}">${ort.zielText || L("Nach Leonida", "Explore Leonida")}</a>
           </div>
         </article>` : leerKarte(L("Lieblingsort", "Favorite place"), L("Wo in Leonida fühlst du dich zu Hause?", "Where in Leonida do you feel at home?"))}
     </div>
@@ -472,13 +560,7 @@ function ansichtZeichnen() {
           <b>${L("Damit dich andere in Leonida finden", "So others can find you in Leonida")}</b>
         </a>`}
 
-      <a class="kmini ${newsletterAn ? "kmini--an" : ""}" href="#bearbeiten">
-        <div>
-          <span class="kicker">Newsletter</span>
-          <b>${newsletterAn ? L("Du bekommst alle GTA-VI-News", "You’re getting all GTA VI news") : L("Noch nicht abonniert", "Not subscribed yet")}</b>
-        </div>
-        <span class="kmini__punkt" aria-hidden="true"></span>
-      </a>
+      ${newsletterKachel()}
     </div>
 
     <section class="kbox knews">
@@ -502,15 +584,35 @@ function ansichtZeichnen() {
   uhr = setInterval(tick, 1000);
 }
 
+/* Der Newsletter-Stand kommt erst nach dem Zeichnen — deshalb steht die
+   Kachel für sich und wird einzeln nachgezogen. */
+function newsletterKachel() {
+  return `
+    <a class="kmini ${newsletterAn ? "kmini--an" : ""}" href="#bearbeiten" data-k="newsletter">
+      <div>
+        <span class="kicker">Newsletter</span>
+        <b>${newsletterAn ? L("Du bekommst alle GTA-VI-News", "You’re getting all GTA VI news") : L("Noch nicht abonniert", "Not subscribed yet")}</b>
+      </div>
+      <span class="kmini__punkt" aria-hidden="true"></span>
+    </a>`;
+}
+
+function newsletterKachelAuffrischen() {
+  const alt = root.querySelector('[data-k="newsletter"]');
+  if (!alt) return;
+  const hilfe = document.createElement("div");
+  hilfe.innerHTML = newsletterKachel();
+  alt.replaceWith(hilfe.firstElementChild);
+}
+
 function newswireHtml() {
   if (!newswire || !window.Newswire) return `<p class="kf__h">${L("Meldungen werden geladen …", "Loading news …")}</p>`;
   const bildOk = u => /^https:\/\/media-rockstargames-com\.akamaized\.net\//.test(u) ? u : "";
-  const urlOk = u => /^https:\/\/(www\.)?rockstargames\.com\//.test(u) ? u : "https://www.rockstargames.com/newswire";
   return newswire.meldungen.slice(0, 3).map(m => {
     const t = Newswire.text(m);
     const bild = bildOk(m.bild);
     return `
-      <a class="knews__eintrag" href="${esc(urlOk(m.url))}" target="_blank" rel="noopener noreferrer">
+      <a class="knews__eintrag" href="${esc(Newswire.url(m))}" target="_blank" rel="noopener noreferrer">
         ${bild ? `<img src="${esc(bild)}" alt="" loading="lazy">` : ""}
         <span>
           <time datetime="${esc(m.datum)}">${esc(t.datum)}</time>${Newswire.istNeu(m) ? `<i class="nitem__neu">${L("NEU", "NEW")}</i>` : ""}
@@ -721,6 +823,9 @@ function profilFormular() {
     try {
       await zustand.backend.profilSpeichern(zustand.nutzer.uid, daten, zustand.profil);
       if (titelNeu) titelGespeichert = eigen.titel;
+      /* stand 0: Der Zeitstempel kommt vom Server, beim nächsten Besuch
+         wird einmal abgeglichen. Das Bild ist trotzdem sofort da. */
+      titelMerken(zustand.nutzer.uid, { cover: daten.cover, daten: eigen.titel, stand: 0 });
       const { coverEigen, ...profil } = daten;
       profilSetzen({ ...profil, createdAt: zustand.profil.createdAt });
       bildAuswahlZeichnen("titel");
@@ -758,6 +863,7 @@ function newsletterEinrichten() {
       status.classList.add("is-schlecht");
     } finally {
       newsletterZeichnen();
+      newsletterKachelAuffrischen();
       kopfAuffrischen(zustand);
     }
   });
@@ -765,6 +871,7 @@ function newsletterEinrichten() {
   zustand.backend.newsletterStatus(zustand.nutzer.uid).then(an => {
     newsletterAn = an;
     newsletterZeichnen();
+    newsletterKachelAuffrischen();
     kopfAuffrischen(zustand);
   });
 }
@@ -916,6 +1023,7 @@ function loeschenEinrichten() {
       } catch (err) {}
     };
     merken(true);
+    titelVergessen(zustand.nutzer.uid);
     try {
       const pw = form.pw ? form.pw.value : "";
       await zustand.backend.kontoLoeschen(zustand.nutzer.uid, zustand.profil, pw);

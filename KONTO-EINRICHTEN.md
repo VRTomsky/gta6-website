@@ -149,8 +149,8 @@ Keine Rechtsberatung.
 
 ## Regeln aktualisieren
 
-Ändert sich `firestore.rules` (zuletzt am 17.09.2026 abends: neue Profilfelder und
-Titelbild in voller Auflösung),
+Ändert sich `firestore.rules` (zuletzt am 17.09.2026 abends: neue Profilfelder, Titelbild
+in voller Auflösung, „Vorfreude" als Muster statt fester Liste),
 müssen die Regeln **neu veröffentlicht** werden — sonst lehnt die Datenbank das Speichern
 des Profils ab:
 
@@ -204,6 +204,7 @@ Datenschutzerklärung ergänzt werden.
 | `assets/js/konto/konto.js` | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog, Konto wechseln |
 | `assets/js/konto/profil.js` | die Kontoseite `konto.html` (Profilansicht, `#bearbeiten`) |
 | `assets/js/konto/zuschnitt.js` | Bild zuschneiden (Profilbild 1 : 1, Titelbild 16 : 9 bis 4K) |
+| `assets/js/konto/titelcache.js` | Titelbild im Browser zwischenspeichern (IndexedDB) |
 | `assets/css/konto.css` | Nav-Knopf, Dialog, Kontoseite, Datenschutzseite |
 | `assets/img/avatars/` | 9 Profilbild-Vorlagen (VI-Logo + 8 Figuren), 256 px |
 | `assets/img/covers/` | 9 Titelbild-Vorlagen, 16 : 9 bis 2560 px, Kacheln in `klein/` |

@@ -15,6 +15,7 @@
      · Statisches HTML trägt die englische Fassung direkt am Element:
          <p data-en="English text">Deutscher Text</p>
          <img alt="…" data-en-alt="…">
+         <a href="…/de/…" data-en-href="…">   Deutsch ist der Normalfall
        `data-en` ersetzt den Inhalt (HTML erlaubt), `data-en-<attr>`
        das gleichnamige Attribut. Beide Sprachen stehen so nebeneinander
        und lassen sich zusammen pflegen.
@@ -64,7 +65,7 @@
   }
 
   var ATTR_AUSWAHL = "[data-en],[data-en-aria-label],[data-en-alt],[data-en-title]," +
-                     "[data-en-content],[data-en-placeholder],[data-en-data-yt-title]";
+                     "[data-en-content],[data-en-placeholder],[data-en-href],[data-en-data-yt-title]";
 
   function anwenden(wurzel) {
     wurzel = wurzel || document;

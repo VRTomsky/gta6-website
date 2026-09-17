@@ -13,6 +13,7 @@
                                Änderung (alle 5 Minuten, nur sichtbarer Tab)
      Newswire.istNeu(meldung)  jünger als 7 Tage
      Newswire.text(meldung)    { titel, datum } in der Sprache der Seite
+     Newswire.url(meldung)     Adresse bei Rockstar, deutsch oder englisch
    ═══════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -75,5 +76,16 @@
     };
   }
 
-  window.Newswire = { laden: laden, beobachten: beobachten, istNeu: istNeu, text: text };
+  /* Rockstar liefert dieselbe Meldung unter /de/ auf Deutsch aus.
+     Fremde Adressen führen sicherheitshalber auf den Newswire. */
+  function url(m) {
+    var u = (m && m.url) || "";
+    if (!/^https:\/\/(www\.)?rockstargames\.com\//.test(u)) u = "https://www.rockstargames.com/newswire";
+    if ((window.LANG || "de") !== "en") {
+      u = u.replace(/^https:\/\/(www\.)?rockstargames\.com\/(?!de\/)/, "https://www.rockstargames.com/de/");
+    }
+    return u;
+  }
+
+  window.Newswire = { laden: laden, beobachten: beobachten, istNeu: istNeu, text: text, url: url };
 })();

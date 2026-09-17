@@ -502,6 +502,22 @@ Service Worker: der würde beim lokalen Entwickeln alte Dateien ausliefern.
 Getestet auf 375×812, 812×375 (quer), 1440×900. Kein waagerechtes Scrollen
 (`document.scrollWidth === clientWidth`), keine Konsolenfehler, Desktop-Werte unverändert.
 
+## Preise und Adressen je Sprache
+
+Die Seite ist zuerst deutsch: Preise stehen in **Euro**, Links führen auf die deutschen
+Seiten. Auf Englisch schaltet `i18n.js` beides um — auch `href`, seit `data-en-href` im
+Selektor steht.
+
+| | Deutsch | Englisch |
+|---|---|---|
+| Album | CD 16,99 €, Vinyl 51,99 €, Limitiert 123,99 € (EU-Shop `gtavi-thealbum.com/en-eu`) | 19,98 / 49,98 / 124,98 $ (`gtavi-thealbum.com`) |
+| Controller | 84,99 € | 84,99 $ |
+| Rockstar Newswire | `rockstargames.com/de/…` | `rockstargames.com/…` |
+| PlayStation Blog | `blog.de.playstation.com/…/erster-blick-auf-die-…` | `blog.playstation.com/…/first-look-at-the-…` |
+
+`rockstargames.com/de/VI` gibt es **nicht** — das leitet auf `/VI` um. Diese Links bleiben
+deshalb in beiden Sprachen gleich.
+
 ## Sprache (Deutsch / Englisch)
 
 Schalter **DE | EN** oben rechts in der Nav, auf jeder Seite. Standard ist Deutsch. Gedacht
@@ -638,14 +654,33 @@ newsletter/{uid}           email, lang, consentAt
   bearbeiten") das Formular mit Newsletter, Sicherheit, Gefahrenzone. Umschalten über
   `hashchange`, kein Neuladen. Links in der Ansicht („festlegen") führen auch auf `#bearbeiten`.
 - **Titelbild als fester Hintergrund** (`.kbg`, `position:fixed`, Verlauf darüber) — nur der
-  Inhalt scrollt. Kein `background-attachment:fixed`, das kann iOS nicht.
+  Inhalt scrollt. Kein `background-attachment:fixed`, das kann iOS nicht. Das Element steht
+  **außerhalb von `kontoRoot`** (direkt vor `<main>`), damit es beim Neuzeichnen der Seite
+  nicht neu lädt und schon hängen kann, bevor Firebase geantwortet hat.
+- **Zwischenspeicher `konto/titelcache.js`** (IndexedDB `luciajason-konto`, Lager
+  `titelbilder`, Schlüssel = uid, im Demo-Modus mit `demo:` davor): Das zuletzt geladene
+  Titelbild liegt im Browser und steht dadurch nach etwa 60 ms statt nach zwei bis drei
+  Sekunden. Gespeichert wird `{ cover, daten, stand }`; `stand` ist `profil.stand`
+  (`updatedAt` in Millisekunden). Stimmt er beim nächsten Besuch noch, wird aus Firestore
+  **gar nichts** nachgeladen. Nach dem Speichern steht `stand: 0` — das Bild ist sofort da,
+  beim nächsten Besuch wird einmal abgeglichen. Das Bild fliegt raus, wenn das Konto vom
+  Gerät entfernt, abgemeldet oder gelöscht wird; beim Seitenstart räumt `titelAufraeumen()`
+  Reste von Konten weg, die nicht mehr in der Liste stehen.
+- Ist „eigenes Bild" gewählt und noch nicht geladen, bleibt der Hintergrund **dunkel**,
+  statt kurz eine fremde Vorlage zu zeigen.
 - Ansicht (`ansichtZeichnen()` in `profil.js`): Countdown live, „Dabei seit", Plattform,
   Edition; Karten Lieblingsfigur (Bild aus `CHAR_PAGES`, Zitat, „Akte öffnen") und
   Lieblingsort (erstes Bild aus `PLACES.shots`); Vorfreude, Gamertag mit Kopieren,
-  Newsletter-Status; die drei neuesten Newswire-Meldungen. Leere Angaben erscheinen als
+  Newsletter-Status (kommt später als der Rest und wird über `newsletterKachelAuffrischen()`
+  einzeln nachgezogen — vorher stand dort bis zum Moduswechsel „Noch nicht abonniert"); die drei neuesten Newswire-Meldungen. Leere Angaben erscheinen als
   gestrichelte Karte mit Link zum Bearbeiten.
 - Titelbild-Vorlagen liegen 16 : 9 in `assets/img/covers/` (2560 px) plus Kacheln
   `covers/klein/` (480 × 270).
+- **Spaß-Einträge** (17.09.2026): Lieblingsort „Jack of Hearts" (Stripclub, Bild
+  `places/vice_city_07.jpg`) steht in `SPASS_ORTE` in `profil.js` — nicht in `PLACES`, weil
+  es ihn in der Leonida-Übersicht nicht gibt. Vorfreude „Lucia Jiggle Physics"
+  (`duo/duo_10.jpg`) steht in `VORFREUDE`. Die Kennungen prüfen die Regeln seither als
+  Muster (`^([a-z-]{2,20})?$`), neue Einträge brauchen also keine neuen Regeln mehr.
 - **Wer ein Bild wählt, sieht es sofort** („Vorschau · noch nicht gespeichert");
   gespeichert wird erst mit „Speichern". Verlässt man die Seite mit ungespeicherten Bildern,
   fragt der Browser nach.
@@ -714,6 +749,8 @@ Browser: assets/js/newswire.js
 
 - Rockstars API erlaubt keine Aufrufe aus dem Browser (kein CORS) — deshalb der Umweg über
   die Action. X/Twitter geht nicht: die API kostet.
+- `Newswire.url(meldung)` gibt die Adresse in der Sprache der Seite zurück: auf Deutsch mit
+  `/de/` im Pfad, auf Englisch ohne.
 - Meldungen mit „Pre-Order/Vorbestellen" im Titel werden gefiltert (Wunsch des Nutzers).
 - Bilder und Links nur von `rockstargames.com` bzw. `media-rockstargames-com.akamaized.net`
   (Prüfung in `main.js`). Neue Meldungen (< 7 Tage) tragen „NEU".

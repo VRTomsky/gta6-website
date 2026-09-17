@@ -22,6 +22,7 @@
 
    nutzer = { uid, email, emailVerified, provider: "password"|"google", name }
    profil = { username, bio, favChar, lang, createdAt: Date|null,
+              stand: Zahl (letzte Änderung, für den Bild-Zwischenspeicher),
               avatar: "preset:<id>"|"eigen", avatarEigen: data:-URL|"",
               cover:  "preset:<id>"|"eigen",
               plattform, edition, lieblingsort, vorfreude, gamertag }
@@ -95,7 +96,7 @@ const DATEN_URL = /^data:image\/(jpeg|webp);base64,/;
 const AUSWAHL = {
   plattform: ["ps5", "xbox"],
   edition: ["standard", "ultimate"],
-  vorfreude: ["story", "vice-city", "ueberfaelle", "autos", "online", "musik"]
+  vorfreude: ["story", "vice-city", "ueberfaelle", "autos", "online", "musik", "jiggle"]
 };
 const eines = (wert, liste) => liste.includes(wert) ? wert : "";
 
@@ -112,6 +113,7 @@ export function profilAusDaten(d) {
     favChar: d.favChar || "",
     lang: d.lang || "de",
     createdAt: d.createdAt || null,
+    stand: Number(d.stand) || 0,
     avatar, avatarEigen, cover,
     plattform: eines(d.plattform, AUSWAHL.plattform),
     edition: eines(d.edition, AUSWAHL.edition),
@@ -273,7 +275,8 @@ async function firebaseBackend(config, slot) {
         const d = s.data();
         return profilAusDaten({
           ...d,
-          createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : null
+          createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : null,
+          stand: d.updatedAt && d.updatedAt.toMillis ? d.updatedAt.toMillis() : 0
         });
       } catch (e) { weiter(e); }
     },
@@ -531,7 +534,11 @@ function demoBackend(slot) {
     async profilLaden(uid) {
       await warte(140);
       const p = lese().profile[uid];
-      return p ? profilAusDaten({ ...p, createdAt: p.createdAt ? new Date(p.createdAt) : null }) : null;
+      return p ? profilAusDaten({
+        ...p,
+        createdAt: p.createdAt ? new Date(p.createdAt) : null,
+        stand: Date.parse(p.updatedAt || "") || 0
+      }) : null;
     },
 
     async titelbildLaden(uid) {
@@ -560,7 +567,8 @@ function demoBackend(slot) {
       s.namen[lower] = uid;
       s.profile[uid] = {
         ...rest,
-        createdAt: vorher && vorher.createdAt ? new Date(vorher.createdAt).toISOString() : new Date().toISOString()
+        createdAt: vorher && vorher.createdAt ? new Date(vorher.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       schreibe(s);
     },

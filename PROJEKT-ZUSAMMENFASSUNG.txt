@@ -174,6 +174,17 @@ WAS BISHER GEMACHT WURDE
      abmelden.
    - firestore.rules geändert - muss neu veröffentlicht werden.
 
+12. Feinschliff (17.09.2026 abends):
+   - Das eigene Titelbild liegt jetzt zusätzlich im Browser und ist
+     beim Öffnen des Profils sofort da (vorher erst nach 2-3
+     Sekunden, davor war die Vorlage zu sehen).
+   - Newsletter-Stand steht sofort richtig in der Profilansicht.
+   - Preise auf Deutsch in Euro, auf Englisch in Dollar; Links führen
+     auf Deutsch zur deutschen Rockstar- bzw. PlayStation-Seite.
+   - Zwei Spaß-Einträge im Profil: Lieblingsort "Jack of Hearts"
+     (Stripclub) und Vorfreude "Lucia Jiggle Physics".
+   - firestore.rules noch einmal geändert - erneut veröffentlichen.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI
