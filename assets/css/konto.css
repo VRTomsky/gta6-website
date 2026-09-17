@@ -324,24 +324,33 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 /* ══════════ Kontoseite ══════════ */
 .kseite{ min-height:100svh; }
 
-/* Profilkopf: Titelbild im Seitenverhältnis 3 : 1 — genau der Rahmen, in
-   dem es zugeschnitten wurde. Wird der Inhalt höher (lange Beschreibung,
-   Handy), wächst der Kopf mit und das Bild wird mittig beschnitten. */
-.khero{
-  position:relative; overflow:hidden;
-  display:flex; align-items:flex-end;
-  min-height:min(calc(100vw / 3), 680px);
-  padding:calc(var(--nav-h) + 40px) var(--pad) 52px;
-  background:var(--bg);
+/* Titelbild fest hinter der ganzen Kontoseite. Beim Scrollen bewegt sich
+   nur der Inhalt, das Bild bleibt stehen. Ein eigenes Element mit
+   position:fixed statt background-attachment:fixed — Letzteres ignorieren
+   iOS und viele Android-Browser. */
+.kbg{ position:fixed; inset:0; z-index:0; background:var(--bg); pointer-events:none; }
+.kbg img{
+  width:100%; height:100%; object-fit:cover; object-position:50% 50%;
+  animation:kbgIn .8s var(--ease-out);
 }
-.khero__bg{ position:absolute; inset:0; background:var(--surf); }
-.khero__bg img{ width:100%; height:100%; object-fit:cover; object-position:50% 50%; }
-.khero__bg::after{
+@keyframes kbgIn{ from{ opacity:0; transform:scale(1.03); } }
+.kbg::after{
   content:""; position:absolute; inset:0;
   background:
-    linear-gradient(180deg, rgba(11,17,36,.55) 0%, rgba(11,17,36,0) 26%, rgba(11,17,36,0) 50%, rgba(11,17,36,.92) 100%),
-    linear-gradient(90deg, rgba(11,17,36,.78) 0%, rgba(11,17,36,.3) 50%, rgba(11,17,36,0) 78%);
+    linear-gradient(180deg, rgba(11,17,36,.55) 0%, rgba(11,17,36,.05) 24%, rgba(11,17,36,.18) 55%, rgba(11,17,36,.72) 100%),
+    linear-gradient(90deg, rgba(11,17,36,.55) 0%, rgba(11,17,36,0) 60%);
 }
+body.hat-titelbild .kseite{ position:relative; z-index:1; }
+body.hat-titelbild .footer{ position:relative; z-index:1; }
+
+.khero{
+  position:relative;
+  display:flex; align-items:flex-end;
+  min-height:74svh;
+  padding:calc(var(--nav-h) + 40px) var(--pad) 44px;
+  transition:min-height .5s var(--ease-out);
+}
+body.ist-bearbeiten .khero{ min-height:52svh; }
 .khero__inner{
   position:relative; width:100%; max-width:var(--wrap); margin-inline:auto;
   display:flex; align-items:center; gap:clamp(24px, 4vw, 48px);
@@ -354,15 +363,24 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 .khero__txt{ min-width:0; }
 .khero__name{
   font-size:clamp(3rem, 8vw, 6.2rem); margin-bottom:12px;
-  overflow-wrap:anywhere;
+  overflow-wrap:anywhere; text-shadow:0 6px 40px rgba(0,0,0,.55);
 }
-.khero__bio{ max-width:62ch; margin:0 0 16px; color:var(--fg); font-size:1.06rem; white-space:pre-line; }
+.khero .kicker{ text-shadow:0 2px 14px rgba(0,0,0,.7); }
+.khero__bio{
+  max-width:62ch; margin:0 0 16px; color:var(--fg); font-size:1.06rem; white-space:pre-line;
+  text-shadow:0 2px 18px rgba(0,0,0,.75);
+}
 .khero__bio:empty{ display:none; }
 .khero__chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.khero__chips:empty{ display:none; }
+.khero__aktionen{ display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
+.khero__aktionen [hidden]{ display:none; }
+.kchip--gold{ background:linear-gradient(135deg, #ffe08a, #ffb86b); border-color:transparent; color:#2a1a00; }
 .kchip{
   display:inline-flex; align-items:center; gap:8px;
   padding:6px 13px; border-radius:999px;
-  background:rgba(8,13,29,.55); border:1px solid var(--line2);
+  background:rgba(8,13,29,.62); border:1px solid var(--line2);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   font-size:.78rem; font-weight:600; color:var(--fg);
 }
 .kchip img{ width:20px; height:20px; border-radius:50%; object-fit:cover; margin-left:-6px; }
@@ -374,6 +392,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
   max-width:calc(var(--wrap) + var(--pad) * 2); margin:0 auto; padding:0 var(--pad) var(--s6);
   display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:22px; align-items:start;
 }
+.kgrid[hidden]{ display:none; }
 .kspalte{ display:flex; flex-direction:column; gap:22px; min-width:0; }
 
 .kbox{
@@ -403,7 +422,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 .kbild__hinweis{ margin:-6px 0 0; }
 .kbild__raster--titel{
   display:grid; gap:10px;
-  grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns:repeat(auto-fill, minmax(118px, 1fr));
 }
 .kbild__raster--avatar{ display:flex; flex-wrap:wrap; gap:10px; }
 .kbild__raster--avatar .av-wahl{ position:relative; width:52px; height:52px; }
@@ -411,7 +430,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 
 .tb-wahl{
   position:relative; display:block; padding:0; border:0; cursor:pointer;
-  aspect-ratio:3 / 1; border-radius:12px; overflow:hidden;
+  aspect-ratio:16 / 9; border-radius:10px; overflow:hidden;
   background:var(--bg2); box-shadow:0 0 0 1px var(--line);
   transition:transform .18s var(--ease), box-shadow .18s var(--ease);
 }
@@ -542,7 +561,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 }
 .kz.is-offen{ opacity:1; }
 .kz__karte{
-  margin:auto; width:min(760px, 100%);
+  margin:auto; width:min(900px, 100%);
   padding:clamp(20px, 3.4vw, 34px);
   background:var(--bg2); border:1px solid var(--line2); border-radius:26px;
   box-shadow:0 50px 120px -30px rgba(0,0,0,.85);
@@ -554,6 +573,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
   font-size:clamp(2rem, 4vw, 2.8rem); line-height:.92;
 }
 .kz__text{ margin:0 0 18px; font-size:.9rem; }
+.kz__aufloesung{ color:var(--cyan); font-variant-numeric:tabular-nums; white-space:nowrap; }
 
 .kz__buehne{
   position:relative; overflow:hidden; margin-inline:auto;
@@ -562,7 +582,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 }
 .kz__buehne.is-ziehen{ cursor:grabbing; }
 .kz__buehne--avatar{ width:min(100%, 380px); aspect-ratio:1; }
-.kz__buehne--titel{ width:100%; aspect-ratio:3 / 1; }
+.kz__buehne--titel{ width:100%; aspect-ratio:16 / 9; max-height:62svh; }
 .kz__bild{
   position:absolute; left:0; top:0; max-width:none;
   transform-origin:0 0; will-change:transform; pointer-events:none;
@@ -576,7 +596,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 .kz__buehne--titel .kz__maske{ border-radius:16px; box-shadow:inset 0 0 0 2px rgba(255,255,255,.85); }
 /* Ausschnitt, der auf einem Handy im Profilkopf sichtbar bleibt */
 .kz__handy{
-  position:absolute; top:0; bottom:0; left:50%; width:32%;
+  position:absolute; top:0; bottom:0; left:50%; width:26%;
   transform:translateX(-50%);
   border-left:1.5px dashed rgba(255,255,255,.8); border-right:1.5px dashed rgba(255,255,255,.8);
 }
@@ -604,7 +624,7 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
   box-shadow:0 0 0 3px var(--bg2), 0 0 0 5px var(--pink);
 }
 .kz__vav--klein canvas{ width:34px; height:34px; box-shadow:0 0 0 2px var(--pink); }
-.kz__vtitel{ position:relative; width:min(100%, 380px); aspect-ratio:3 / 1; border-radius:12px; overflow:hidden; }
+.kz__vtitel{ position:relative; width:min(100%, 300px); aspect-ratio:16 / 9; border-radius:12px; overflow:hidden; }
 .kz__vtitel canvas{ display:block; width:100%; height:100%; }
 .kz__vtitel::after{
   content:""; position:absolute; inset:0;
@@ -628,6 +648,219 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
   .kz__handy i{ font-size:.5rem; padding:1px 5px; }
 }
 
+/* ══════════ Profil ansehen ══════════ */
+.kprofil{
+  max-width:calc(var(--wrap) + var(--pad) * 2); margin:0 auto;
+  padding:0 var(--pad) var(--s6);
+  display:flex; flex-direction:column; gap:22px;
+}
+.kprofil[hidden]{ display:none; }
+.kprofil .kicker{ margin:0 0 6px; }
+
+.kstats{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+.kstat{
+  display:flex; flex-direction:column; gap:2px; min-width:0;
+  padding:18px 20px; border-radius:20px;
+  background:rgba(23,32,61,.86); border:1px solid var(--line);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+.kstat__k{
+  font-family:var(--f-label); font-size:.64rem; font-weight:700;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--fg-dim);
+}
+.kstat__v{
+  font-family:var(--f-display); font-weight:800; color:var(--cream);
+  font-size:clamp(2.4rem, 4.4vw, 3.4rem); line-height:.95; font-variant-numeric:tabular-nums;
+}
+.kstat__v--text{ font-size:clamp(1.8rem, 3.2vw, 2.5rem); text-transform:uppercase; }
+.kstat__u{ font-size:.82rem; color:var(--fg-mid); font-variant-numeric:tabular-nums; }
+.kstat__u a{ color:var(--pink); }
+.kstat--countdown{ background:linear-gradient(135deg, rgba(232,84,140,.9), rgba(106,76,255,.82)); border-color:transparent; }
+.kstat--countdown .kstat__k, .kstat--countdown .kstat__u{ color:rgba(255,255,255,.85); }
+.kstat--countdown .kstat__v{ color:#fff; }
+
+.kkarten{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:22px; }
+.kkarte{
+  position:relative; overflow:hidden; min-height:360px;
+  display:flex; align-items:flex-end;
+  border-radius:24px; border:1px solid var(--line); background:var(--surf);
+  text-decoration:none; color:inherit;
+}
+.kkarte--bild > img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  transition:transform 1.2s var(--ease-out);
+}
+.kkarte--bild::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(11,17,36,.1) 0%, rgba(11,17,36,.6) 45%, rgba(11,17,36,.96) 100%);
+}
+.kkarte__inhalt{ position:relative; z-index:1; padding:clamp(20px, 3vw, 30px); display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+.kkarte--bild .kkarte__inhalt{ text-shadow:0 1px 14px rgba(8,13,29,.9); }
+.kkarte__titel{
+  margin:0; color:var(--cream);
+  font-family:var(--f-display); font-weight:800; text-transform:uppercase;
+  font-size:clamp(2.2rem, 4vw, 3.2rem); line-height:.9;
+}
+.kkarte__zeile{ margin:0; font-size:.84rem; color:var(--pink); font-weight:600; }
+.kkarte__zitat{ margin:0; font-size:1rem; color:var(--fg); font-style:italic; max-width:40ch; }
+.kkarte__text{
+  margin:0; font-size:.9rem; color:var(--fg-mid); max-width:52ch;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+.kkarte .btn{ margin-top:6px; }
+.kkarte--leer{
+  min-height:220px; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px;
+  padding:28px; border:1.5px dashed rgba(255,255,255,.22); background:rgba(23,32,61,.72);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+.kkarte--leer b{
+  color:var(--cream); font-family:var(--f-display); font-weight:800;
+  text-transform:uppercase; font-size:clamp(1.6rem, 3vw, 2.2rem); line-height:.95;
+}
+.kkarte__plus{ font-size:.86rem; font-weight:700; color:var(--pink); }
+
+.kreihe{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
+.kmini{
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  min-height:96px; padding:18px 20px; border-radius:20px;
+  background:rgba(23,32,61,.86); border:1px solid var(--line);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  text-decoration:none; color:inherit;
+}
+.kmini b{ display:block; color:var(--fg); font-size:1rem; line-height:1.3; }
+.kmini .kicker{ display:block; }
+.kmini__tag{ font-family:var(--f-display); font-weight:800; font-size:1.6rem !important; color:var(--cream) !important; letter-spacing:.01em; }
+.kmini--bild{ justify-content:flex-start; }
+.kmini--bild img{ width:64px; height:64px; flex:none; border-radius:14px; object-fit:cover; }
+.kmini--leer{ border:1.5px dashed rgba(255,255,255,.22); }
+.kmini--leer b{ color:var(--fg-mid); font-weight:600; }
+.kmini__punkt{ width:12px; height:12px; flex:none; border-radius:50%; background:rgba(255,255,255,.25); }
+.kmini--an .kmini__punkt{ background:#3ddc84; box-shadow:0 0 0 0 rgba(61,220,132,.6); animation:pulse 2s infinite; }
+
+.knews{ background:rgba(23,32,61,.9); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+.knews__liste{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; margin-bottom:16px; }
+.knews__eintrag{
+  display:flex; flex-direction:column; gap:10px; min-width:0;
+  text-decoration:none; color:inherit;
+}
+.knews__eintrag img{ width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:12px; background:var(--surf2); }
+.knews__eintrag time{
+  font-family:var(--f-label); font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--lav);
+}
+.knews__eintrag b{ display:block; margin-top:4px; color:var(--lav-hi); font-size:.95rem; line-height:1.35; }
+
+.kfelder{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; }
+
+/* Bearbeiten-Ansicht über dem Titelbild: Boxen bleiben blau */
+body.hat-titelbild .kgrid{ position:relative; }
+
+@media (hover:hover){
+  .kkarte--bild:hover > img{ transform:scale(1.04); }
+  .kkarte--leer:hover, .kmini--leer:hover{ border-color:var(--pink); }
+  .knews__eintrag:hover b{ color:#fff; text-decoration:underline; text-underline-offset:3px; }
+}
+@media (max-width:1024px){
+  .kstats{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .kreihe{ grid-template-columns:1fr; }
+}
+@media (max-width:760px){
+  .kkarten{ grid-template-columns:1fr; }
+  .knews__liste{ grid-template-columns:1fr; }
+  .knews__eintrag{ flex-direction:row; align-items:flex-start; }
+  .knews__eintrag img{ width:120px; flex:none; }
+  .kfelder{ grid-template-columns:1fr; }
+}
+@media (max-width:560px){
+  .khero{ min-height:66svh; }
+  body.ist-bearbeiten .khero{ min-height:48svh; }
+  .kstat{ padding:14px 16px; }
+  .kkarte{ min-height:320px; }
+}
+
+/* ══════════ Konto wechseln ══════════ */
+.kw{
+  position:fixed; inset:0; z-index:210;
+  display:flex; overflow-y:auto; overscroll-behavior:contain;
+  padding:max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  background:rgba(5,8,20,.72);
+  opacity:0; transition:opacity .2s var(--ease);
+}
+.kw[hidden]{ display:none; }
+.kw.is-offen{ opacity:1; }
+.kw__karte{
+  position:relative; margin:auto; width:min(480px, 100%);
+  padding:clamp(22px, 4vw, 32px);
+  background:var(--bg2); border:1px solid var(--line2); border-radius:26px;
+  box-shadow:0 40px 100px -30px rgba(0,0,0,.85);
+  transform:translateY(14px) scale(.985); transition:transform .32s var(--ease-out);
+}
+.kw.is-offen .kw__karte{ transform:none; }
+/* Das Schließen-Kreuz der Anmeldung sitzt auf Handys über dem Bild —
+   hier gibt es kein Bild, es bleibt in der Karte */
+.kw .kd__zu{ top:16px; right:16px; background:rgba(255,255,255,.07); }
+.kw__titel{
+  margin:0 0 18px; padding-right:40px; color:var(--cream);
+  font-family:var(--f-display); font-weight:800; text-transform:uppercase;
+  font-size:clamp(2.1rem, 5vw, 2.7rem); line-height:.92;
+}
+.kw__liste{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:10px; }
+.kw__konto{
+  border-radius:18px; background:rgba(255,255,255,.04); border:1px solid var(--line);
+  overflow:hidden;
+}
+.kw__konto.is-aktiv{ border-color:rgba(255,178,198,.55); background:rgba(255,178,198,.07); }
+.kw__wahl{
+  display:flex; align-items:center; gap:14px; width:100%;
+  padding:12px 14px; border:0; background:none; color:inherit; text-align:left; cursor:pointer;
+}
+.kw__wahl img{ width:48px; height:48px; flex:none; border-radius:50%; object-fit:cover; background:var(--surf2); }
+.kw__konto.is-aktiv .kw__wahl img{ box-shadow:0 0 0 2px var(--bg2), 0 0 0 4px var(--pink); }
+.kw__wahl span{ flex:1; min-width:0; }
+.kw__wahl b{
+  display:block; color:var(--fg); font-size:1rem;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.kw__wahl small{
+  display:block; color:var(--fg-dim); font-size:.8rem;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.kw__wahl.is-busy{ opacity:.6; pointer-events:none; }
+.kw__wahl:focus-visible{ outline:2px solid var(--pink); outline-offset:-2px; border-radius:18px; }
+.kw__marke{
+  flex:none; padding:3px 9px; border-radius:999px; background:var(--pink); color:var(--ink);
+  font-family:var(--f-label); font-style:normal; font-size:.6rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+}
+.kw__pfeil{ flex:none; font-style:normal; font-size:1.6rem; color:var(--fg-dim); line-height:1; }
+.kw__aktionen{ display:flex; gap:4px; padding:0 10px 10px 76px; }
+.kw__klein{
+  padding:6px 10px; border:0; border-radius:9px; background:none; cursor:pointer;
+  color:var(--fg-mid); font:inherit; font-size:.8rem; font-weight:600; text-decoration:none;
+}
+.kw__klein--weg{ color:#ff9aae; }
+.kw__klein--weg.is-sicher{ background:#e0344f; color:#fff; }
+.kw__leer{ padding:18px; text-align:center; color:var(--fg-dim); font-size:.9rem; }
+.kw__neu{
+  display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+  min-height:52px; border-radius:18px; border:1.5px dashed rgba(255,255,255,.25);
+  background:none; color:var(--fg); font:inherit; font-weight:700; cursor:pointer;
+}
+.kw__fuss{ display:flex; justify-content:center; margin-top:16px; }
+.kw__fuss .btn[hidden]{ display:none; }
+
+.kd__gespeichert{ display:flex; flex-direction:column; gap:8px; margin:18px 0 4px; }
+.kw__wahl--klein{
+  padding:8px 10px; border-radius:14px; background:rgba(255,255,255,.05); border:1px solid var(--line);
+}
+.kw__wahl--klein img{ width:36px; height:36px; }
+
+@media (hover:hover){
+  .kw__wahl:hover{ background:rgba(255,255,255,.05); }
+  .kw__klein:hover{ background:rgba(255,255,255,.08); color:var(--fg); }
+  .kw__klein--weg:hover{ background:rgba(255,79,112,.15); color:#ffb3c0; }
+  .kw__neu:hover{ border-color:var(--pink); color:var(--pink); }
+}
+
 /* ══════════ Datenschutzseite ══════════ */
 .ds{ max-width:860px; margin:0 auto; padding:calc(var(--nav-h) + 80px) var(--pad) var(--s6); }
 .ds__kopf{ margin-bottom:var(--s4); }
@@ -649,6 +882,6 @@ select.kf__i option{ background:var(--bg2); color:var(--fg); }
 html.konto-an .footer a[href="datenschutz.html"]{ display:inline; }
 
 @media (prefers-reduced-motion: reduce){
-  .kd, .kd__karte, .acct, .acct__menu, .kschalter__bahn::after, .kz, .tb-wahl{ transition:none; animation:none; }
+  .kd, .kd__karte, .acct, .acct__menu, .kschalter__bahn::after, .kz, .tb-wahl, .kw, .kw__karte, .kbg img, .khero{ transition:none; animation:none; }
   .kd__karte{ transform:none; }
 }

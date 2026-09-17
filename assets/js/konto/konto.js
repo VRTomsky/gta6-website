@@ -12,9 +12,18 @@
 
    Von außen öffnen: jedes Element mit data-konto-oeffnen="anmelden"
    (oder "registrieren"), oder per import { dialogOeffnen }.
+
+   ── Mehrere Konten ──
+   Die Liste der Konten auf diesem Gerät steht in localStorage
+   ("konto-liste"): welcher Slot aktiv ist und pro Konto Name, E-Mail und
+   ein kleines Profilbild für das Wechsel-Fenster. Jeder Slot ist bei
+   Firebase eine eigene App mit eigener Anmeldung (siehe backend.js).
+   „Konto wechseln" setzt den aktiven Slot und lädt die Seite neu;
+   „Konto hinzufügen" meldet sich in einem neuen Slot an. Meldet man sich
+   ab, rückt das nächste Konto der Liste nach.
    ═══════════════════════════════════════════════════════════ */
 
-import { backendWaehlen, KontoFehler } from "./backend.js";
+import { backendWaehlen, istDemo, KontoFehler } from "./backend.js";
 
 export const L = window.L || (de => de);
 export const LANG = window.LANG || "de";
@@ -37,7 +46,8 @@ export const VORLAGEN = [
   { id: "brian",   name: "Brian Heder" }
 ];
 
-/* Vorlagen für das Titelbild — 1500 × 500 px (3 : 1) in assets/img/covers/ */
+/* Vorlagen für das Titelbild — 16 : 9, bis 2560 px breit, in assets/img/covers/
+   (Vorschaubilder 480 × 270 in covers/klein/) */
 export const TITEL_VORLAGEN = [
   { id: "vice-city",   name: "Vice City bei Nacht" },
   { id: "strand",      name: "Jason & Lucia am Strand" },
@@ -121,8 +131,89 @@ export function datumMonat(d) {
   return d.toLocaleDateString(LANG === "en" ? "en-US" : "de-DE", { month: "long", year: "numeric" });
 }
 
+/* ═══ Konten auf diesem Gerät ═════════════════════════════ */
+const LISTE = "konto-liste" + (istDemo() ? "-demo" : "");
+
+export function kontenLesen() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LISTE));
+    if (d && Array.isArray(d.konten)) {
+      return { aktiv: typeof d.aktiv === "string" ? d.aktiv : "standard", konten: d.konten.filter(k => k && k.slot) };
+    }
+  } catch (e) {}
+  return { aktiv: "standard", konten: [] };
+}
+function kontenSchreiben(d) {
+  try { localStorage.setItem(LISTE, JSON.stringify(d)); } catch (e) {}
+}
+const neuerSlot = () => "konto-" + Math.random().toString(36).slice(2, 10);
+
+/* Kleines Profilbild für die Liste — eigene Bilder als 72-px-Vorschau,
+   damit die Liste nicht mit großen Bildern vollläuft */
+function miniBild(profil) {
+  const url = avatarUrl(profil);
+  if (!url.startsWith("data:")) return Promise.resolve(url);
+  return new Promise(ok => {
+    const i = new Image();
+    i.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 72;
+      c.getContext("2d").drawImage(i, 0, 0, 72, 72);
+      ok(c.toDataURL("image/jpeg", 0.82));
+    };
+    i.onerror = () => ok(avatarUrl(null));
+    i.src = url;
+  });
+}
+
+async function kontoEintragen(nutzer, profil) {
+  const liste = kontenLesen();
+  /* Dasselbe Konto schon in einem anderen Slot? Dann gilt dieser hier. */
+  const doppelt = liste.konten.filter(k => k.uid === nutzer.uid && k.slot !== zustand.slot);
+  if (doppelt.length) {
+    liste.konten = liste.konten.filter(k => !doppelt.includes(k));
+    doppelt.forEach(k => backendWaehlen(k.slot).then(b => b && b.abmelden()).catch(() => {}));
+  }
+  let eintrag = liste.konten.find(k => k.slot === zustand.slot);
+  if (!eintrag) { eintrag = { slot: zustand.slot }; liste.konten.push(eintrag); }
+  eintrag.uid = nutzer.uid;
+  eintrag.email = nutzer.email;
+  eintrag.name = profil ? profil.username : (nutzer.name || nutzer.email);
+  eintrag.bild = await miniBild(profil);
+  liste.aktiv = zustand.slot;
+  kontenSchreiben(liste);
+}
+
+function neuLaden() {
+  location.reload();
+}
+
+export function kontoWechseln(slot, ziel) {
+  const liste = kontenLesen();
+  if (!liste.konten.some(k => k.slot === slot)) return;
+  liste.aktiv = slot;
+  kontenSchreiben(liste);
+  if (ziel) location.href = ziel;
+  else neuLaden();
+}
+
+/* Konto von diesem Gerät entfernen = dort abmelden. Das Konto selbst
+   bleibt bestehen und lässt sich jederzeit wieder hinzufügen. */
+export async function kontoEntfernen(slot) {
+  const liste = kontenLesen();
+  const warAktiv = slot === zustand.slot;
+  liste.konten = liste.konten.filter(k => k.slot !== slot);
+  if (warAktiv) liste.aktiv = liste.konten.length ? liste.konten[0].slot : "standard";
+  kontenSchreiben(liste);
+  try {
+    const b = warAktiv ? zustand.backend : await backendWaehlen(slot);
+    if (b) await b.abmelden();
+  } catch (e) { /* offline — der Eintrag ist trotzdem weg */ }
+  if (warAktiv) neuLaden();
+}
+
 /* ═══ Zustand ═════════════════════════════════════════════ */
-export const zustand = { backend: null, nutzer: null, profil: null, geladen: false };
+export const zustand = { backend: null, slot: "standard", nutzer: null, profil: null, geladen: false };
 const abonnenten = new Set();
 
 export function abonnieren(cb) {
@@ -132,6 +223,7 @@ export function abonnieren(cb) {
 }
 function melden() {
   navZeichnen();
+  if (zustand.nutzer) kontoEintragen(zustand.nutzer, zustand.profil).then(() => { if (kw && !kw.hidden) kontenZeichnen(); });
   abonnenten.forEach(cb => { try { cb(zustand); } catch (e) { console.error(e); } });
 }
 
@@ -150,8 +242,9 @@ let bereitLoesen;
 export const bereit = new Promise(r => { bereitLoesen = r; });
 
 async function start() {
+  zustand.slot = kontenLesen().aktiv || "standard";
   try {
-    zustand.backend = await backendWaehlen();
+    zustand.backend = await backendWaehlen(zustand.slot);
   } catch (e) {
     /* Firebase nicht erreichbar (offline, Blocker) — die Seite läuft
        ohne Konten weiter */
@@ -182,6 +275,21 @@ async function start() {
       }
     }
     if (meinLauf !== lauf) return;
+
+    /* Abgemeldet (hier oder in einem anderen Tab): aus der Liste nehmen.
+       Gibt es noch weitere Konten, rückt das nächste nach. */
+    if (!nutzer) {
+      const liste = kontenLesen();
+      if (liste.konten.some(k => k.slot === zustand.slot)) {
+        liste.konten = liste.konten.filter(k => k.slot !== zustand.slot);
+        if (liste.konten.length) {
+          liste.aktiv = liste.konten[0].slot;
+          kontenSchreiben(liste);
+          return neuLaden();
+        }
+        kontenSchreiben(liste);
+      }
+    }
 
     zustand.nutzer = nutzer;
     zustand.profil = profil;
@@ -232,8 +340,9 @@ function navZeichnen() {
           <div><b>${esc(name)}</b><span>${esc(nutzer.email)}</span></div>
         </div>
         ${profil
-          ? `<a class="acct__punkt" href="konto.html">${L("Mein Konto", "My account")}</a>`
+          ? `<a class="acct__punkt" href="konto.html">${L("Mein Profil", "My profile")}</a>`
           : `<button type="button" class="acct__punkt" data-konto-oeffnen="profil">${L("Profil anlegen", "Set up profile")}</button>`}
+        <button type="button" class="acct__punkt" data-konto-wechseln>${L("Konto wechseln", "Switch account")}</button>
         <button type="button" class="acct__punkt acct__punkt--aus" data-konto-abmelden>${L("Abmelden", "Sign out")}</button>
       </div>`;
   });
@@ -268,6 +377,12 @@ document.addEventListener("click", e => {
     dialogOeffnen(oeffnen.getAttribute("data-konto-oeffnen"));
     return;
   }
+  if (e.target.closest("[data-konto-wechseln]")) {
+    e.preventDefault();
+    menueSchliessen();
+    kontenOeffnen();
+    return;
+  }
   if (e.target.closest("[data-konto-abmelden]")) {
     e.preventDefault();
     menueSchliessen();
@@ -285,6 +400,10 @@ let dlg = null;
 let ansicht = "anmelden";
 let vorherFokus = null;
 let ansichtDaten = {};
+/* „Konto hinzufügen": eigener Slot mit eigenem Backend, bis die Anmeldung
+   durch ist. Alle Formulare sprechen mit aktivesBackend(). */
+let hinzu = null;          // { slot, backend }
+const aktivesBackend = () => (hinzu && hinzu.backend) || zustand.backend;
 const beruehrung = matchMedia("(hover: none), (pointer: coarse)").matches;
 
 const ICON_ZU = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
@@ -365,8 +484,13 @@ function dialogBauen() {
   });
 }
 
-export function dialogOeffnen(welche = "anmelden", daten = {}) {
+export async function dialogOeffnen(welche = "anmelden", daten = {}) {
   if (!zustand.backend) return;
+  if (daten.hinzufuegen) {
+    const slot = neuerSlot();
+    try { hinzu = { slot, backend: await backendWaehlen(slot) }; }
+    catch (e) { hinzu = null; return; }
+  }
   if (!dlg) dialogBauen();
   if (dlg.hidden) {
     vorherFokus = document.activeElement;
@@ -386,7 +510,8 @@ export function dialogSchliessen() {
   if (ansicht === "profil") { try { sessionStorage.setItem("konto-profil-spaeter", "1"); } catch (e) {} }
   dlg.classList.remove("is-offen");
   dlg.hidden = true;
-  document.body.classList.remove("is-locked");
+  hinzu = null;
+  if (!document.querySelector(".kw:not([hidden]), .kz")) document.body.classList.remove("is-locked");
   if (vorherFokus && vorherFokus.focus && document.contains(vorherFokus)) vorherFokus.focus();
 }
 
@@ -407,7 +532,7 @@ function zeige(welche, daten = {}) {
 }
 
 function demoHinweis() {
-  if (zustand.backend.modus !== "demo") return "";
+  if (!zustand.backend || zustand.backend.modus !== "demo") return "";
   return `<p class="kd__demo">${L(
     "<b>Demo-Modus</b> · Firebase ist noch nicht eingerichtet. Konten werden nur in diesem Browser gespeichert, Mails gehen keine raus.",
     "<b>Demo mode</b> · Firebase isn’t set up yet. Accounts are stored in this browser only and no emails are sent."
@@ -445,9 +570,25 @@ const feld = ({ name, label, typ = "text", auto, hinweis = "", wert = "", extra 
 
 const meldungsZeile = `<p class="kd__meldung" role="alert" data-kd-meldung></p>`;
 
+/* Abgemeldet, aber andere Konten sind noch auf dem Gerät angemeldet */
+const gespeicherteKonten = () => `
+  <div class="kd__gespeichert">
+    <p class="kf__l">${L("Auf diesem Gerät", "On this device")}</p>
+    ${kontenLesen().konten.map(k => `
+      <button type="button" class="kw__wahl kw__wahl--klein" data-kw-wechseln="${esc(k.slot)}">
+        <img src="${esc(k.bild || avatarUrl(null))}" alt="" width="36" height="36">
+        <span><b>${esc(k.name || "")}</b><small>${esc(k.email || "")}</small></span>
+      </button>`).join("")}
+  </div>`;
+
 const ANSICHTEN = {
   anmelden: () => `
-    ${kopf(L("Konto", "Account") + " · luciajason.de", L("Willkommen zurück", "Welcome back"))}
+    ${hinzu
+      ? kopf(L("Weiteres Konto", "Another account"), L("Konto hinzufügen", "Add account"),
+             L("Melde dich mit einem weiteren Konto an. Zwischen deinen Konten wechselst du danach über dein Profilbild oben rechts.",
+               "Sign in with another account. Afterwards you can switch between your accounts from your profile picture at the top right."))
+      : kopf(L("Konto", "Account") + " · luciajason.de", L("Willkommen zurück", "Welcome back"))}
+    ${!hinzu && !zustand.nutzer && kontenLesen().konten.length ? gespeicherteKonten() : ""}
     ${reiter("anmelden")}
     ${googleBlock(L("Mit Google anmelden", "Sign in with Google"))}
     <form class="kd__form" data-kd-form="anmelden" novalidate>
@@ -459,7 +600,7 @@ const ANSICHTEN = {
     </form>`,
 
   registrieren: () => `
-    ${kopf(L("Konto", "Account") + " · luciajason.de", L("Konto erstellen", "Create account"),
+    ${kopf(hinzu ? L("Weiteres Konto", "Another account") : L("Konto", "Account") + " · luciajason.de", L("Konto erstellen", "Create account"),
       L("Kostenlos und freiwillig — mit eigenem Profil und dem GTA-VI-Newsletter.",
         "Free and optional — with your own profile and the GTA VI newsletter."))}
     ${reiter("registrieren")}
@@ -541,12 +682,17 @@ const ANSICHTEN = {
 function namensVorschlag(n) {
   if (!n) return "";
   const roh = (n.name || (n.email || "").split("@")[0] || "")
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, "_").replace(/[^A-Za-z0-9_.-]/g, "");
   return roh.slice(0, 20);
 }
 
 /* ── Formulare ───────────────────────────────────────────── */
+export const neuesProfil = (username, avatar) => ({
+  username, bio: "", avatar, avatarEigen: "", cover: TITEL_STANDARD, favChar: "",
+  plattform: "", edition: "", lieblingsort: "", vorfreude: "", gamertag: "", lang: LANG
+});
+
 function meldungSetzen(text, gut = false) {
   const m = dlg && dlg.querySelector("[data-kd-meldung]");
   if (!m) return;
@@ -561,11 +707,29 @@ function beschaeftigt(knopf, an) {
   knopf.setAttribute("aria-busy", String(an));
 }
 
+/* Anmeldung im neuen Slot geschafft: in die Liste, aktiv setzen, neu laden.
+   War das Konto schon auf dem Gerät, wird einfach dorthin gewechselt. */
+async function hinzugefuegt(nutzer) {
+  const { slot, backend } = hinzu;
+  const liste = kontenLesen();
+  const vorhanden = liste.konten.find(k => k.uid === nutzer.uid);
+  if (vorhanden) {
+    try { await backend.abmelden(); } catch (e) {}
+    liste.aktiv = vorhanden.slot;
+  } else {
+    liste.konten.push({ slot, uid: nutzer.uid, email: nutzer.email, name: nutzer.name || nutzer.email, bild: avatarUrl(null) });
+    liste.aktiv = slot;
+  }
+  kontenSchreiben(liste);
+  neuLaden();
+}
+
 async function mitGoogle(knopf) {
   meldungSetzen("");
   beschaeftigt(knopf, true);
   try {
-    await zustand.backend.mitGoogle();
+    const n = await aktivesBackend().mitGoogle();
+    if (hinzu && n) return hinzugefuegt(n);
     /* Weiter geht es im Beobachter: mit Profil schließt der Dialog,
        ohne Profil kommt die Namenswahl. */
   } catch (e) {
@@ -584,7 +748,8 @@ async function formAnmelden(form) {
   meldungSetzen("");
   beschaeftigt(knopf, true);
   try {
-    await zustand.backend.anmelden(email, pw);
+    const n = await aktivesBackend().anmelden(email, pw);
+    if (hinzu && n) return hinzugefuegt(n);
   } catch (e) {
     meldungSetzen(meldung(e));
     beschaeftigt(knopf, false);
@@ -602,14 +767,16 @@ async function formRegistrieren(form) {
   const knopf = form.querySelector("[type=submit]");
   meldungSetzen("");
   beschaeftigt(knopf, true);
-  registrierungLaeuft = true;
+  if (!hinzu) registrierungLaeuft = true;
+  const b = aktivesBackend();
   try {
     /* Name zuerst prüfen — sonst stünde ein Konto ohne Namen da */
-    if (!(await zustand.backend.nameFrei(name, null))) throw new KontoFehler("name-vergeben");
-    const nutzer = await zustand.backend.registrieren(email, pw);
-    const profil = { username: name, bio: "", avatar: "preset:vi", avatarEigen: "", cover: TITEL_STANDARD, favChar: "", lang: LANG };
+    if (!(await b.nameFrei(name, null))) throw new KontoFehler("name-vergeben");
+    const nutzer = await b.registrieren(email, pw);
+    const profil = neuesProfil(name, "preset:vi");
     try {
-      await zustand.backend.profilSpeichern(nutzer.uid, profil, null);
+      await b.profilSpeichern(nutzer.uid, profil, null);
+      if (hinzu) return hinzugefuegt(nutzer);
       zustand.nutzer = nutzer;
       profilSetzen({ ...profil, createdAt: new Date() });
       zeige("willkommen");
@@ -633,7 +800,7 @@ async function formVergessen(form) {
   const knopf = form.querySelector("[type=submit]");
   beschaeftigt(knopf, true);
   try {
-    await zustand.backend.passwortVergessen(email);
+    await aktivesBackend().passwortVergessen(email);
     meldungSetzen(L(
       "Wenn es zu dieser Adresse ein Konto gibt, ist der Link unterwegs. Schau auch im Spam-Ordner nach.",
       "If there’s an account for this address, the link is on its way. Check your spam folder too."
@@ -651,15 +818,7 @@ async function formProfil(form) {
   const name = form.username.value.trim();
   if (!NAME_MUSTER.test(name)) { form.username.focus(); return meldungSetzen(meldung({ code: "name-ungueltig" })); }
   const gewaehlt = dlg.querySelector("[data-kd-vorlage][aria-checked='true']");
-  const profil = {
-    username: name,
-    bio: "",
-    avatar: "preset:" + (gewaehlt ? gewaehlt.getAttribute("data-kd-vorlage") : "vi"),
-    avatarEigen: "",
-    cover: TITEL_STANDARD,
-    favChar: "",
-    lang: LANG
-  };
+  const profil = neuesProfil(name, "preset:" + (gewaehlt ? gewaehlt.getAttribute("data-kd-vorlage") : "vi"));
   const knopf = form.querySelector("[type=submit]");
   meldungSetzen("");
   beschaeftigt(knopf, true);
@@ -673,5 +832,138 @@ async function formProfil(form) {
     beschaeftigt(knopf, false);
   }
 }
+
+/* ═══ Konto wechseln ══════════════════════════════════════ */
+let kw = null;
+
+export function kontenOeffnen() {
+  if (!zustand.backend) return;
+  if (!kw) kontenBauen();
+  kw.hidden = false;
+  document.body.classList.add("is-locked");
+  kontenZeichnen();
+  requestAnimationFrame(() => {
+    kw.classList.add("is-offen");
+    const f = kw.querySelector(".kw__wahl, .kw__neu");
+    if (f && !beruehrung) f.focus({ preventScroll: true });
+  });
+}
+
+function kontenSchliessen() {
+  if (!kw || kw.hidden) return;
+  kw.classList.remove("is-offen");
+  kw.hidden = true;
+  if (!document.querySelector(".kd:not([hidden]), .kz")) document.body.classList.remove("is-locked");
+}
+
+const ICON_PLUS = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+
+function kontenBauen() {
+  kw = document.createElement("div");
+  kw.className = "kw";
+  kw.hidden = true;
+  kw.setAttribute("role", "dialog");
+  kw.setAttribute("aria-modal", "true");
+  kw.setAttribute("aria-labelledby", "kwTitel");
+  kw.innerHTML = `
+    <div class="kw__karte">
+      <button type="button" class="kd__zu" data-kw-zu aria-label="${esc(L("Schließen", "Close"))}">${ICON_ZU}</button>
+      <p class="kd__kicker">${L("Konten auf diesem Gerät", "Accounts on this device")}</p>
+      <h2 class="kw__titel" id="kwTitel">${L("Konto wechseln", "Switch account")}</h2>
+      <ul class="kw__liste" data-kw-liste></ul>
+      <button type="button" class="kw__neu" data-kw-neu>${ICON_PLUS}<span>${L("Konto hinzufügen", "Add account")}</span></button>
+      <div class="kw__fuss">
+        <button type="button" class="btn btn--ghost" data-kw-abmelden>${L("Aktuelles Konto abmelden", "Sign out current account")}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(kw);
+
+  kw.addEventListener("click", async e => {
+    if (e.target === kw || e.target.closest("[data-kw-zu]")) return kontenSchliessen();
+    const wechseln = e.target.closest("[data-kw-wechseln]");
+    if (wechseln) {
+      const slot = wechseln.getAttribute("data-kw-wechseln");
+      if (slot === zustand.slot) return kontenSchliessen();
+      wechseln.classList.add("is-busy");
+      return kontoWechseln(slot);
+    }
+    const bearbeiten = e.target.closest("[data-kw-bearbeiten]");
+    if (bearbeiten) {
+      e.preventDefault();
+      const slot = bearbeiten.getAttribute("data-kw-bearbeiten");
+      if (slot === zustand.slot) {
+        kontenSchliessen();
+        if (/konto\.html$/.test(location.pathname)) { location.hash = "bearbeiten"; return; }
+        location.href = "konto.html#bearbeiten";
+        return;
+      }
+      return kontoWechseln(slot, "konto.html#bearbeiten");
+    }
+    const weg = e.target.closest("[data-kw-entfernen]");
+    if (weg) {
+      /* Zweimal klicken: erst fragen, dann entfernen */
+      if (weg.dataset.sicher !== "1") {
+        weg.dataset.sicher = "1";
+        weg.textContent = L("Wirklich entfernen?", "Really remove?");
+        weg.classList.add("is-sicher");
+        setTimeout(() => {
+          if (!weg.isConnected) return;
+          weg.dataset.sicher = "";
+          weg.textContent = L("Entfernen", "Remove");
+          weg.classList.remove("is-sicher");
+        }, 4000);
+        return;
+      }
+      weg.disabled = true;
+      await kontoEntfernen(weg.getAttribute("data-kw-entfernen"));
+      return kontenZeichnen();
+    }
+    if (e.target.closest("[data-kw-neu]")) {
+      kontenSchliessen();
+      return dialogOeffnen("anmelden", { hinzufuegen: true });
+    }
+    if (e.target.closest("[data-kw-abmelden]")) {
+      kontenSchliessen();
+      return abmelden();
+    }
+  });
+
+  kw.addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.stopPropagation(); kontenSchliessen(); }
+  });
+}
+
+function kontenZeichnen() {
+  if (!kw) return;
+  const liste = kontenLesen();
+  const box = kw.querySelector("[data-kw-liste]");
+  if (!liste.konten.length) {
+    box.innerHTML = `<li class="kw__leer">${L("Noch kein Konto auf diesem Gerät.", "No accounts on this device yet.")}</li>`;
+  } else {
+    box.innerHTML = liste.konten.map(k => {
+      const aktiv = k.slot === zustand.slot && zustand.nutzer;
+      return `
+        <li class="kw__konto ${aktiv ? "is-aktiv" : ""}">
+          <button type="button" class="kw__wahl" data-kw-wechseln="${esc(k.slot)}"
+                  aria-current="${aktiv ? "true" : "false"}">
+            <img src="${esc(k.bild || avatarUrl(null))}" alt="" width="48" height="48">
+            <span><b>${esc(k.name || "")}</b><small>${esc(k.email || "")}</small></span>
+            ${aktiv ? `<i class="kw__marke">${L("Aktiv", "Active")}</i>` : `<i class="kw__pfeil" aria-hidden="true">›</i>`}
+          </button>
+          <div class="kw__aktionen">
+            <a class="kw__klein" href="konto.html#bearbeiten" data-kw-bearbeiten="${esc(k.slot)}">${L("Profil bearbeiten", "Edit profile")}</a>
+            <button type="button" class="kw__klein kw__klein--weg" data-kw-entfernen="${esc(k.slot)}">${L("Entfernen", "Remove")}</button>
+          </div>
+        </li>`;
+    }).join("");
+  }
+  kw.querySelector("[data-kw-abmelden]").hidden = !zustand.nutzer;
+}
+
+/* Gespeicherte Konten im Anmelde-Dialog */
+document.addEventListener("click", e => {
+  const k = e.target.closest(".kd [data-kw-wechseln]");
+  if (k) kontoWechseln(k.getAttribute("data-kw-wechseln"));
+});
 
 start();

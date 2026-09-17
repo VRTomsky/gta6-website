@@ -149,7 +149,8 @@ Keine Rechtsberatung.
 
 ## Regeln aktualisieren
 
-Ändert sich `firestore.rules` (zuletzt am 17.09.2026 für Titelbild und eigene Bilder),
+Ändert sich `firestore.rules` (zuletzt am 17.09.2026 abends: neue Profilfelder und
+Titelbild in voller Auflösung),
 müssen die Regeln **neu veröffentlicht** werden — sonst lehnt die Datenbank das Speichern
 des Profils ab:
 
@@ -200,12 +201,12 @@ Datenschutzerklärung ergänzt werden.
 |---|---|
 | `assets/js/konto-config.js` | Firebase-Werte und Schalter `live` |
 | `assets/js/konto/backend.js` | Firebase **oder** Demo-Modus, gleiche Schnittstelle |
-| `assets/js/konto/konto.js` | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
-| `assets/js/konto/profil.js` | die Kontoseite `konto.html` |
-| `assets/js/konto/zuschnitt.js` | Bild zuschneiden (Profilbild 1 : 1, Titelbild 3 : 1) |
+| `assets/js/konto/konto.js` | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog, Konto wechseln |
+| `assets/js/konto/profil.js` | die Kontoseite `konto.html` (Profilansicht, `#bearbeiten`) |
+| `assets/js/konto/zuschnitt.js` | Bild zuschneiden (Profilbild 1 : 1, Titelbild 16 : 9 bis 4K) |
 | `assets/css/konto.css` | Nav-Knopf, Dialog, Kontoseite, Datenschutzseite |
 | `assets/img/avatars/` | 9 Profilbild-Vorlagen (VI-Logo + 8 Figuren), 256 px |
-| `assets/img/covers/` | 9 Titelbild-Vorlagen, 1500 × 500 px |
+| `assets/img/covers/` | 9 Titelbild-Vorlagen, 16 : 9 bis 2560 px, Kacheln in `klein/` |
 | `firestore.rules` | Sicherheitsregeln — gehören in die Firebase-Konsole |
 | `datenschutz.html` | Datenschutzerklärung (DE/EN) |
 
@@ -213,14 +214,18 @@ Datenmodell in Firestore:
 
 ```
 users/{uid}                username, usernameLower, bio, favChar, lang, createdAt, updatedAt,
-                           avatar, avatarEigen, cover
-users/{uid}/bilder/titel   daten                ← eigenes Titelbild
+                           avatar, avatarEigen, cover,
+                           plattform, edition, lieblingsort, vorfreude, gamertag
+users/{uid}/bilder/titel      teile, typ        ← eigenes Titelbild (Anzahl Teile, Format)
+users/{uid}/bilder/titel-0…7  daten             ← das Bild in Teilen
 usernames/{name}           uid                  ← klein geschrieben, sorgt für Eindeutigkeit
 newsletter/{uid}           email, lang, consentAt
 ```
 
 `avatar` und `cover` sind `preset:<id>` (Vorlage) oder `eigen`. Eigene Bilder schneidet der
-Browser zu und speichert sie als JPEG-`data:`-URL: Profilbild 256 × 256 px in `avatarEigen`
-(≤ 150.000 Zeichen), Titelbild 1500 × 500 px in `bilder/titel` (≤ 300.000 Zeichen). Sie
+Browser zu und speichert sie als `data:`-URL: Profilbild 384 × 384 px JPEG in `avatarEigen`
+(≤ 150.000 Zeichen), Titelbild **16 : 9 in voller Auflösung bis 3840 × 2160** als WebP. Ein
+Firestore-Dokument darf höchstens 1 MB groß sein, deshalb liegt das Titelbild in bis zu 8
+Teilen zu je ≤ 700.000 Zeichen. Sie
 bleiben gespeichert, auch wenn gerade eine Vorlage gewählt ist. Ein eigener Speicher-Dienst
 (Firebase Storage) wird so nicht gebraucht — der wäre nicht mehr kostenlos.

@@ -58,15 +58,26 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem ---- 1b. Newswire von GitHub uebernehmen ----
+rem assets\data\newswire.json pflegt eine GitHub Action (alle 15 Minuten).
+rem Sie wird hier nie hochgeladen, nur hierher kopiert, damit die Seite
+rem auch lokal die neuesten Meldungen zeigt.
+if exist "%REPO%\assets\data\newswire.json" (
+  if not exist "%QUELLE%assets\data" mkdir "%QUELLE%assets\data"
+  copy /Y "%REPO%\assets\data\newswire.json" "%QUELLE%assets\data\newswire.json" >nul
+)
+
 rem ---- 2. Ordner spiegeln ----
 rem /MIR loescht im Ziel, was hier geloescht wurde - so bleiben beide
 rem   Ordner wirklich gleich.
 rem /XD .git  muss ausgeschlossen bleiben, sonst loescht /MIR das
 rem   Repository selbst.
+rem /XF newswire.json  gehoert der GitHub Action - /MIR laesst
+rem   ausgeschlossene Dateien im Ziel stehen.
 echo   [2/4] Dateien spiegeln...
 robocopy "%QUELLE%." "%REPO%" /MIR /NFL /NDL /NJH /NJS /NP ^
   /XD ".git" "_backup" "__pycache__" ^
-  /XF "server.log" >nul
+  /XF "server.log" "newswire.json" >nul
 if errorlevel 8 (
   echo   [FEHLER] Kopieren fehlgeschlagen.
   pause
@@ -94,6 +105,12 @@ if errorlevel 1 (
 rem ---- 4. Hochladen ----
 echo   [4/4] Zu GitHub hochladen...
 git -C "%REPO%" push origin main --quiet
+if errorlevel 1 (
+  rem Vielleicht hat die Newswire-Action inzwischen etwas hochgeladen:
+  rem einmal nachziehen und erneut versuchen.
+  git -C "%REPO%" pull --rebase origin main --quiet
+  git -C "%REPO%" push origin main --quiet
+)
 if errorlevel 1 (
   echo.
   echo   [FEHLER] Hochladen fehlgeschlagen.

@@ -159,6 +159,21 @@ WAS BISHER GEMACHT WURDE
    behoben. Nach Änderungen an firestore.rules müssen die Regeln in
    der Firebase-Konsole neu veröffentlicht werden.
 
+11. News automatisch + Profil neu (17.09.2026 abends):
+   - News: Aufmacher "GTA VI: The Album" (CD, Vinyl, limitiertes
+     Vinyl). Die Liste "Rockstar Newswire" aktualisiert sich selbst:
+     eine GitHub Action holt alle 15 Minuten die GTA-VI-Meldungen von
+     Rockstar, die Seite schaut alle 5 Minuten nach. X/Twitter geht
+     nicht automatisch (die Schnittstelle kostet Geld).
+   - Konto: Klick aufs Profil zeigt erst die Profilansicht (Countdown,
+     Lieblingsfigur, Lieblingsort, Plattform, Edition, Gamertag,
+     neueste News), "Profil bearbeiten" führt zum Formular.
+   - Titelbild bleibt beim Scrollen als Hintergrund stehen, eigene
+     Titelbilder in voller Auflösung bis 4K (16:9).
+   - "Konto wechseln": mehrere Konten hinzufügen, wechseln, entfernen,
+     abmelden.
+   - firestore.rules geändert - muss neu veröffentlicht werden.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

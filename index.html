@@ -351,18 +351,68 @@
 <!-- ══════════════ 9 · NEWS & LEAKS (Karte über dem Video) ══════════════ -->
 <section class="sec sec--pad news rise-card" id="news">
   <header class="sec__head">
-    <p class="kicker reveal" data-en="As of September 17, 2026">Stand: 17. September 2026</p>
+    <p class="kicker reveal news__live"><span class="dot dot--green" aria-hidden="true"></span><span data-en="Newswire updates automatically">Newswire aktualisiert sich automatisch</span></p>
     <h2 class="h-display reveal" data-en="News &amp; Leak Watch">News &amp; Leak-Lage</h2>
-    <p class="sec__intro reveal" data-en="Official word from Rockstar and PlayStation, the latest on the leaks and a live feed from the community.">Offizielles von Rockstar und PlayStation, dazu die Lage rund um die Leaks und ein Live-Feed aus der Community.</p>
+    <p class="sec__intro reveal" data-en="The latest from the Rockstar Newswire — checked every 15 minutes — plus the leak situation and a live feed from the community.">Das Neueste vom Rockstar Newswire — alle 15 Minuten abgefragt —, dazu die Lage rund um die Leaks und ein Live-Feed aus der Community.</p>
   </header>
+
+  <!-- Aufmacher: die wichtigste Meldung, von Hand gepflegt -->
+  <article class="aufmacher reveal">
+    <div class="aufmacher__bild">
+      <img src="assets/img/news/album.jpg" alt="Artwork zu Grand Theft Auto VI: The Album — Jason und Lucia an einem Wagen vor der Skyline von Vice City"
+           data-en-alt="Grand Theft Auto VI: The Album artwork — Jason and Lucia leaning on a car in front of the Vice City skyline" loading="lazy">
+    </div>
+    <div class="aufmacher__text">
+      <span class="tcard__badge tcard__badge--live" data-en="New · Sep 17, 2026">Neu · 17.09.2026</span>
+      <h3 class="aufmacher__titel">Grand Theft Auto VI: The Album</h3>
+      <p data-en="Rockstar and Atlantic Records are releasing the official album on <strong>November 19</strong> — the same day as the game. 34 original tracks from hip-hop to country, Latin, pop and rock. Six singles are already out on all streaming services, including Travis Scott, Future &amp; Metro Boomin with Yung Lean, PinkPantheress &amp; Fred again.., Morgan Wallen, Rauw Alejandro and Keith Richards.">Rockstar und Atlantic Records bringen das offizielle Album am <strong>19. November</strong> heraus — am selben Tag wie das Spiel. 34 eigens produzierte Songs von Hip-Hop bis Country, Latin, Pop und Rock. Sechs Singles laufen schon jetzt bei allen Streamingdiensten, unter anderem von Travis Scott, Future &amp; Metro Boomin mit Yung Lean, PinkPantheress &amp; Fred again.., Morgan Wallen, Rauw Alejandro und Keith Richards.</p>
+      <ul class="aufmacher__formate">
+        <li><b>CD</b><span data-en="Jewel case with booklet">Jewel Case mit Booklet</span><i>19,98&nbsp;$</i></li>
+        <li><b>Vinyl</b><span data-en="2 LPs, transparent magenta with blue splatter">2 LPs, transparent Magenta mit blauen Sprenkeln</span><i>49,98&nbsp;$</i></li>
+        <li><b data-en="Limited vinyl">Limitiertes Vinyl</b><span data-en="Records filled with blue liquid — sold out within hours">Platten mit blauer Flüssigkeit gefüllt — nach wenigen Stunden ausverkauft</span><i>124,98&nbsp;$</i></li>
+      </ul>
+      <div class="tcard__acts">
+        <a class="btn btn--pink" href="https://www.gtavi-thealbum.com/" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span data-en="Album &amp; singles">Album &amp; Singles</span>
+        </a>
+        <a class="btn btn--ghost" href="https://www.rockstargames.com/newswire/article/7599a881942544/announcing-grand-theft-auto-vi-the-album-coming-november-19" target="_blank" rel="noopener noreferrer">
+          <span>Newswire</span>
+        </a>
+      </div>
+    </div>
+  </article>
 
   <div class="news-grid">
 
     <div class="news-col">
-      <h3 class="news-col__h" data-en="Official · Rockstar &amp; PlayStation">Offiziell · Rockstar &amp; PlayStation</h3>
+      <h3 class="news-col__h">Rockstar Newswire</h3>
+      <!-- Wird von main.js aus assets/data/newswire.json gefüllt (GitHub Action,
+           alle 15 Minuten). Die Einträge hier sind nur der Stand zum Zeitpunkt
+           des letzten Uploads — falls der Abruf einmal nicht klappt. -->
+      <div class="newswire" id="newswireListe" aria-live="polite">
+        <a class="nitem reveal" href="https://www.rockstargames.com/newswire/article/7599a881942544/announcing-grand-theft-auto-vi-the-album-coming-november-19" target="_blank" rel="noopener noreferrer">
+          <time datetime="2026-09-17" data-en="September 17, 2026">17. September 2026</time>
+          <strong data-en="Announcing Grand Theft Auto VI: The Album, Coming November 19">Grand Theft Auto VI: The Album – ab 19. November</strong>
+          <span class="nitem__go">rockstargames.com</span>
+        </a>
+        <a class="nitem reveal" href="https://www.rockstargames.com/newswire/article/4k138k8okkk483" target="_blank" rel="noopener noreferrer">
+          <time datetime="2026-08-27" data-en="August 27, 2026">27. August 2026</time>
+          <strong data-en="Grand Theft Auto VI: An Extended Look — Now Playing">Grand Theft Auto VI: Ein ausführlicher Blick – jetzt ansehen</strong>
+          <span class="nitem__go">rockstargames.com</span>
+        </a>
+        <a class="nitem reveal" href="https://www.rockstargames.com/newswire/article/ak3ak31a49a221/grand-theft-auto-vi-is-now-set-to-launch-november-19-2026" target="_blank" rel="noopener noreferrer">
+          <time datetime="2025-11-06" data-en="November 6, 2025">6. November 2025</time>
+          <strong data-en="Grand Theft Auto VI is Now Set to Launch November 19, 2026">Grand Theft Auto VI erscheint am 19. November 2026</strong>
+          <span class="nitem__go">rockstargames.com</span>
+        </a>
+      </div>
+      <p class="newswire__stand" id="newswireStand"></p>
+
+      <h3 class="news-col__h news-col__h--zwei" data-en="Around the game">Rund ums Spiel</h3>
       <a class="nitem reveal" href="https://blog.playstation.com/2026/09/03/first-look-at-the-grand-theft-auto-vi-limited-edition-dualsense-wireless-controllers/" target="_blank" rel="noopener noreferrer">
         <time datetime="2026-09-03" data-en="September 3, 2026">3. September 2026</time>
-        <strong>First look at the Grand Theft Auto VI Limited-Edition DualSense Wireless Controllers</strong>
+        <strong data-en="Limited-edition GTA VI DualSense controllers">Limitierte GTA-VI-Controller für die PS5</strong>
         <p data-en="Two limited controllers in black and white with a shimmering Vice City finish, €84.99 each. Orders opened September 10; they arrive on November 19.">Zwei limitierte Controller in Schwarz und Weiß mit schimmerndem Vice-City-Finish, je 84,99&nbsp;€. Bestellbar seit 10. September, erhältlich ab 19. November.</p>
         <span class="nitem__go">blog.playstation.com</span>
       </a>
@@ -372,22 +422,10 @@
         <p data-en="Rockstar North co-studio head Rob Nelson told Kinda Funny that the story world is entirely handcrafted and that there’s no way to spend real money in the game. Nothing has been said about GTA Online yet.">Rob Nelson, Co-Studiochef von Rockstar North, im Interview mit Kinda Funny: Die Welt ist komplett von Hand gebaut, echtes Geld lässt sich im Spiel nicht ausgeben. Zu GTA Online gibt es noch keine Aussage.</p>
         <span class="nitem__go">gamespot.com</span>
       </a>
-      <a class="nitem reveal" href="https://www.rockstargames.com/newswire/article/4k138k8okkk483" target="_blank" rel="noopener noreferrer">
-        <time datetime="2026-08-27" data-en="August 27, 2026">27. August 2026</time>
-        <strong>Grand Theft Auto VI: An Extended Look — Now Playing</strong>
-        <p data-en="26 minutes of PS5 gameplay, first exclusive to Netflix, then everywhere.">26 Minuten Gameplay von der PS5, zuerst exklusiv bei Netflix, danach überall.</p>
-        <span class="nitem__go">rockstargames.com</span>
-      </a>
-      <a class="nitem reveal" href="https://www.rockstargames.com/newswire/article/ak3ak31a49a221/grand-theft-auto-vi-is-now-set-to-launch-november-19-2026" target="_blank" rel="noopener noreferrer">
-        <time datetime="2025-11-06" data-en="November 6, 2025">6. November 2025</time>
-        <strong>GTA VI is Now Set to Launch November 19, 2026</strong>
-        <p data-en="The delay that gave us the current release date.">Die Verschiebung, aus der der aktuelle Release-Termin wurde.</p>
-        <span class="nitem__go">rockstargames.com</span>
-      </a>
     </div>
 
     <div class="news-col">
-      <h3 class="news-col__h">Leak-Watch</h3>
+      <h3 class="news-col__h" data-en="Leak watch · as of Sep 17, 2026">Leak-Watch · Stand 17.09.2026</h3>
       <div class="leak reveal">
         <div class="leak__status">
           <span class="dot dot--red" aria-hidden="true"></span>
@@ -496,6 +534,7 @@
 
 <script src="assets/js/data.js"></script>
 <script src="assets/js/data.en.js"></script>
+<script src="assets/js/newswire.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/konto-config.js"></script>
 <script type="module" src="assets/js/konto/konto.js"></script>

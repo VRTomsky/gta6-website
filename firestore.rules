@@ -8,9 +8,10 @@ rules_version = '2';
 //
 //  Sammlungen:
 //    users/{uid}          Profil — nur die Person selbst liest und schreibt
-//    users/{uid}/bilder/titel
-//                         { daten } — eigenes Titelbild, getrennt vom Profil,
-//                         weil es groß ist und nur die Kontoseite es braucht
+//    users/{uid}/bilder/titel      { teile, typ }
+//    users/{uid}/bilder/titel-0…7  { daten }
+//                         eigenes Titelbild in voller Auflösung (bis 4K) —
+//                         zu groß für ein Dokument (1 MB), deshalb in Teilen
 //    usernames/{name}     { uid } — sorgt dafür, dass jeder Name nur
 //                         einmal existiert; lesbar für alle, damit sich
 //                         „Name schon vergeben" vor dem Registrieren prüfen lässt
@@ -34,7 +35,8 @@ service cloud.firestore {
 
     function profilFelder() {
       return ['username', 'usernameLower', 'bio', 'avatar', 'avatarEigen', 'cover',
-              'favChar', 'lang', 'createdAt', 'updatedAt'];
+              'favChar', 'plattform', 'edition', 'lieblingsort', 'vorfreude', 'gamertag',
+              'lang', 'createdAt', 'updatedAt'];
     }
 
     // Eigenes Bild als data:-URL (JPEG/WebP), im Browser zugeschnitten und
@@ -60,7 +62,12 @@ service cloud.firestore {
         && d.avatar is string && d.avatar.matches('^(preset:[a-z]{2,12}|eigen)$')
         && eigenesBild(d.avatarEigen, 150000)
         && (d.avatar != 'eigen' || d.avatarEigen != '')
-        && d.cover is string && d.cover.matches('^(preset:[a-z-]{2,20}|eigen)$');
+        && d.cover is string && d.cover.matches('^(preset:[a-z-]{2,20}|eigen)$')
+        && d.plattform in ['', 'ps5', 'xbox']
+        && d.edition in ['', 'standard', 'ultimate']
+        && d.vorfreude in ['', 'story', 'vice-city', 'ueberfaelle', 'autos', 'online', 'musik']
+        && d.lieblingsort is string && d.lieblingsort.matches('^([a-z-]{2,20})?$')
+        && d.gamertag is string && d.gamertag.matches('^[A-Za-z0-9 _.-]{0,24}$');
     }
 
     // ── Profile ─────────────────────────────────────────────────
@@ -88,14 +95,27 @@ service cloud.firestore {
     }
 
     // ── Eigenes Titelbild ───────────────────────────────────────
+    // "titel" beschreibt das Bild (Anzahl Teile, Format), "titel-0" bis
+    // "titel-7" enthalten die Base64-Teile. Gelesen wird nur von der
+    // Person selbst.
     match /users/{uid}/bilder/{bild} {
       allow get: if istSelbst(uid);
       allow list: if false;
-      allow create, update: if istSelbst(uid)
-        && bild == 'titel'
-        && request.resource.data.keys().hasOnly(['daten'])
-        && request.resource.data.daten != ''
-        && eigenesBild(request.resource.data.daten, 300000);
+
+      allow create, update: if istSelbst(uid) && (
+        (bild == 'titel'
+          && request.resource.data.keys().hasOnly(['teile', 'typ'])
+          && request.resource.data.teile is int
+          && request.resource.data.teile >= 1 && request.resource.data.teile <= 8
+          && request.resource.data.typ in ['image/webp', 'image/jpeg'])
+        ||
+        (bild.matches('^titel-[0-7]$')
+          && request.resource.data.keys().hasOnly(['daten'])
+          && request.resource.data.daten is string
+          && request.resource.data.daten.size() > 0
+          && request.resource.data.daten.size() <= 700000)
+      );
+
       allow delete: if istSelbst(uid);
     }
 

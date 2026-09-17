@@ -719,6 +719,43 @@ function cardRise(card) {
   setCat("all");
 })();
 
+/* ═══ 9b · ROCKSTAR NEWSWIRE (automatisch) ══════════════════ */
+/* Die fest eingetragenen Meldungen im HTML sind nur der Rückfall. Sobald
+   newswire.json da ist, ersetzt diese Liste sie — und aktualisiert sich
+   alle paar Minuten selbst, wenn Rockstar etwas Neues veröffentlicht. */
+(function newswire() {
+  const liste = $("#newswireListe");
+  const stand = $("#newswireStand");
+  if (!liste || !window.Newswire) return;
+  const ANZAHL = 4;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const sichereUrl = u => /^https:\/\/(www\.)?rockstargames\.com\//.test(u) ? u : "https://www.rockstargames.com/newswire";
+  const sicheresBild = u => /^https:\/\/media-rockstargames-com\.akamaized\.net\//.test(u) ? u : "";
+
+  Newswire.beobachten((daten, vorher) => {
+    const meldungen = daten.meldungen.slice(0, ANZAHL);
+    liste.innerHTML = meldungen.map(m => {
+      const t = Newswire.text(m);
+      const bild = sicheresBild(m.bild);
+      const frisch = vorher && !vorher.includes(m.id);
+      return `
+        <a class="nitem ${bild ? "nitem--bild" : ""} ${frisch ? "nitem--frisch" : ""}" href="${esc(sichereUrl(m.url))}" target="_blank" rel="noopener noreferrer">
+          ${bild ? `<img class="nitem__bild" src="${esc(bild)}" alt="" loading="lazy" decoding="async">` : ""}
+          <span>
+            <time datetime="${esc(m.datum)}">${esc(t.datum)}</time>${Newswire.istNeu(m) ? `<span class="nitem__neu">${L("NEU", "NEW")}</span>` : ""}
+            <strong>${esc(t.titel)}</strong>
+            <span class="nitem__go">rockstargames.com</span>
+          </span>
+        </a>`;
+    }).join("");
+    if (stand && daten.aktualisiert) {
+      const d = new Date(daten.aktualisiert);
+      stand.textContent = L("Letzte Änderung: ", "Last change: ") +
+        d.toLocaleString(window.LANG === "en" ? "en-US" : "de-DE", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    }
+  });
+})();
+
 /* ═══ 10 · X-FEED ═════════════════════════════════════════ */
 (function xfeed() {
   const box = $("#xlist");

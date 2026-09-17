@@ -4,8 +4,8 @@
     {
       "name": "gta6-site",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5173"],
-      "port": 5173
+      "runtimeArgs": ["serve.py", "--no-browser", "--port", "5174"],
+      "port": 5174
     }
   ]
 }

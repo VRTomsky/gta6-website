@@ -5,19 +5,24 @@
      aus           kein Backend — Konten noch nicht freigeschaltet
      abgemeldet    Einladung zum Anmelden / Registrieren
      ohne-profil   angemeldet, aber noch kein Name gewählt
-     angemeldet    Profilkopf + Bearbeiten, Newsletter, Sicherheit, Löschen
+     angemeldet    Profil ansehen — oder mit #bearbeiten bearbeiten
 
-   Der Profilkopf zeigt Titelbild, Profilbild, Name und Beschreibung. Wer
-   ein anderes Bild wählt, sieht es dort sofort — gespeichert wird erst
-   mit „Speichern".
+   ── Profil ansehen (konto.html) ──
+   Das eigene Titelbild liegt fest hinter der ganzen Seite; beim Scrollen
+   läuft nur der Inhalt darüber. Oben Profilbild, Name, Beschreibung, dann
+   Countdown und Steckbrief, Lieblingsfigur und -ort, Gamertag, Vorfreude
+   und die neuesten Meldungen vom Rockstar Newswire.
 
-   Eigene Bilder gehen nicht verloren, wenn man zu einer Vorlage wechselt:
-   Sie bleiben als eigene Kachel in der Auswahl stehen, bis man sie
-   ausdrücklich entfernt.
+   ── Profil bearbeiten (konto.html#bearbeiten) ──
+   Titel- und Profilbild (Vorlage oder eigenes Bild mit Zuschneiden),
+   Name, Beschreibung, „Über dich", dazu Newsletter, Anmeldung und
+   Konto löschen. Wer ein Bild wählt, sieht es sofort im Profilkopf;
+   gespeichert wird erst mit „Speichern". Eigene Bilder gehen beim Wechsel
+   zu einer Vorlage nicht verloren, sie bleiben als Kachel „Eigenes".
 
    Die Seite wird nur neu aufgebaut, wenn sich der angemeldete Nutzer
-   ändert. Speichert man das Profil, werden Kopf und Nav nachgezogen —
-   halb ausgefüllte Felder bleiben dabei stehen.
+   ändert. Speichert man das Profil, werden Kopf, Ansicht und Nav
+   nachgezogen — halb ausgefüllte Felder bleiben dabei stehen.
    ═══════════════════════════════════════════════════════════ */
 
 import {
@@ -27,11 +32,33 @@ import {
 import { zuschneiden } from "./zuschnitt.js";
 
 const root = document.getElementById("kontoRoot");
-const FIGUREN = (typeof CHARS !== "undefined" ? CHARS : []).map(c => ({ id: c.id, name: c.name }));
+const FIGUREN = typeof CHARS !== "undefined" ? CHARS : [];
+const ORTE = typeof PLACES !== "undefined" ? PLACES : [];
+const SEITEN = typeof CHAR_PAGES !== "undefined" ? CHAR_PAGES : {};
 const STANDARD = { avatar: "preset:vi", titel: TITEL_STANDARD };
+const GAMERTAG_MUSTER = /^[A-Za-z0-9 _.-]{0,24}$/;
+
+const PLATTFORMEN = [
+  { id: "ps5",  kurz: "PS5",  name: "PlayStation 5" },
+  { id: "xbox", kurz: "Xbox", name: "Xbox Series X|S" }
+];
+const EDITIONEN = [
+  { id: "standard", kurz: "Standard", name: "Standard Edition" },
+  { id: "ultimate", kurz: "Ultimate", name: "Ultimate Edition" }
+];
+const VORFREUDE = [
+  { id: "story",       name: L("Die Story von Jason & Lucia", "Jason & Lucia’s story"),  bild: "art/jason_lucia_motel.jpg" },
+  { id: "vice-city",   name: L("Vice City erkunden", "Exploring Vice City"),              bild: "places/vice_city_09.jpg" },
+  { id: "ueberfaelle", name: L("Überfälle planen", "Planning heists"),                    bild: "art/jason_lucia_robbery.jpg" },
+  { id: "autos",       name: L("Autos & Tuning", "Cars & tuning"),                        bild: "ultimate/ue_cheetah_01.jpg" },
+  { id: "online",      name: "GTA Online",                                                 bild: "places/vice_city_05.jpg" },
+  { id: "musik",       name: L("Radio & Soundtrack", "Radio & soundtrack"),               bild: "news/album.jpg" }
+];
 
 let gebautFuer = null;       // uid, für den die Seite gerade steht
 let newsletterAn = false;
+let uhr = null;              // Countdown in der Profilansicht
+let newswire = null;         // zuletzt geladene Meldungen
 
 /* Bilder — `wahl` ist das, was gerade ausgewählt ist (auch ungespeichert),
    `eigen` die hochgeladenen Bilder, `quellen` die Originale dieses
@@ -43,6 +70,7 @@ let titelGespeichert = "";   // eigenes Titelbild, wie es in der Datenbank liegt
 let titelGeladen = false;
 
 abonnieren(zeichnen);
+addEventListener("hashchange", () => { if (gebautFuer) modusSetzen(true); });
 
 function zeichnen(z) {
   if (!z.backend) return leer("aus");
@@ -54,6 +82,7 @@ function zeichnen(z) {
     seiteBauen(z);
   } else {
     kopfAuffrischen(z);
+    ansichtZeichnen();
     sicherheitAuffrischen(z);
   }
 }
@@ -61,6 +90,8 @@ function zeichnen(z) {
 /* ═══ Leere Zustände ══════════════════════════════════════ */
 function leer(art) {
   gebautFuer = null;
+  clearInterval(uhr);
+  document.body.classList.remove("hat-titelbild");
   document.title = L("Mein Konto", "My account") + " — Grand Theft Auto VI";
 
   if (art === "aus") {
@@ -107,9 +138,9 @@ function leer(art) {
         : L("Freiwillig und kostenlos. Mit Konto hast du ein eigenes Profil und bekommst die wichtigsten GTA-VI-News per E-Mail.",
             "Optional and free. With an account you get your own profile and the biggest GTA VI news by email.")}</p>
       <ul class="kleer__liste">
-        <li><b>${L("Dein Profil", "Your profile")}</b>${L("Benutzername, Beschreibung und ein Profilbild — eigenes Foto oder eine der Figuren.", "Username, bio and a profile picture — your own photo or one of the characters.")}</li>
+        <li><b>${L("Dein Profil", "Your profile")}</b>${L("Titelbild, Profilbild, Lieblingsfigur, Gamertag — alles, was zu dir gehört.", "Cover image, profile picture, favorite character, gamertag — everything that’s you.")}</li>
         <li><b>Newsletter</b>${L("Neue Trailer, offizielle Ankündigungen und die Leak-Lage, gesammelt in dein Postfach.", "New trailers, official announcements and the leak situation, straight to your inbox.")}</li>
-        <li><b>${L("Deine Daten", "Your data")}</b>${L("Kein Abo, keine Werbung. Abmelden und Konto löschen geht jederzeit selbst.", "No subscription, no ads. Unsubscribe or delete your account yourself at any time.")}</li>
+        <li><b>${L("Mehrere Konten", "Multiple accounts")}</b>${L("Wechsle mit einem Klick zwischen deinen Konten. Abmelden und löschen geht jederzeit selbst.", "Switch between your accounts in one click. Sign out or delete any time.")}</li>
       </ul>
       <div class="kleer__knoepfe">
         <button type="button" class="btn btn--pink btn--lg" data-konto-oeffnen="registrieren">${L("Konto erstellen", "Create account")}</button>
@@ -119,6 +150,19 @@ function leer(art) {
 }
 
 /* ═══ Angemeldet ══════════════════════════════════════════ */
+const ICON_STIFT = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
+const ICON_HAKEN = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ICON_WECHSEL = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+const auswahlFeld = (name, label, optionen, wert, leerText) => `
+  <label class="kf">
+    <span class="kf__l">${label}</span>
+    <select class="kf__i" name="${name}">
+      <option value="">${leerText || L("Keine Angabe", "No preference")}</option>
+      ${optionen.map(o => `<option value="${esc(o.id)}"${wert === o.id ? " selected" : ""}>${esc(o.name)}</option>`).join("")}
+    </select>
+  </label>`;
+
 function seiteBauen(z) {
   const { nutzer, profil } = z;
   wahl = { avatar: profil.avatar || STANDARD.avatar, titel: profil.cover || STANDARD.titel };
@@ -126,10 +170,12 @@ function seiteBauen(z) {
   quellen = { avatar: null, titel: null };
   titelGespeichert = "";
   titelGeladen = false;
+  document.body.classList.add("hat-titelbild");
 
   root.innerHTML = `
+    <div class="kbg" aria-hidden="true"><img data-k="titel" src="${esc(titelUrl(wahl.titel, ""))}" alt=""></div>
+
     <section class="khero">
-      <div class="khero__bg" aria-hidden="true"><img data-k="titel" src="${esc(titelUrl(wahl.titel, ""))}" alt=""></div>
       <div class="khero__inner">
         <img class="khero__av" data-k="av" src="" alt="" width="164" height="164">
         <div class="khero__txt">
@@ -137,18 +183,25 @@ function seiteBauen(z) {
           <h1 class="h-display khero__name" data-k="name"></h1>
           <p class="khero__bio" data-k="bio"></p>
           <div class="khero__chips" data-k="chips"></div>
+          <div class="khero__aktionen">
+            <a class="btn btn--pink" href="#bearbeiten" data-nur="profil">${ICON_STIFT}<span>${L("Profil bearbeiten", "Edit profile")}</span></a>
+            <a class="btn btn--pink" href="#profil" data-nur="bearbeiten">${ICON_HAKEN}<span>${L("Zur Profilansicht", "View profile")}</span></a>
+            <button type="button" class="btn btn--ghost" data-konto-wechseln>${ICON_WECHSEL}<span>${L("Konto wechseln", "Switch account")}</span></button>
+          </div>
         </div>
       </div>
     </section>
 
-    <div class="kgrid">
+    <div class="kprofil" data-modus="profil"></div>
+
+    <div class="kgrid" data-modus="bearbeiten" hidden>
       <section class="kbox" aria-labelledby="kProfilH">
         <p class="kbox__k">${L("Profil", "Profile")}</p>
         <h2 class="kbox__h" id="kProfilH">${L("Profil bearbeiten", "Edit profile")}</h2>
         <form class="kbox__form" id="kProfilForm" novalidate>
           <fieldset class="kbild">
             <legend class="kf__l">${L("Titelbild", "Cover image")}</legend>
-            <p class="kf__h kbild__hinweis">${L("Oben im Profilkopf siehst du sofort, wie es aussieht.", "The header above shows right away how it looks.")}</p>
+            <p class="kf__h kbild__hinweis">${L("Liegt hinter deinem ganzen Profil. Eigene Bilder bleiben in voller Auflösung — bis 4K.", "Sits behind your whole profile. Your own images keep their full resolution — up to 4K.")}</p>
             <div class="kbild__raster kbild__raster--titel" role="radiogroup"
                  aria-label="${esc(L("Titelbild", "Cover image"))}" data-raster="titel"></div>
             <div class="kbox__zeile kbild__aktionen" data-aktionen="titel"></div>
@@ -175,13 +228,21 @@ function seiteBauen(z) {
             <span class="kzaehler" id="kBioZahl" aria-live="polite"></span>
           </label>
 
-          <label class="kf">
-            <span class="kf__l">${L("Lieblingsfigur", "Favorite character")}</span>
-            <select class="kf__i" name="favChar">
-              <option value="">${L("Keine Angabe", "No preference")}</option>
-              ${FIGUREN.map(f => `<option value="${f.id}"${profil.favChar === f.id ? " selected" : ""}>${esc(f.name)}</option>`).join("")}
-            </select>
-          </label>
+          <fieldset class="kbild">
+            <legend class="kf__l">${L("Über dich", "About you")}</legend>
+            <div class="kfelder">
+              ${auswahlFeld("favChar", L("Lieblingsfigur", "Favorite character"), FIGUREN.map(f => ({ id: f.id, name: f.name })), profil.favChar)}
+              ${auswahlFeld("lieblingsort", L("Lieblingsort", "Favorite place"), ORTE.map(o => ({ id: o.id, name: o.name })), profil.lieblingsort)}
+              ${auswahlFeld("plattform", L("Plattform", "Platform"), PLATTFORMEN, profil.plattform)}
+              ${auswahlFeld("edition", L("Edition", "Edition"), EDITIONEN, profil.edition)}
+              ${auswahlFeld("vorfreude", L("Am meisten freue ich mich auf", "Most excited about"), VORFREUDE, profil.vorfreude)}
+              <label class="kf">
+                <span class="kf__l">${L("Gamertag (PSN / Xbox)", "Gamertag (PSN / Xbox)")}</span>
+                <input class="kf__i" name="gamertag" value="${esc(profil.gamertag)}" maxlength="24"
+                       autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(L("z. B. ViceCityLegend", "e.g. ViceCityLegend"))}">
+              </label>
+            </div>
+          </fieldset>
 
           <div class="kbox__zeile kspeichern">
             <button type="submit" class="btn btn--pink btn--lg">${L("Speichern", "Save")}</button>
@@ -228,6 +289,15 @@ function seiteBauen(z) {
   profilFormular();
   newsletterEinrichten();
   loeschenEinrichten();
+  modusSetzen(false);
+
+  if (window.Newswire) {
+    Newswire.laden().then(d => {
+      if (!d || gebautFuer !== nutzer.uid) return;
+      newswire = d;
+      ansichtZeichnen();
+    });
+  }
 
   /* Das eigene Titelbild liegt getrennt und kommt nach */
   const uid = nutzer.uid;
@@ -243,6 +313,20 @@ function seiteBauen(z) {
     if (gebautFuer !== uid) return;
     bildAuswahlZeichnen("titel");
   });
+}
+
+/* Profil ansehen ↔ bearbeiten, gesteuert über #bearbeiten */
+function modusSetzen(scrollen) {
+  const modus = location.hash === "#bearbeiten" ? "bearbeiten" : "profil";
+  root.querySelectorAll("[data-modus]").forEach(el => { el.hidden = el.dataset.modus !== modus; });
+  root.querySelectorAll("[data-nur]").forEach(el => { el.hidden = el.dataset.nur !== modus; });
+  document.body.classList.toggle("ist-bearbeiten", modus === "bearbeiten");
+  if (modus === "profil") ansichtZeichnen();
+  if (scrollen) {
+    const ziel = root.querySelector(`[data-modus="${modus}"]`);
+    const oben = ziel ? ziel.getBoundingClientRect().top + scrollY - 110 : 0;
+    if (scrollY > oben) scrollTo({ top: Math.max(0, oben), behavior: "smooth" });
+  }
 }
 
 /* ── Profilkopf ── */
@@ -270,8 +354,9 @@ function kopfAuffrischen({ nutzer, profil }) {
 
   const chips = [];
   if (ungespeichert()) chips.push(`<span class="kchip kchip--vorschau">${L("Vorschau · noch nicht gespeichert", "Preview · not saved yet")}</span>`);
-  const fig = FIGUREN.find(f => f.id === profil.favChar);
-  if (fig) chips.push(`<span class="kchip"><img src="assets/img/avatars/${fig.id}.jpg" alt="">${L("Lieblingsfigur", "Favorite")}: ${esc(fig.name)}</span>`);
+  const plattform = PLATTFORMEN.find(p => p.id === profil.plattform);
+  if (plattform) chips.push(`<span class="kchip">${esc(plattform.name)}</span>`);
+  if (profil.edition === "ultimate") chips.push(`<span class="kchip kchip--gold">Ultimate Edition</span>`);
   if (newsletterAn) chips.push(`<span class="kchip kchip--pink">${L("Newsletter aktiv", "Newsletter on")}</span>`);
   if (!nutzer.emailVerified) chips.push(`<span class="kchip kchip--warn">${L("E-Mail nicht bestätigt", "Email not confirmed")}</span>`);
   q("chips").innerHTML = chips.join("");
@@ -283,6 +368,166 @@ function kopfAuffrischen({ nutzer, profil }) {
   }
 }
 
+/* ── Profil ansehen ── */
+function tageZwischen(a, b) {
+  return Math.max(0, Math.floor((b - a) / 86400000));
+}
+
+function ansichtZeichnen() {
+  const box = root.querySelector(".kprofil");
+  const p = zustand.profil;
+  if (!box || !p || box.hidden) return;
+
+  const plattform = PLATTFORMEN.find(x => x.id === p.plattform);
+  const edition = EDITIONEN.find(x => x.id === p.edition);
+  const figur = FIGUREN.find(f => f.id === p.favChar);
+  const ort = ORTE.find(o => o.id === p.lieblingsort);
+  const vorfreude = VORFREUDE.find(v => v.id === p.vorfreude);
+  const dabei = p.createdAt ? tageZwischen(new Date(p.createdAt), Date.now()) : 0;
+  const leerKarte = (kicker, text) => `
+    <a class="kkarte kkarte--leer" href="#bearbeiten">
+      <span class="kicker">${kicker}</span>
+      <b>${text}</b>
+      <span class="kkarte__plus">${L("Im Profil festlegen", "Set it in your profile")} →</span>
+    </a>`;
+
+  const figurBild = figur
+    ? "assets/img/" + ((SEITEN[figur.id] && SEITEN[figur.id].full) || (figur.thumb || "").replace("assets/img/", ""))
+    : "";
+
+  box.innerHTML = `
+    <div class="kstats">
+      <div class="kstat kstat--countdown">
+        <span class="kstat__k">${L("GTA VI erscheint in", "GTA VI launches in")}</span>
+        <b class="kstat__v" data-k="tage">—</b>
+        <span class="kstat__u" data-k="uhr">${L("Tagen", "days")}</span>
+      </div>
+      <div class="kstat">
+        <span class="kstat__k">${L("Dabei seit", "Member for")}</span>
+        <b class="kstat__v">${dabei}</b>
+        <span class="kstat__u">${dabei === 1 ? L("Tag", "day") : L("Tagen", "days")}${p.createdAt ? " · " + esc(datumMonat(new Date(p.createdAt))) : ""}</span>
+      </div>
+      <div class="kstat">
+        <span class="kstat__k">${L("Plattform", "Platform")}</span>
+        <b class="kstat__v kstat__v--text">${plattform ? esc(plattform.kurz) : "—"}</b>
+        <span class="kstat__u">${plattform ? esc(plattform.name) : `<a href="#bearbeiten">${L("festlegen", "set it")}</a>`}</span>
+      </div>
+      <div class="kstat">
+        <span class="kstat__k">Edition</span>
+        <b class="kstat__v kstat__v--text">${edition ? esc(edition.kurz) : "—"}</b>
+        <span class="kstat__u">${edition ? "Edition" : `<a href="#bearbeiten">${L("festlegen", "set it")}</a>`}</span>
+      </div>
+    </div>
+
+    <div class="kkarten">
+      ${figur ? `
+        <article class="kkarte kkarte--bild">
+          <img src="${esc(figurBild)}" alt="" loading="lazy">
+          <div class="kkarte__inhalt">
+            <span class="kicker">${L("Lieblingsfigur", "Favorite character")}</span>
+            <h2 class="kkarte__titel">${figur.display}</h2>
+            <p class="kkarte__zeile">${esc(figur.tag)} · ${esc(figur.sub)}</p>
+            <p class="kkarte__zitat">${L("„", "“")}${String(figur.quote).replace(/<br>/g, " ")}${L("“", "”")}</p>
+            <a class="btn btn--ghost" href="charakter.html?c=${esc(figur.id)}">${L("Akte öffnen", "Open file")}</a>
+          </div>
+        </article>` : leerKarte(L("Lieblingsfigur", "Favorite character"), L("Team Jason oder Team Lucia?", "Team Jason or Team Lucia?"))}
+
+      ${ort ? `
+        <article class="kkarte kkarte--bild">
+          <img src="${esc(ort.shots && ort.shots[0] ? "assets/img/" + ort.shots[0] : ort.hero)}" alt="" loading="lazy">
+          <div class="kkarte__inhalt">
+            <span class="kicker">${L("Lieblingsort", "Favorite place")}</span>
+            <h2 class="kkarte__titel">${esc(ort.name)}</h2>
+            <p class="kkarte__zeile">${esc(ort.sub)} · ${esc(ort.badge)}</p>
+            <p class="kkarte__text">${esc(ort.text)}</p>
+            <a class="btn btn--ghost" href="index.html#leonida">${L("Nach Leonida", "Explore Leonida")}</a>
+          </div>
+        </article>` : leerKarte(L("Lieblingsort", "Favorite place"), L("Wo in Leonida fühlst du dich zu Hause?", "Where in Leonida do you feel at home?"))}
+    </div>
+
+    <div class="kreihe">
+      ${vorfreude ? `
+        <article class="kmini kmini--bild">
+          <img src="assets/img/${esc(vorfreude.bild)}" alt="" loading="lazy">
+          <div>
+            <span class="kicker">${L("Freut sich am meisten auf", "Most excited about")}</span>
+            <b>${esc(vorfreude.name)}</b>
+          </div>
+        </article>` : `
+        <a class="kmini kmini--leer" href="#bearbeiten">
+          <span class="kicker">${L("Vorfreude", "Excitement")}</span>
+          <b>${L("Worauf freust du dich am meisten?", "What are you most excited about?")}</b>
+        </a>`}
+
+      ${p.gamertag ? `
+        <article class="kmini">
+          <div>
+            <span class="kicker">Gamertag${plattform ? " · " + esc(plattform.kurz) : ""}</span>
+            <b class="kmini__tag">${esc(p.gamertag)}</b>
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" data-kopieren="${esc(p.gamertag)}">${L("Kopieren", "Copy")}</button>
+        </article>` : `
+        <a class="kmini kmini--leer" href="#bearbeiten">
+          <span class="kicker">Gamertag</span>
+          <b>${L("Damit dich andere in Leonida finden", "So others can find you in Leonida")}</b>
+        </a>`}
+
+      <a class="kmini ${newsletterAn ? "kmini--an" : ""}" href="#bearbeiten">
+        <div>
+          <span class="kicker">Newsletter</span>
+          <b>${newsletterAn ? L("Du bekommst alle GTA-VI-News", "You’re getting all GTA VI news") : L("Noch nicht abonniert", "Not subscribed yet")}</b>
+        </div>
+        <span class="kmini__punkt" aria-hidden="true"></span>
+      </a>
+    </div>
+
+    <section class="kbox knews">
+      <p class="kbox__k">Rockstar Newswire</p>
+      <h2 class="kbox__h">${L("Neu für dich", "New for you")}</h2>
+      <div class="knews__liste">${newswireHtml()}</div>
+      <a class="kd__link" href="index.html#news">${L("Alle News & Leaks", "All news & leaks")} →</a>
+    </section>`;
+
+  clearInterval(uhr);
+  const tick = () => {
+    const rest = (typeof RELEASE !== "undefined" ? RELEASE : Date.now()) - Date.now();
+    const t = box.querySelector('[data-k="tage"]'), u = box.querySelector('[data-k="uhr"]');
+    if (!t) return clearInterval(uhr);
+    if (rest <= 0) { t.textContent = "0"; u.textContent = L("Es ist so weit!", "It’s here!"); return clearInterval(uhr); }
+    const s = Math.floor(rest / 1000), zwei = n => String(n).padStart(2, "0");
+    t.textContent = Math.floor(s / 86400);
+    u.textContent = L("Tagen · ", "days · ") + `${zwei(Math.floor(s % 86400 / 3600))}:${zwei(Math.floor(s % 3600 / 60))}:${zwei(s % 60)}`;
+  };
+  tick();
+  uhr = setInterval(tick, 1000);
+}
+
+function newswireHtml() {
+  if (!newswire || !window.Newswire) return `<p class="kf__h">${L("Meldungen werden geladen …", "Loading news …")}</p>`;
+  const bildOk = u => /^https:\/\/media-rockstargames-com\.akamaized\.net\//.test(u) ? u : "";
+  const urlOk = u => /^https:\/\/(www\.)?rockstargames\.com\//.test(u) ? u : "https://www.rockstargames.com/newswire";
+  return newswire.meldungen.slice(0, 3).map(m => {
+    const t = Newswire.text(m);
+    const bild = bildOk(m.bild);
+    return `
+      <a class="knews__eintrag" href="${esc(urlOk(m.url))}" target="_blank" rel="noopener noreferrer">
+        ${bild ? `<img src="${esc(bild)}" alt="" loading="lazy">` : ""}
+        <span>
+          <time datetime="${esc(m.datum)}">${esc(t.datum)}</time>${Newswire.istNeu(m) ? `<i class="nitem__neu">${L("NEU", "NEW")}</i>` : ""}
+          <b>${esc(t.titel)}</b>
+        </span>
+      </a>`;
+  }).join("");
+}
+
+root.addEventListener("click", e => {
+  const k = e.target.closest("[data-kopieren]");
+  if (!k) return;
+  const text = k.getAttribute("data-kopieren");
+  const fertig = () => { k.textContent = L("Kopiert ✓", "Copied ✓"); setTimeout(() => { k.textContent = L("Kopieren", "Copy"); }, 1800); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(fertig, () => {});
+});
+
 /* ── Bildauswahl (Titelbild und Profilbild) ── */
 function bildAuswahlZeichnen(art) {
   const raster = root.querySelector(`[data-raster="${art}"]`);
@@ -291,7 +536,7 @@ function bildAuswahlZeichnen(art) {
   const istTitel = art === "titel";
   const vorlagen = istTitel ? TITEL_VORLAGEN : VORLAGEN;
   const klasse = istTitel ? "tb-wahl" : "av-wahl";
-  const url = istTitel ? (id => `assets/img/covers/${id}.jpg`) : (id => `assets/img/avatars/${id}.jpg`);
+  const url = istTitel ? (id => `assets/img/covers/klein/${id}.jpg`) : (id => `assets/img/avatars/${id}.jpg`);
 
   const kacheln = [];
   if (eigen[art]) {
@@ -444,6 +689,12 @@ function profilFormular() {
     e.preventDefault();
     const name = form.username.value.trim();
     if (!NAME_MUSTER.test(name)) { form.username.focus(); return statusSetzen(meldung({ code: "name-ungueltig" }), true); }
+    const gamertag = form.gamertag.value.trim();
+    if (!GAMERTAG_MUSTER.test(gamertag)) {
+      form.gamertag.focus();
+      return statusSetzen(L("Gamertag: bis 24 Zeichen, Buchstaben, Ziffern, Leerzeichen, Punkt, Minus, Unterstrich.",
+                            "Gamertag: up to 24 characters — letters, numbers, spaces, dot, dash, underscore."), true);
+    }
     if (wahl.avatar === "eigen" && !eigen.avatar) wahl.avatar = STANDARD.avatar;
     if (wahl.titel === "eigen" && titelGeladen && !eigen.titel) wahl.titel = STANDARD.titel;
     const daten = {
@@ -454,13 +705,19 @@ function profilFormular() {
       /* Solange das eigene Titelbild nicht geladen ist, bleibt es unangetastet */
       cover: titelGeladen ? wahl.titel : zustand.profil.cover,
       favChar: form.favChar.value,
+      lieblingsort: form.lieblingsort.value,
+      plattform: form.plattform.value,
+      edition: form.edition.value,
+      vorfreude: form.vorfreude.value,
+      gamertag,
       lang: LANG
     };
     const titelNeu = titelGeladen && eigen.titel !== titelGespeichert;
     if (titelNeu) daten.coverEigen = eigen.titel;
     const knopf = form.querySelector("[type=submit]");
     knopf.disabled = true; knopf.classList.add("is-busy");
-    statusSetzen("");
+    statusSetzen(titelNeu && eigen.titel
+      ? L("Titelbild wird hochgeladen …", "Uploading cover image …") : "");
     try {
       await zustand.backend.profilSpeichern(zustand.nutzer.uid, daten, zustand.profil);
       if (titelNeu) titelGespeichert = eigen.titel;

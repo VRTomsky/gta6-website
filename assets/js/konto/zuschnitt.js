@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════
-   Bild zuschneiden — für Profilbild (1 : 1) und Titelbild (3 : 1)
+   Bild zuschneiden — für Profilbild (1 : 1) und Titelbild (16 : 9)
 
    const erg = await zuschneiden({ art: "avatar" | "titel", datei, vorschau });
    → null (abgebrochen) oder { daten, quelle }
 
-     daten    fertiges JPEG als data:-URL
+     daten    fertiges Bild als data:-URL (Titelbild WebP, sonst JPEG)
      quelle   { bild, stand } — damit lässt sich derselbe Upload später
               erneut zuschneiden: zuschneiden({ art, quelle, vorschau })
 
@@ -14,15 +14,28 @@
    Bedienung: ziehen (Maus, Finger), Regler, Mausrad, zwei Finger,
    Pfeiltasten und +/−. Das Bild füllt den Rahmen immer ganz aus —
    leere Ränder sind nicht möglich.
+
+   Auflösung: Das Titelbild behält die Auflösung des gewählten
+   Ausschnitts — ein 4K-Bild ohne Zoom bleibt 3840 × 2160, nichts wird
+   hochgerechnet. Bei sehr großen Dateien sinkt erst die Qualität ein
+   wenig, notfalls die Größe, bis es in den Speicher passt (≈ 4 MB).
    ═══════════════════════════════════════════════════════════ */
 
 import { L, esc } from "./konto.js";
 import { KontoFehler } from "./backend.js";
 
 const ARTEN = {
-  avatar: { verh: 1, breite: 256, hoehe: 256, max: 140000, min: 200 },
-  titel:  { verh: 3, breite: 1500, hoehe: 500, max: 280000, min: 200 }
+  avatar: { verh: 1,      festeBreite: 384, maxBreite: 384,  max: 140000,  typen: ["image/jpeg"],               qual: [0.9, 0.84, 0.76, 0.66] },
+  titel:  { verh: 16 / 9, festeBreite: 0,   maxBreite: 3840, max: 5500000, typen: ["image/webp", "image/jpeg"], qual: [0.93, 0.88, 0.82, 0.74] }
 };
+
+const alsBlob = (c, typ, q) => new Promise(ok => c.toBlob(ok, typ, q));
+const alsDatenUrl = b => new Promise((ok, nein) => {
+  const f = new FileReader();
+  f.onload = () => ok(f.result);
+  f.onerror = nein;
+  f.readAsDataURL(b);
+});
 const ZOOM_MAX = 5;
 
 /* Datei → geladenes <img>. Große Fotos vom Handy gehen problemlos,
@@ -63,7 +76,8 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
       <div class="kz__karte kz__karte--${art}">
         <p class="kd__kicker">${art === "avatar" ? L("Profilbild", "Profile picture") : L("Titelbild", "Cover image")}</p>
         <h2 class="kz__titel" id="kzTitel">${L("Bild zuschneiden", "Crop image")}</h2>
-        <p class="kz__text">${L("Ziehen zum Verschieben, Regler oder Mausrad zum Zoomen.", "Drag to move, use the slider or scroll wheel to zoom.")}</p>
+        <p class="kz__text">${L("Ziehen zum Verschieben, Regler oder Mausrad zum Zoomen.", "Drag to move, use the slider or scroll wheel to zoom.")}
+          <span class="kz__aufloesung" data-kz-aufloesung></span></p>
 
         <div class="kz__buehne kz__buehne--${art}" tabindex="0"
              aria-label="${esc(L("Bildausschnitt. Pfeiltasten verschieben, Plus und Minus zoomen.", "Image crop. Arrow keys move, plus and minus zoom."))}">
@@ -85,7 +99,7 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
             ? `<div class="kz__vav"><canvas width="192" height="192"></canvas></div>
                <div class="kz__vav kz__vav--klein"><canvas width="68" height="68"></canvas></div>`
             : `<div class="kz__vtitel">
-                 <canvas width="600" height="200"></canvas>
+                 <canvas width="480" height="270"></canvas>
                  <div class="kz__vinhalt">
                    ${vorschau && vorschau.avatar ? `<img src="${esc(vorschau.avatar)}" alt="">` : ""}
                    <b>${esc((vorschau && vorschau.name) || "")}</b>
@@ -108,6 +122,7 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
     const img = el.querySelector(".kz__bild");
     const regler = el.querySelector("input[type=range]");
     const leinwaende = Array.from(el.querySelectorAll(".kz__vorschau canvas"));
+    const aufloesung = el.querySelector("[data-kz-aufloesung]");
     const bw = bild.naturalWidth, bh = bild.naturalHeight;
 
     /* ── Geometrie ──
@@ -128,6 +143,15 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
       return { W, H, s, dw, dh, x, y };
     };
 
+    /* Zielbreite in Pixeln. Rahmenmaße sind ganzzahlig gerundet, deshalb
+       landet ein unbeschnittenes 4K-Bild sonst bei 3839 statt 3840 */
+    const zielBreite = sw => {
+      if (cfg.festeBreite) return cfg.festeBreite;
+      const voll = Math.min(cfg.maxBreite, bw);
+      const b = Math.min(cfg.maxBreite, Math.round(sw));
+      return Math.abs(b - voll) <= Math.max(3, voll * 0.002) ? voll : b;
+    };
+
     let rafId = null;
     const zeichnen = () => {
       rafId = null;
@@ -136,6 +160,10 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
       img.style.height = g.dh + "px";
       img.style.transform = `translate3d(${g.x}px, ${g.y}px, 0)`;
       regler.value = stand.zoom;
+      if (aufloesung) {
+        const b = zielBreite(g.W / g.s);
+        aufloesung.textContent = `· ${b} × ${Math.round(b / cfg.verh)} px`;
+      }
       /* Vorschau aus demselben Ausschnitt */
       const sx = -g.x / g.s, sy = -g.y / g.s, sw = g.W / g.s, sh = g.H / g.s;
       leinwaende.forEach(c => {
@@ -238,18 +266,29 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
       fertig(erg);
     };
 
-    const ausschneiden = () => {
+    /* Ausschnitt in Originalpixeln → Leinwand → Datei. Kodiert wird mit
+       toBlob, damit die Seite bei 4K nicht einfriert. */
+    const ausschneiden = async () => {
       const g = geo();
-      const c = document.createElement("canvas");
-      c.width = cfg.breite; c.height = cfg.hoehe;
-      const ctx = c.getContext("2d");
-      ctx.fillStyle = "#0b1124";                 // Hintergrund für transparente PNGs
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(bild, -g.x / g.s, -g.y / g.s, g.W / g.s, g.H / g.s, 0, 0, c.width, c.height);
-      for (const q of [0.86, 0.78, 0.7, 0.6, 0.5]) {
-        const d = c.toDataURL("image/jpeg", q);
-        if (d.length <= cfg.max) return d;
+      const sx = -g.x / g.s, sy = -g.y / g.s, sw = g.W / g.s, sh = g.H / g.s;
+      let breite = zielBreite(sw);
+      for (let runde = 0; runde < 4; runde++) {
+        const c = document.createElement("canvas");
+        c.width = breite;
+        c.height = Math.round(breite / cfg.verh);
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#0b1124";               // Hintergrund für transparente PNGs
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(bild, sx, sy, sw, sh, 0, 0, c.width, c.height);
+        for (const typ of cfg.typen) {
+          for (const q of cfg.qual) {
+            const b = await alsBlob(c, typ, q);
+            if (!b || b.type !== typ) break;      // Format kann dieser Browser nicht
+            if (Math.ceil(b.size / 3) * 4 + 40 <= cfg.max) return alsDatenUrl(b);
+          }
+        }
+        breite = Math.round(breite * 0.8);
       }
       throw new KontoFehler("zu-gross");
     };
@@ -272,15 +311,17 @@ export async function zuschneiden({ art, datei, quelle, vorschau }) {
         stand.zoom = 1; stand.mx = 0.5; stand.my = 0.5;
         return neuZeichnen();
       }
-      if (e.target.closest("[data-kz-ok]")) {
-        try {
-          const daten = ausschneiden();
+      const ok = e.target.closest("[data-kz-ok]");
+      if (ok && !ok.disabled) {
+        ok.disabled = true; ok.classList.add("is-busy");
+        ausschneiden().then(daten => {
           schliessen({ daten, quelle: { bild, stand: { ...stand } } });
-        } catch (err) {
+        }).catch(err => {
+          ok.disabled = false; ok.classList.remove("is-busy");
           el.querySelector("[data-kz-fehler]").textContent = err.code === "zu-gross"
             ? L("Das Bild ist zu groß. Versuch ein anderes.", "That image is too large. Try another one.")
             : L("Das hat nicht geklappt. Versuch es noch einmal.", "That didn’t work. Please try again.");
-        }
+        });
       }
     });
 

@@ -1,0 +1,51 @@
+# Rockstar Newswire alle 15 Minuten abholen und assets/data/newswire.json
+# aktualisieren. Einen Commit gibt es nur, wenn eine neue Meldung da ist.
+#
+# Von Hand starten: GitHub → Repository → Actions → „Rockstar Newswire"
+# → „Run workflow".
+
+name: Rockstar Newswire
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: newswire
+  cancel-in-progress: false
+
+jobs:
+  holen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Newswire abrufen
+        run: node tools/newswire-holen.mjs
+
+      - name: Speichern, falls neu
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- assets/data/newswire.json; then
+            echo "Keine neuen Meldungen."
+            exit 0
+          fi
+          git config user.name "newswire-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/data/newswire.json
+          git commit -m "Newswire aktualisiert"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+          # GitHub Pages neu bauen (Pushes der Action lösen das nicht immer aus)
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || true

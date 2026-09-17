@@ -112,13 +112,14 @@ in der passenden Liste eintragen, sonst nichts.
 - **Ultimate Edition:** 16 Inhalte als Kacheln + Spielhülle in CSS-3D, die auf Mausbewegung
   reagiert und sich ziehen lässt
 - **Galerie:** 136 Bilder, 7 Filter, Lightbox mit Pfeiltasten und Wischgesten
-- **News:** Rockstar Newswire, Leak-Chronik mit Quellen, X-Accounts
+- **News:** Aufmacher (aktuell „GTA VI: The Album"), Rockstar Newswire **aktualisiert sich
+  selbst** (Abschnitt „Newswire automatisch"), Leak-Chronik mit Quellen, X-Accounts
 - **Trailer:** Trailer 1 + 2 als YouTube-Overlay auf der Seite, Extended Look als externer Link
 - **Barrierefreiheit:** Skip-Link, Fokus-Ringe, ARIA-Labels, vollständiger `prefers-reduced-motion`-Zweig
 - **Mobil:** eigener Verhaltenszweig für Touch — Details im Abschnitt „Mobil / Android"
 - **Deutsch / Englisch:** Schalter oben rechts, Direktlink `?lang=en` — Abschnitt „Sprache"
-- **Benutzerkonten:** Anmelden per E-Mail oder Google, Profil, Newsletter — Abschnitt
-  „Benutzerkonten" (live seit 17.09.2026)
+- **Benutzerkonten:** Anmelden per E-Mail oder Google, Profilansicht + Bearbeiten, mehrere
+  Konten mit Wechsler, Newsletter — Abschnitt „Benutzerkonten" (live seit 17.09.2026)
 - Geprüft auf 375×812, 812×375 (quer), 1280 und 1440 px
 
 ## Technische Fallstricke — das Wichtigste für Nachfolger
@@ -536,8 +537,9 @@ Direktlink **`luciajason.de/?lang=en`**.
 ## Benutzerkonten
 
 Freiwillig. Registrieren mit E-Mail + Passwort oder Google, Profil (Benutzername,
-Beschreibung, Lieblingsfigur, Profilbild), Newsletter-Anmeldung, Passwort ändern, Konto
-selbst löschen. Anmelde-Knopf bzw. Profilbild oben rechts in der Nav, Kontoseite
+Beschreibung, Profil- und Titelbild, Lieblingsfigur, Lieblingsort, Plattform, Edition,
+Vorfreude, Gamertag), mehrere Konten auf einem Gerät, Newsletter-Anmeldung, Passwort ändern,
+Konto selbst löschen. Anmelde-Knopf bzw. Profilbild oben rechts in der Nav, Kontoseite
 `konto.html`. Einrichtung Schritt für Schritt: **`KONTO-EINRICHTEN.md`**.
 
 ### Stand
@@ -567,6 +569,11 @@ Demo-Modus, auch wenn Firebase eingetragen ist.
 **Regeln neu veröffentlichen**, sobald sich `firestore.rules` ändert — Anleitung in
 `KONTO-EINRICHTEN.md`. Mit alten Regeln schlägt das Speichern des Profils fehl.
 
+Geprüft im Demo-Modus (17.09.2026, Profilansicht/Wechsler): Registrieren → Profilansicht,
+„Profil bearbeiten" (`#bearbeiten`), alle neuen Felder speichern, 4K-Titelbild
+(3840 × 2160 → WebP ≈ 650 KB), fester Hintergrund beim Scrollen, zweites Konto hinzufügen,
+wechseln, entfernen, aktuelles abmelden → automatischer Wechsel, Englisch, 1440 und 390 px.
+
 Geprüft im Demo-Modus (17.09.2026, Titelbild): eigenes Titel- und Profilbild hochladen,
 ziehen, zoomen, Randbegrenzung, übernehmen, zu Vorlage wechseln und zurück, speichern,
 neu laden, „Zuschnitt ändern" mit gespeichertem Bild, altes Profilformat, Englisch,
@@ -595,15 +602,20 @@ Firestore (Spark-Tarif, kostenlos):
 
 ```
 users/{uid}                username, usernameLower, bio, favChar, lang, createdAt, updatedAt,
-                           avatar, avatarEigen, cover
-users/{uid}/bilder/titel   daten      ← eigenes Titelbild, nur auf der Kontoseite geladen
+                           avatar, avatarEigen, cover,
+                           plattform, edition, lieblingsort, vorfreude, gamertag
+users/{uid}/bilder/titel   teile, typ ← eigenes Titelbild: Anzahl Teile, image/webp|jpeg
+users/{uid}/bilder/titel-0…7  daten   ← Base64-Teile, je ≤ 700.000 Zeichen
 usernames/{name}           uid        ← Eindeutigkeit; öffentlich lesbar für „Name schon vergeben"
 newsletter/{uid}           email, lang, consentAt
 ```
 
 - **Profil- und Titelbild** sind je `preset:<id>` oder `eigen`. Eigene Bilder schneidet
-  `zuschnitt.js` im Browser zu (256 × 256 bzw. 1500 × 500 px, JPEG als `data:`-URL,
-  ≤ 150.000 bzw. 300.000 Zeichen — in den Regeln begrenzt). Sie **bleiben gespeichert, wenn
+  `zuschnitt.js` im Browser zu: Profilbild 384 × 384 JPEG (≤ 140.000 Zeichen), Titelbild
+  **16 : 9 in Originalauflösung bis 3840 px breit**, WebP (sonst JPEG), Qualität 0,93 abwärts
+  bis ≤ 5,5 MB Base64. Weil ein Firestore-Dokument höchstens 1 MB groß sein darf, liegt das
+  Titelbild in bis zu 8 Teilen (`titel-0…7`), geschrieben im selben Batch wie das Profil;
+  überzählige alte Teile werden dabei gelöscht. Sie **bleiben gespeichert, wenn
   man zu einer Vorlage wechselt**, und stehen als Kachel „Eigenes" in der Auswahl, bis man
   sie entfernt. Das Profilbild liegt im Profil selbst (die Nav braucht es auf jeder Seite),
   das große Titelbild getrennt. Firebase Storage wäre nicht mehr kostenlos.
@@ -620,22 +632,47 @@ newsletter/{uid}           email, lang, consentAt
 - **Löschen** verlangt bei Firebase eine frische Anmeldung — die wird **vor** dem Löschen
   der Daten geholt, sonst wären die Daten weg und das Konto noch da.
 
-### Profilkopf, Titelbild, Zuschnitt
+### Profilansicht und Bearbeiten
 
-- Der Profilkopf auf `konto.html` hat genau **3 : 1** (am Desktop gemessen 1440 × 480) —
-  derselbe Rahmen wie beim Zuschneiden. Links Profilbild, daneben Name und Beschreibung.
-  Wird der Inhalt höher (Handy, lange Beschreibung), wächst der Kopf und das Bild wird
-  mittig beschnitten. Auf 390 px bleiben rund **32 %** der Breite sichtbar — die gestrichelten
-  „Handy"-Linien im Zuschneide-Fenster zeigen genau diesen Ausschnitt.
-- **Wer ein Bild wählt, sieht es sofort im Kopf** („Vorschau · noch nicht gespeichert");
+- `konto.html` zeigt zuerst die **Profilansicht**; `konto.html#bearbeiten` (Knopf „Profil
+  bearbeiten") das Formular mit Newsletter, Sicherheit, Gefahrenzone. Umschalten über
+  `hashchange`, kein Neuladen. Links in der Ansicht („festlegen") führen auch auf `#bearbeiten`.
+- **Titelbild als fester Hintergrund** (`.kbg`, `position:fixed`, Verlauf darüber) — nur der
+  Inhalt scrollt. Kein `background-attachment:fixed`, das kann iOS nicht.
+- Ansicht (`ansichtZeichnen()` in `profil.js`): Countdown live, „Dabei seit", Plattform,
+  Edition; Karten Lieblingsfigur (Bild aus `CHAR_PAGES`, Zitat, „Akte öffnen") und
+  Lieblingsort (erstes Bild aus `PLACES.shots`); Vorfreude, Gamertag mit Kopieren,
+  Newsletter-Status; die drei neuesten Newswire-Meldungen. Leere Angaben erscheinen als
+  gestrichelte Karte mit Link zum Bearbeiten.
+- Titelbild-Vorlagen liegen 16 : 9 in `assets/img/covers/` (2560 px) plus Kacheln
+  `covers/klein/` (480 × 270).
+- **Wer ein Bild wählt, sieht es sofort** („Vorschau · noch nicht gespeichert");
   gespeichert wird erst mit „Speichern". Verlässt man die Seite mit ungespeicherten Bildern,
   fragt der Browser nach.
 - **Zuschneiden:** ziehen, Mausrad, Regler, zwei Finger, Pfeiltasten, +/−. Das Bild füllt
-  den Rahmen immer ganz, leere Ränder gehen nicht. „Zuschnitt ändern" nimmt das Original
-  dieses Besuchs; nach dem Neuladen das gespeicherte Bild (hineinzoomen und verschieben geht
-  dann weiter, herauszoomen nicht mehr).
+  den Rahmen immer ganz. Neben der Anleitung steht die Zielauflösung. Rahmenmaße sind
+  ganzzahlig — ohne `zielBreite()` käme ein unbeschnittenes 4K-Bild als 3839 px heraus.
+  Kodiert wird mit `toBlob` (friert bei 4K nicht ein). „Handy"-Linien zeigen den Ausschnitt,
+  der am Telefon hinter dem Profil sichtbar bleibt.
 - **Nicht per Klick daneben schließen** — endet ein Ziehen außerhalb des Rahmens, käme
   sonst ein Klick auf den Hintergrund an und der Zuschnitt wäre weg.
+
+### Mehrere Konten
+
+- Menü oben rechts: „Mein Profil", „Konto wechseln", „Abmelden". „Konto wechseln" öffnet
+  ein Fenster (`.kw`, kein Vollbild): Konten auflisten, wechseln, „Profil bearbeiten",
+  „Entfernen" (zweimal klicken), „Konto hinzufügen", „Aktuelles Konto abmelden".
+- Firebase kann pro App-Instanz nur **ein** angemeldetes Konto. Jedes weitere Konto bekommt
+  deshalb eine eigene Instanz: `initializeApp(config, slot)`, `standard` = `[DEFAULT]`.
+  Die Anmeldungen liegen getrennt in IndexedDB.
+- Liste in `localStorage` `konto-liste` (`konto-liste-demo` im Demo-Modus):
+  `{ aktiv, konten:[{slot, uid, email, name, bild}] }`. Wechseln = `aktiv` setzen + neu laden.
+- „Konto hinzufügen" öffnet den Anmelde-Dialog mit einer **neuen** Instanz; erst nach
+  erfolgreicher Anmeldung wird sie eingetragen und aktiv.
+- Meldet sich das aktive Konto ab (oder läuft die Anmeldung aus), fliegt es aus der Liste
+  und die Seite wechselt automatisch zum nächsten Konto.
+- Das Schließen-Kreuz teilt sich die Klasse `.kd__zu` mit dem Anmelde-Dialog, der es am
+  Handy über das Bild schiebt — im Wechsler per `.kw .kd__zu` zurückgesetzt.
 
 ### Fallstricke
 
@@ -658,6 +695,35 @@ newsletter/{uid}           email, lang, consentAt
 5. **Am Handy kein Autofokus** im Dialog — sonst schiebt sich die Tastatur sofort drüber.
 6. Wer die Namenswahl wegklickt, wird in derselben Sitzung nicht bei jedem Seitenwechsel
    erneut gefragt (`sessionStorage konto-profil-spaeter`); die Nav bietet „Profil anlegen".
+
+## Newswire automatisch
+
+Die Liste „Rockstar Newswire" auf der Startseite (und „Neu für dich" im Profil) aktualisiert
+sich selbst:
+
+```
+GitHub Action (.github/workflows/newswire.yml, alle 15 min)
+  → node tools/newswire-holen.mjs
+      POST https://graph.rockstargames.com/  NewswireList, tagId 666 (GTA VI), en_us + de_de
+  → assets/data/newswire.json  (nur committen, wenn sich Meldungen geändert haben)
+  → Pages-Build anstoßen
+Browser: assets/js/newswire.js
+  → raw.githubusercontent.com/VRTomsky/gta6-website/main/assets/data/newswire.json
+    (CORS erlaubt, 5 min Cache), Ersatz: eigene Datei; alle 5 min erneut, solange sichtbar
+```
+
+- Rockstars API erlaubt keine Aufrufe aus dem Browser (kein CORS) — deshalb der Umweg über
+  die Action. X/Twitter geht nicht: die API kostet.
+- Meldungen mit „Pre-Order/Vorbestellen" im Titel werden gefiltert (Wunsch des Nutzers).
+- Bilder und Links nur von `rockstargames.com` bzw. `media-rockstargames-com.akamaized.net`
+  (Prüfung in `main.js`). Neue Meldungen (< 7 Tage) tragen „NEU".
+- **`newswire.json` gehört der Action.** `Auf GitHub hochladen.bat` spiegelt sie nicht,
+  sondern holt vorher den Stand aus dem Repository in den Arbeitsordner — sonst würde ein
+  Upload eine neuere Liste mit der alten überschreiben. Beim Push-Konflikt mit einem
+  Action-Commit: `pull --rebase`, dann erneut pushen.
+- GitHub pausiert geplante Actions nach 60 Tagen ohne Commit im Repository.
+- Der Aufmacher (Album) und „Rund ums Spiel" sind handgepflegt in `index.html`.
+- Lokal testen: `node tools/newswire-holen.mjs`.
 
 ## Farben
 

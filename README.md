@@ -164,10 +164,18 @@ Wer einen deutschen Text ändert, ändert das `data-en` direkt daneben mit.
 
 ## Benutzerkonten
 
-Freiwillig und kostenlos: Registrieren mit E-Mail oder Google, Profil mit Benutzername,
-Beschreibung, Lieblingsfigur, Titelbild und Profilbild (je eigenes Bild mit Zuschneiden
-oder eine von neun Vorlagen),
-Newsletter-Anmeldung, Konto selbst löschen. Oben rechts in der Nav sitzt der Anmelde-Knopf.
+Freiwillig und kostenlos: Registrieren mit E-Mail oder Google, Profilansicht mit
+Countdown, Lieblingsfigur, Lieblingsort, Plattform, Edition, Gamertag und den neuesten
+Rockstar-Meldungen; „Profil bearbeiten" für Benutzername, Beschreibung, Titelbild (16 : 9 bis
+4K, bleibt beim Scrollen als Hintergrund stehen) und Profilbild. Mehrere Konten auf einem
+Gerät mit „Konto wechseln", Newsletter-Anmeldung, Konto selbst löschen. Oben rechts in der
+Nav sitzt der Anmelde-Knopf.
+
+## News automatisch
+
+Die Liste „Rockstar Newswire" holt eine GitHub Action alle 15 Minuten von Rockstar
+(`tools/newswire-holen.mjs` → `assets/data/newswire.json`); die Seite fragt alle 5 Minuten
+nach. Details in `HANDOVER.md`, Abschnitt „Newswire automatisch".
 
 Das läuft über **Firebase** (Google, Projekt `luciajason-27a74`) und ist seit 17.09.2026
 live. `live: false` in `assets/js/konto-config.js` nimmt den Anmelde-Knopf wieder von der
