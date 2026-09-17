@@ -16,13 +16,13 @@ Solange das nicht eingerichtet ist:
 | Schritt | |
 |---|---|
 | HTTPS-Zertifikat für luciajason.de | ✅ seit 17.09.2026 gültig |
-| „Enforce HTTPS" bei GitHub | ⬜ noch offen — bis dahin leitet `i18n.js` http:// auf https:// um |
+| „Enforce HTTPS" bei GitHub | ✅ |
 | 1 · Projekt `luciajason-27a74` | ✅ |
 | 2 · Web-App, Werte in `konto-config.js` | ✅ |
-| 3 · Anmeldung freischalten | ⬜ |
-| 4 · Datenbank anlegen | ⬜ |
-| 5 · Sicherheitsregeln | ⬜ |
-| 6 · Öffentlicher Name | ⬜ |
+| 3 · Anmeldung freischalten | ✅ E-Mail/Passwort, Google, Domains |
+| 4 · Datenbank anlegen | ✅ |
+| 5 · Sicherheitsregeln | ✅ geprüft: `usernames` lesbar, `users`/`newsletter` gesperrt |
+| 6 · Öffentlicher Name | ✅ |
 | 7 · Verantwortlicher für den Datenschutz | ⬜ |
 | `live: true` in `konto-config.js` | ⬜ erst wenn 3–7 stehen |
 
