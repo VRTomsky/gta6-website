@@ -31,8 +31,12 @@ Solange `live: false` steht, sieht auf luciajason.de niemand etwas vom Kontosyst
 
 ## 0 · HTTPS erzwingen
 
-<https://github.com/VRTomsky/gta6-website/settings/pages> öffnen → Haken bei
-**Enforce HTTPS** setzen.
+GitHub gibt es nur auf Englisch.
+
+1. **<https://github.com/VRTomsky/gta6-website/settings/pages>** öffnen
+   (ggf. vorher bei GitHub anmelden)
+2. Etwas nach unten scrollen bis **„Custom domain"** — dort steht `luciajason.de`
+3. Darunter den Haken bei **„Enforce HTTPS"** setzen. Er speichert sofort
 
 ## 1 · Projekt anlegen
 
@@ -56,29 +60,67 @@ egal: die Seite lädt Analytics nicht und trackt niemanden.
 
 ## 3 · Anmeldung freischalten
 
-**Build → Authentication → Jetzt starten**, dann Reiter **Anmeldemethode**:
+„Authentication" ist bei Firebase der Bereich für die Anmeldung. Er heißt auch in der
+deutschen Oberfläche so. Am einfachsten über den direkten Link:
 
-1. **E-Mail/Passwort** → nur den **oberen** Schalter aktivieren → Speichern
-2. **Neuer Anbieter → Google** → aktivieren → Support-E-Mail auswählen → Speichern
+**<https://console.firebase.google.com/project/luciajason-27a74/authentication>**
 
-Reiter **Einstellungen → Autorisierte Domains → Domain hinzufügen**:
+(Ohne Link: links in der grauen Seitenleiste unter **Build** bzw. **Security** auf
+**Authentication**. Ist die Leiste eingeklappt, oben links auf die drei Striche ☰.)
 
-- `luciajason.de`
-- `www.luciajason.de`
+1. Großer Knopf **„Jetzt starten"** anklicken (nur beim ersten Mal da)
+2. Oben erscheinen Reiter — **„Anmeldemethode"** anklicken
 
-(`localhost` steht dort schon.)
+**E-Mail und Passwort:**
+
+3. In der Liste **„E-Mail/Passwort"** anklicken
+4. Den **oberen** Schalter **„Aktivieren"** einschalten.
+   Den unteren („E-Mail-Link / Anmeldung ohne Passwort") **aus** lassen
+5. **„Speichern"**
+
+**Google:**
+
+6. **„Neuen Anbieter hinzufügen"** anklicken → **„Google"**
+7. Schalter **„Aktivieren"** einschalten
+8. **„Öffentlicher Name des Projekts"**: `luciajason.de` eintragen
+   (das steht später im Google-Anmeldefenster)
+9. **„Support-E-Mail-Adresse des Projekts"**: aufklappen, die eigene Adresse wählen
+10. **„Speichern"**
+
+**Freigegebene Adressen:**
+
+11. Oben den Reiter **„Einstellungen"** anklicken
+12. Links **„Autorisierte Domains"** → **„Domain hinzufügen"** → `luciajason.de` → Hinzufügen
+13. Noch einmal **„Domain hinzufügen"** → `www.luciajason.de` → Hinzufügen
+
+`localhost` und `luciajason-27a74.firebaseapp.com` stehen dort schon — so lassen.
 
 ## 4 · Datenbank anlegen
 
-**Build → Firestore Database → Datenbank erstellen**
+**<https://console.firebase.google.com/project/luciajason-27a74/firestore>**
 
-1. Standort: **`europe-west3 (Frankfurt)`** — lässt sich später nicht mehr ändern
-2. **Produktionsmodus** wählen → Erstellen
+(Ohne Link: Seitenleiste → **Build** bzw. **Databases & Storage** → **Firestore Database**.)
+
+1. **„Datenbank erstellen"** anklicken
+2. Fragt Firebase nach der Edition: **Standard** lassen → **„Weiter"**
+3. **Standort**: aufklappen und **`europe-west3 (Frankfurt)`** wählen → **„Weiter"**.
+   Lässt sich später nicht mehr ändern
+4. **„Im Produktionsmodus starten"** auswählen → **„Erstellen"**
+5. Kurz warten, bis die leere Datenbank erscheint
 
 ## 5 · Sicherheitsregeln einsetzen
 
-**Firestore Database → Regeln** → den vorhandenen Text komplett durch den Inhalt
-der Datei **`firestore.rules`** ersetzen → **Veröffentlichen**.
+Auf derselben Firestore-Seite oben den Reiter **„Regeln"** anklicken. Dort steht schon
+ein kurzer Text.
+
+1. Im Projektordner die Datei **`firestore.rules`** öffnen: Rechtsklick →
+   **„Öffnen mit"** → **„Editor"**
+2. Im Editor **Strg + A** (alles markieren), dann **Strg + C** (kopieren)
+3. Zurück in Firebase: in das Textfeld klicken, **Strg + A**, dann **Strg + V** (einfügen) —
+   der alte Text ist damit komplett ersetzt
+4. **„Veröffentlichen"** anklicken
+
+Meldet Firebase einen Fehler in rot, den Wortlaut an Claude schicken.
 
 Die Regeln sorgen dafür, dass
 
@@ -89,10 +131,10 @@ Die Regeln sorgen dafür, dass
 
 ## 6 · Name im Google-Fenster
 
-Beim „Mit Google anmelden" zeigt Google den Projektnamen an. Damit dort
-**luciajason.de** steht statt `project-123456`:
+Ist in Schritt 3 unter Punkt 8 schon erledigt. Falls dort nicht zu sehen:
 
-**Zahnrad → Projekteinstellungen → Allgemein → Öffentlicher Name** → `luciajason.de`
+**<https://console.firebase.google.com/project/luciajason-27a74/settings/general>** →
+**„Öffentlicher Name"** → Stift-Symbol → `luciajason.de` → Speichern
 
 ## 7 · Datenschutz vervollständigen
 
@@ -106,7 +148,7 @@ Die Erklärung ist sorgfältig formuliert, aber **keine Rechtsberatung**.
 
 ## Danach
 
-- **Nutzer ansehen:** Authentication → Nutzer
+- **Nutzer ansehen:** Authentication → Reiter **Nutzer**
 - **Profile ansehen:** Firestore Database → `users`
 - **Newsletter-Liste:** Firestore Database → `newsletter` (E-Mail, Sprache,
   Zeitpunkt der Einwilligung)
