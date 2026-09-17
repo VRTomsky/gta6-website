@@ -98,6 +98,11 @@ CHARAKTER-AKTEN (charakter.html)
 - Barrierefrei: Tastatur, Vorlesehilfe, gut lesbarer Kontrast und
   eine ruhige Fassung ohne Bewegung für Leute, die das eingestellt
   haben
+- Deutsch und Englisch: Schalter "DE | EN" oben rechts. Standard ist
+  Deutsch. Der Link luciajason.de/?lang=en öffnet direkt Englisch
+- Benutzerkonten (freiwillig): Anmelden mit E-Mail oder Google,
+  Profil mit Name, Beschreibung, Lieblingsfigur und Profilbild,
+  Newsletter-Anmeldung, Konto selbst löschen. Seite: konto.html
 
 
 ----------------------------------------------------------------
@@ -133,6 +138,21 @@ WAS BISHER GEMACHT WURDE
    - Klickflächen waren zu klein, Umlaute fehlten
    - Der Direktsprung zu einer Figur landete daneben
 
+7. Sprachumschaltung (17.09.2026): Die komplette Seite gibt es auch
+   auf Englisch - Startseite, alle Akten, Galerie, Konto, Datenschutz.
+
+8. News aktualisiert auf den 17.09.2026: GTA-VI-Controller von
+   PlayStation, "keine Mikrotransaktionen", Stand der Leaks.
+
+9. Kontosystem (17.09.2026): Fertig gebaut und getestet, läuft über
+   Firebase (Google, kostenlos). NOCH NICHT LIVE - der Nutzer muss
+   dafür einmal ein Firebase-Projekt anlegen, Anleitung in
+   KONTO-EINRICHTEN.md. Bis dahin ist auf luciajason.de nichts davon
+   zu sehen; auf dem eigenen Rechner läuft ein Demo-Modus.
+   Außerdem neu: datenschutz.html (Name/Anschrift fehlen noch).
+   Newsletter-Anmeldungen werden gesammelt, verschickt wird noch
+   nichts - dafür braucht es später einen Mail-Dienst.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI
@@ -146,7 +166,9 @@ WICHTIG FÜR DIE NÄCHSTE KI
       "Auf GitHub hochladen.bat" Kurze Beschreibung
 
 - Inhalte (Texte, Bilder, Charaktere, Galerie) stehen fast alle in
-  assets/js/data.js.
+  assets/js/data.js, die englische Fassung in assets/js/data.en.js.
+  Texte im HTML tragen ihr Englisch direkt daneben (data-en="...").
+  Wer Deutsch ändert, ändert Englisch mit.
 
 - Nie "Pre-Order" auf die Seite schreiben, die Navigation bleibt
   immer durchsichtig, das VI-Logo bleibt oben links.

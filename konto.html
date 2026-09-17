@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-en="My account — Grand Theft Auto VI">Mein Konto — Grand Theft Auto VI</title>
+<meta name="description" content="Dein Konto auf luciajason.de: Profil, Profilbild und GTA-VI-Newsletter."
+      data-en-content="Your luciajason.de account: profile, profile picture and GTA VI newsletter.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b1124">
+<meta name="color-scheme" content="dark">
+<!-- Sprache zuerst: steht fest, bevor irgendetwas gezeichnet wird -->
+<script src="assets/js/i18n.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/konto.css">
+<link rel="icon" href="assets/img/art/vi_logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/img/app/apple-touch-icon.png">
+</head>
+<body>
+
+<a class="skip-link" href="#main" data-en="Skip to content">Zum Inhalt springen</a>
+
+<!-- ══════════════ NAV ══════════════ -->
+<header class="nav" id="nav">
+  <a class="nav__logo" href="index.html" aria-label="Grand Theft Auto VI — zur Startseite" data-en-aria-label="Grand Theft Auto VI — home">
+    <svg class="vi-mark" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
+      <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/>
+      <path d="M49.2 0h11.6v38H49.2z"/>
+    </svg>
+  </a>
+
+  <nav class="nav__links" aria-label="Hauptnavigation" data-en-aria-label="Main navigation">
+    <a href="index.html#trailer">Trailer</a>
+    <a href="index.html#story">Story</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="index.html#leonida">Leonida</a>
+    <a href="index.html#ultimate">Ultimate</a>
+    <a href="index.html#news">News</a>
+    <a href="index.html#galerie" data-en="Media">Medien</a>
+  </nav>
+
+  <div class="nav__right">
+    <span class="nav__mini" id="navMini" aria-hidden="true"></span>
+    <div class="lang" role="group" aria-label="Sprache wählen" data-en-aria-label="Choose language">
+      <button type="button" class="lang__btn" data-lang="de" lang="de" aria-pressed="true" title="Deutsch">DE</button>
+      <button type="button" class="lang__btn" data-lang="en" lang="en" aria-pressed="false" title="English">EN</button>
+    </div>
+    <div class="acct" data-acct></div>
+    <button class="nav__burger" id="burger" aria-label="Menü öffnen" data-en-aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" hidden>
+  <nav aria-label="Mobile Navigation" data-en-aria-label="Mobile navigation">
+    <a href="index.html#trailer">Trailer</a>
+    <a href="index.html#story">Story</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="index.html#leonida">Leonida</a>
+    <a href="index.html#ultimate">Ultimate Edition</a>
+    <a href="index.html#news">News &amp; Leaks</a>
+    <a href="index.html#galerie" data-en="Media">Medien</a>
+  </nav>
+  <p class="mobile-menu__cd" data-en='<span id="navMiniMobile">—</span> days until release'><span id="navMiniMobile">—</span> bis zum Release</p>
+</div>
+
+<main id="main" class="kseite" tabindex="-1">
+  <div id="kontoRoot" aria-live="polite">
+    <p class="kleer__laden" data-en="Loading account …">Konto wird geladen …</p>
+  </div>
+  <noscript>
+    <p class="kleer__t" style="padding:140px 24px 60px;text-align:center">Für das Konto wird JavaScript benötigt.</p>
+  </noscript>
+</main>
+
+<footer class="footer">
+  <div class="footer__top">
+    <svg class="vi-mark vi-mark--foot" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
+      <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/><path d="M49.2 0h11.6v38H49.2z"/>
+    </svg>
+    <p data-en="<strong>Unofficial fan site.</strong> Not affiliated with, endorsed or authorized by Rockstar Games or Take-Two Interactive. All images, videos, logos and trademarks belong to their respective owners. Media comes from the official Rockstar Games press and download area."><strong>Inoffizielle Fan-Seite.</strong> Nicht mit Rockstar Games oder Take-Two Interactive verbunden und von diesen weder unterstützt noch autorisiert. Alle Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. Medien stammen aus dem offiziellen Presse- und Downloadbereich von Rockstar Games.</p>
+  </div>
+  <div class="footer__links">
+    <a href="index.html" data-en="Home">Startseite</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="datenschutz.html" data-en="Privacy">Datenschutz</a>
+    <a href="https://www.rockstargames.com/VI/" target="_blank" rel="noopener noreferrer" data-en="Official site">Offizielle Seite</a>
+    <span class="footer__esrb" data-en="May contain content unsuitable for children.">Kann Inhalte enthalten, die für Kinder ungeeignet sind.</span>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/data.en.js"></script>
+<script src="assets/js/konto-config.js"></script>
+<script src="assets/js/seite.js"></script>
+<script type="module" src="assets/js/konto/profil.js"></script>
+</body>
+</html>

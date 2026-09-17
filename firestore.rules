@@ -1,0 +1,118 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════
+//  Sicherheitsregeln der Firestore-Datenbank von luciajason.de
+//
+//  Einfügen: Firebase-Konsole → Firestore Database → Regeln →
+//  kompletten Inhalt dieser Datei ersetzen → „Veröffentlichen".
+//
+//  Drei Sammlungen:
+//    users/{uid}          Profil — nur die Person selbst liest und schreibt
+//    usernames/{name}     { uid } — sorgt dafür, dass jeder Name nur
+//                         einmal existiert; lesbar für alle, damit sich
+//                         „Name schon vergeben" vor dem Registrieren prüfen lässt
+//    newsletter/{uid}     { email, lang, consentAt } — nur mit bestätigter
+//                         E-Mail-Adresse, nur die eigene Adresse
+//
+//  Alles andere ist gesperrt. Auslesen der Newsletter-Liste geht nur
+//  über die Firebase-Konsole (Projektinhaber).
+// ═══════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function angemeldet() {
+      return request.auth != null;
+    }
+
+    function istSelbst(uid) {
+      return angemeldet() && request.auth.uid == uid;
+    }
+
+    function profilFelder() {
+      return ['username', 'usernameLower', 'bio', 'avatar', 'favChar', 'lang', 'createdAt', 'updatedAt'];
+    }
+
+    // Inhalt eines Profils. Das Profilbild ist entweder eine Vorlage
+    // ("preset:lucia") oder ein kleines JPEG/WebP als data:-URL —
+    // der Browser verkleinert eigene Bilder vorher auf 256 px.
+    function gueltigesProfil(d) {
+      return d.keys().hasOnly(profilFelder())
+        && d.username is string
+        && d.username.matches('^[A-Za-z0-9_.-]{3,20}$')
+        && d.usernameLower == d.username.lower()
+        && d.bio is string && d.bio.size() <= 300
+        && d.favChar is string && d.favChar.matches('^([a-z]{2,12})?$')
+        && d.lang in ['de', 'en']
+        && d.updatedAt == request.time
+        && d.avatar is string
+        && (d.avatar.matches('^preset:[a-z]{2,12}$')
+            || (d.avatar.size() <= 150000
+                && d.avatar.matches('^data:image/(jpeg|webp);base64,[A-Za-z0-9+/=]+$')));
+    }
+
+    // ── Profile ─────────────────────────────────────────────────
+    match /users/{uid} {
+      allow get: if istSelbst(uid);
+      allow list: if false;
+
+      // Neues Profil: der Name muss im selben Schreibvorgang für diese
+      // Person reserviert werden
+      allow create: if istSelbst(uid)
+        && gueltigesProfil(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.usernameLower)).data.uid == uid;
+
+      // Änderung: Erstellungsdatum bleibt, und wer den Namen wechselt,
+      // muss den alten im selben Zug freigeben
+      allow update: if istSelbst(uid)
+        && gueltigesProfil(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.usernameLower)).data.uid == uid
+        && (request.resource.data.usernameLower == resource.data.usernameLower
+            || !existsAfter(/databases/$(database)/documents/usernames/$(resource.data.usernameLower)));
+
+      allow delete: if istSelbst(uid);
+    }
+
+    // ── Benutzernamen ───────────────────────────────────────────
+    match /usernames/{name} {
+      allow get: if true;
+      allow list: if false;
+
+      // Nur der Name, den das eigene Profil nach dem Schreiben trägt.
+      // Ein vergebener Name lässt sich nicht überschreiben (kein update).
+      allow create: if angemeldet()
+        && name.matches('^[a-z0-9_.-]{3,20}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameLower == name;
+
+      allow update: if false;
+
+      // Freigeben nur, wenn das eigene Profil den Namen nicht mehr trägt
+      // (Umbenennen oder Konto löschen)
+      allow delete: if angemeldet()
+        && resource.data.uid == request.auth.uid
+        && (!existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
+            || getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameLower != name);
+    }
+
+    // ── Newsletter ──────────────────────────────────────────────
+    match /newsletter/{uid} {
+      allow get: if istSelbst(uid);
+      allow list: if false;
+
+      // Nur mit bestätigter Adresse, nur die eigene — so kann niemand
+      // eine fremde Adresse eintragen. consentAt belegt die Einwilligung.
+      allow create, update: if istSelbst(uid)
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['email', 'lang', 'consentAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.lang in ['de', 'en']
+        && request.resource.data.consentAt == request.time;
+
+      allow delete: if istSelbst(uid);
+    }
+  }
+}

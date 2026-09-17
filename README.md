@@ -1,7 +1,8 @@
 # GTA VI — Countdown nach Vice City
 
-Eine interaktive Fan-Seite zu *Grand Theft Auto VI*. Statisches HTML/CSS/JS, kein Build-Schritt,
-keine Abhängigkeiten außer Google Fonts.
+Eine interaktive Fan-Seite zu *Grand Theft Auto VI*, auf Deutsch und Englisch. Statisches
+HTML/CSS/JS, kein Build-Schritt, keine Abhängigkeiten außer Google Fonts — und Firebase für
+die freiwilligen Benutzerkonten.
 
 ## Starten
 
@@ -72,6 +73,16 @@ ablegen; Name und Symbol dafür stehen in `manifest.webmanifest`.
 |---|---|
 | `index.html` | Struktur aller Abschnitte der Startseite |
 | `charakter.html` | Alle acht Akten auf einer Seite; `?c=jason` wählt den Einstieg |
+| `konto.html` | Kontoseite: Profil, Profilbild, Newsletter, Konto löschen |
+| `datenschutz.html` | Datenschutzerklärung (DE/EN) |
+| `assets/js/i18n.js` | Sprachwahl Deutsch/Englisch, steht im `<head>` jeder Seite |
+| `assets/js/data.en.js` | Englische Fassung der Inhalte aus `data.js` |
+| `assets/js/konto-config.js` | Firebase-Zugangsdaten und Verantwortlicher (Datenschutz) |
+| `assets/js/konto/` | Kontosystem: `backend.js`, `konto.js` (Nav + Dialog), `profil.js` |
+| `assets/js/seite.js` | Gemeinsames für `konto.html` und `datenschutz.html` |
+| `assets/css/konto.css` | Anmelde-Knopf, Dialog, Kontoseite, Datenschutzseite |
+| `firestore.rules` | Sicherheitsregeln der Datenbank — gehören in die Firebase-Konsole |
+| `KONTO-EINRICHTEN.md` | Schritt für Schritt: Firebase-Projekt anlegen |
 | `assets/css/char.css` | Styles nur für die Detailseiten |
 | `assets/js/char.js` | Aufbau der Detailseiten, Scroll-Video, Lightbox |
 | `assets/css/style.css` | Design-Tokens, Layout, Responsive, Reduced-Motion |
@@ -134,6 +145,33 @@ Alle Texte und Bildzuordnungen stehen in `assets/js/data.js`:
 
 Ein neues Bild kommt nach `assets/img/<ordner>/` und wird in der passenden Liste eingetragen —
 sonst ist nichts zu tun.
+
+Die **englische Fassung** dazu steht in `assets/js/data.en.js` — nur die Texte, die Bildpfade
+bleiben in `data.js`. Fehlt dort eine Übersetzung, erscheint einfach der deutsche Text.
+
+## Sprache (Deutsch / Englisch)
+
+Oben rechts in der Nav schaltet **DE | EN** um, Standard ist Deutsch. Die Wahl merkt sich der
+Browser. Zum Verschicken lässt sich die Sprache auch in die Adresse schreiben:
+**`https://luciajason.de/?lang=en`**.
+
+- **Texte im HTML** tragen die englische Fassung direkt am Element:
+  `<p data-en="English">Deutsch</p>`, Attribute über `data-en-alt`, `data-en-aria-label` usw.
+- **Texte aus JavaScript** über `L("Deutsch", "English")`
+- **Inhalte aus `data.js`** über `data.en.js`
+
+Wer einen deutschen Text ändert, ändert das `data-en` direkt daneben mit.
+
+## Benutzerkonten
+
+Freiwillig und kostenlos: Registrieren mit E-Mail oder Google, Profil mit Benutzername,
+Beschreibung, Lieblingsfigur und Profilbild (eigenes Foto oder eine von neun Vorlagen),
+Newsletter-Anmeldung, Konto selbst löschen. Oben rechts in der Nav sitzt der Anmelde-Knopf.
+
+Das läuft über **Firebase** (Google). Solange `assets/js/konto-config.js` keine
+Firebase-Werte enthält, zeigt luciajason.de **keinen** Anmelde-Knopf; auf dem eigenen Rechner
+läuft stattdessen ein **Demo-Modus**, der alles nur im Browser speichert. Einrichten:
+**`KONTO-EINRICHTEN.md`**.
 
 ## Schriften
 
@@ -224,5 +262,5 @@ einen neuen Tab statt des Overlays. Bei den Trailern geht das Overlay.
 Inoffizielle Fan-Seite, nicht mit Rockstar Games oder Take-Two Interactive verbunden.
 Alle Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern; die Medien stammen
 aus dem offiziellen Presse- und Downloadbereich unter
-[rockstargames.com/VI/media](https://www.rockstargames.com/VI/media). Nur für den privaten
-Gebrauch — nicht veröffentlichen.
+[rockstargames.com/VI/media](https://www.rockstargames.com/VI/media), der ausdrücklich zum
+Herunterladen und Teilen einlädt. Die Seite ist privat und nicht kommerziell.

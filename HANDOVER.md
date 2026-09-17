@@ -8,12 +8,14 @@ Eine private, **inoffizielle Fan-Website zu Grand Theft Auto VI**, gebaut als Hy
 den Besitzer (hat die Ultimate Edition vorbestellt). Sie ist kein Shop und keine Kopie der
 Rockstar-Seite, sondern eine eigene Scroll-Erzählung im Look von `rockstargames.com/VI`.
 
-**Sprache der Inhalte: Deutsch.** Englische Zitate von Rockstar bleiben wörtlich stehen.
+**Sprache: Deutsch, per Schalter auch Englisch** (Abschnitt „Sprache"). Englische Zitate von
+Rockstar bleiben in beiden Fassungen wörtlich stehen.
 
 - **Pfad:** `C:\Users\young\OneDrive\Desktop\Claude Projekte\GTA6-Hype-Website`
 - **Stack:** statisches HTML/CSS/JS, **kein Build-Schritt**, keine Abhängigkeiten außer Google Fonts
 - **Umfang:** ~4.400 Zeilen Code, 150 Bilder, 10 Videos, ~85 MB
-- **Nicht veröffentlichen** — private Nutzung, siehe Abschnitt „Rechtliches"
+- **Öffentlich auf https://luciajason.de** (GitHub Pages) — Arbeitsweise in `CLAUDE.md`
+- **Benutzerkonten** über Firebase, siehe Abschnitt „Benutzerkonten" und `KONTO-EINRICHTEN.md`
 
 ### Starten
 
@@ -44,12 +46,24 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.l
 | Datei | Zeilen | Inhalt |
 |---|---:|---|
 | `index.html` | 481 | Struktur aller Abschnitte der Startseite |
-| `charakter.html` | 100 | **Gerüst aller Akten** — alle acht auf einer durchgehenden Seite |
+| `charakter.html` | 125 | **Gerüst aller Akten** — alle acht auf einer durchgehenden Seite |
+| `konto.html` | 110 | Kontoseite, Inhalt baut `konto/profil.js` |
+| `datenschutz.html` | 160 | Datenschutzerklärung DE/EN |
 | `assets/css/style.css` | 1351 | Design-Tokens, Layout, Responsive, Reduced-Motion, **Mobil-Block M1–M9** |
 | `assets/css/char.css` | 476 | **Nur die Detailseiten** — Editorial-Raster, Zitatbänder, Vollbild |
 | `assets/js/data.js` | 670 | **Alle Texte und Bildlisten**; `CHARS` (Stammdaten) + `CHAR_PAGES` (Seitenaufbau) |
 | `assets/js/main.js` | 810 | Countdown, Scroll-Motor, Videos, Galerie, 3D-Hülle |
-| `assets/js/char.js` | 691 | Baut alle acht Akten, ein Scroll-Motor für alle, Einstiegssprung, Lightbox |
+| `assets/js/char.js` | 700 | Baut alle acht Akten, ein Scroll-Motor für alle, Einstiegssprung, Lightbox |
+| `assets/js/i18n.js` | 125 | Sprachwahl, `data-en`-Einsetzen, `L()` — im `<head>` jeder Seite |
+| `assets/js/data.en.js` | 480 | Englische Texte zu `data.js` |
+| `assets/js/seite.js` | 70 | Menü, Countdown-Pille, Verantwortlicher — für `konto.html` und `datenschutz.html` |
+| `assets/js/konto-config.js` | 40 | Firebase-Werte (noch `null`) und Verantwortlicher |
+| `assets/js/konto/backend.js` | 430 | Firebase **oder** Demo-Modus hinter derselben Schnittstelle |
+| `assets/js/konto/konto.js` | 590 | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
+| `assets/js/konto/profil.js` | 570 | Kontoseite |
+| `assets/css/konto.css` | 580 | Nav-Knopf, Dialog, Kontoseite, Datenschutzseite |
+| `firestore.rules` | 120 | Sicherheitsregeln — in die Firebase-Konsole kopieren |
+| `assets/img/avatars/` | 9 | Profilbild-Vorlagen 256 px: VI-Logo + 8 Figuren (Zuschnitte der Artworks) |
 | `assets/img/` | 150 | `art/` 20, `chars/` 49, `duo/` 13, `places/` 42, `ultimate/` 26 |
 | `assets/img/app/` | 4 | quadratische Symbole für den Android-Startbildschirm |
 | `assets/video/` | 10 | 2 Scroll-Clips + 8 Charakter-Loops |
@@ -100,6 +114,9 @@ in der passenden Liste eintragen, sonst nichts.
 - **Trailer:** Trailer 1 + 2 als YouTube-Overlay auf der Seite, Extended Look als externer Link
 - **Barrierefreiheit:** Skip-Link, Fokus-Ringe, ARIA-Labels, vollständiger `prefers-reduced-motion`-Zweig
 - **Mobil:** eigener Verhaltenszweig für Touch — Details im Abschnitt „Mobil / Android"
+- **Deutsch / Englisch:** Schalter oben rechts, Direktlink `?lang=en` — Abschnitt „Sprache"
+- **Benutzerkonten:** Anmelden per E-Mail oder Google, Profil, Newsletter — Abschnitt
+  „Benutzerkonten" (gebaut, wartet auf das Firebase-Projekt)
 - Geprüft auf 375×812, 812×375 (quer), 1280 und 1440 px
 
 ## Technische Fallstricke — das Wichtigste für Nachfolger
@@ -323,6 +340,7 @@ kam auf Rauls hellem Artwork auf **1,37 : 1** — unlesbar. Der untere Teil von
 zusätzlich ist der Kicker von `--vice-hot` auf das hellere `--pink` gewechselt.
 Gemessen danach: Kicker 7,1 : 1, Name 14 : 1. Wer den Verlauf abschwächt, muss
 gegen ein **helles** Artwork nachmessen, nicht gegen Jasons dunklen Clip.
+
 ### Zwei weitere Fallstricke
 
 **`overflow:hidden` bricht `position:sticky`.** Das Elternelement wird dadurch zum
@@ -373,43 +391,6 @@ Fehlermeldung nirgends hin kann. Alle Ausgaben in `serve.py` laufen deshalb übe
 das die Konsole nimmt, wenn es eine gibt, und sonst nur in die Logdatei schreibt.
 `log_message` des Handlers ebenso. **Kein `print()` mehr direkt einbauen.**
 
-### Der Einstieg per `?c=`
-
-Der Sprung zur richtigen Figur ist heikler, als er aussieht — zwei Dinge stehen
-ihm im Weg:
-
-1. **Der Browser stellt die alte Scrollposition wieder her**, und zwar *nach*
-   unserem Sprung. `history.scrollRestoration = "manual"` schaltet das ab.
-2. **`scroll-behavior: smooth`** steht in `style.css` auf `<html>`. Ohne
-   Aushebeln würde der Sprung als weiche Fahrt über zehntausende Pixel
-   losrollen. Während des Sprungs wird es per Inline-Style auf `auto` gesetzt.
-
-Dazu kommt: Die Zielhöhe verschiebt sich noch, während Schriften und die ersten
-Bilder ankommen. Mit einem Durchgang landete der Sprung **169 px daneben**,
-mit einer festen Zahl von Frames sogar **33.665 px**. Deshalb drei Runden —
-sofort, nach `load` und wenn die Schriften stehen. Sobald der Nutzer selbst
-scrollt, wird abgebrochen; sonst zöge die Seite ihn zurück.
-
-### Drei Fallstricke
-
-**Die Hero-Höhe steuert zwei Dinge gleichzeitig.**
-
-1. *Wie schnell der Clip läuft.* Die nutzbare Strecke ist `Höhe − 100svh` (die
-   ersten 100 svh klebt das Medium nur), davon spielt `PLAY_END` (0.90) den Clip
-   ab. `.cv` steht wie `.scrub` auf der Startseite **überall auf 400 svh** —
-   Desktop, Tablet, Handy, Querformat. Gemessen: 2,70 Bildschirmhöhen für einen
-   ganzen Clip, auf beiden Seiten und jedem Gerät gleich.
-2. *Ob die Karte passt.* Die Höhe muss mindestens `--rise + 100svh` betragen,
-   sonst ragt die Intro-Karte schon beim Laden ins Bild und der Name steht
-   doppelt da. Betrifft heute nur noch die kürzeren Standbild-Heroes
-   (`.cv--still`); dort ist `--rise` mobil auf 100 gesenkt.
-
-**Helle Artworks brauchen einen kräftigeren Verlauf.** Der Kicker über dem Hero
-kam auf Rauls hellem Artwork auf **1,37 : 1** — unlesbar. Der untere Teil von
-`.cv__vig` setzt jetzt früher an und erreicht am Fuß fast die Grundfarbe;
-zusätzlich ist der Kicker von `--vice-hot` auf das hellere `--pink` gewechselt.
-Gemessen danach: Kicker 7,1 : 1, Name 14 : 1. Wer den Verlauf abschwächt, muss
-gegen ein **helles** Artwork nachmessen, nicht gegen Jasons dunklen Clip.
 ### Zwei weitere Fallstricke bei den .bat-Dateien
 
 1. **Zeilenenden und Zeichensatz.** Die Dateien müssen **reines ASCII mit CRLF** sein. Mit
@@ -518,6 +499,111 @@ Service Worker: der würde beim lokalen Entwickeln alte Dateien ausliefern.
 Getestet auf 375×812, 812×375 (quer), 1440×900. Kein waagerechtes Scrollen
 (`document.scrollWidth === clientWidth`), keine Konsolenfehler, Desktop-Werte unverändert.
 
+## Sprache (Deutsch / Englisch)
+
+Schalter **DE | EN** oben rechts in der Nav, auf jeder Seite. Standard ist Deutsch. Gedacht
+unter anderem dafür, die Seite international zu zeigen (Bewerbungen) — deshalb auch der
+Direktlink **`luciajason.de/?lang=en`**.
+
+| Baustein | Wie |
+|---|---|
+| Welche Sprache | `?lang=` in der Adresse → `localStorage.lang` → Deutsch. Entschieden in `i18n.js` im `<head>`, bevor gezeichnet wird |
+| Statisches HTML | `data-en="…"` ersetzt den Inhalt (HTML erlaubt), `data-en-<attr>` das Attribut (`alt`, `aria-label`, `content`, `title`, `placeholder`, `data-yt-title`) |
+| JavaScript | `L("Deutsch", "English")` |
+| Inhalte | `data.en.js` überschreibt nur Textfelder der Objekte aus `data.js`; Bildunterschriften der Akten als Liste in derselben Reihenfolge |
+| Umschalten | speichert, blendet 180 ms aus, **lädt neu** — alles, was `main.js`/`char.js` bauen, entsteht so von selbst in der neuen Sprache; die Scrollposition bleibt |
+
+### Fallstricke
+
+1. **`data-en` ersetzt den kompletten Inhalt.** Steckt darin ein Element, das JavaScript per
+   ID sucht (`#finaleDays`, `#navMiniMobile`), muss es in der englischen Fassung wieder
+   vorkommen. Deshalb auch: `I18N.anwenden()` steht **ganz oben** in `main.js`, `char.js`
+   und `seite.js`, vor jedem `querySelector`.
+2. **Knöpfe mit Symbol:** `data-en` nie auf ein Element mit `<svg>` darin setzen — der Text
+   kommt in ein eigenes `<span data-en>`.
+3. **Kein Aufblitzen:** Auf Englisch trägt `<html>` bis zum Einsetzen `i18n-warte`
+   (`visibility:hidden`). Ein Zeitgeber gibt die Seite nach 2,5 s in jedem Fall frei.
+4. **`char.js` schreibt beim Scrollen die Adresse um** (`?c=lucia`). Ein vorhandenes
+   `&lang=` bleibt dabei erhalten — sonst fiele ein privates Fenster ohne Speicher beim
+   Neuladen auf Deutsch zurück.
+5. **„Pre-Order" gilt auch auf Englisch.** „Deine Vorbestellung" heißt dort „Your edition",
+   „jede Vorbestellung" wird zu „every copy bought before launch".
+6. Auf Handys unter 480 px ist in der Akten-Nav kein Platz: die Sprachwahl steht dort im
+   Menü (`.lang--menu`, `char.css`).
+
+## Benutzerkonten
+
+Freiwillig. Registrieren mit E-Mail + Passwort oder Google, Profil (Benutzername,
+Beschreibung, Lieblingsfigur, Profilbild), Newsletter-Anmeldung, Passwort ändern, Konto
+selbst löschen. Anmelde-Knopf bzw. Profilbild oben rechts in der Nav, Kontoseite
+`konto.html`. Einrichtung Schritt für Schritt: **`KONTO-EINRICHTEN.md`**.
+
+### Stand
+
+**Gebaut und getestet, aber noch nicht live:** `konto-config.js` hat noch keine
+Firebase-Werte. Das Firebase-Projekt muss der Nutzer selbst anlegen (Google-Konto). Bis dahin:
+
+| Wo | Verhalten |
+|---|---|
+| luciajason.de | kein Anmelde-Knopf, `konto.html` zeigt „Bald verfügbar", Datenschutz-Link im Footer ausgeblendet |
+| localhost, WLAN-IP | **Demo-Modus** — alles funktioniert, gespeichert in `localStorage` (`konto-demo`), keine Mails; im Dialog steht ein Hinweis |
+
+Geprüft im Demo-Modus: Registrieren, falsches Passwort, Anmelden, Google, Namenswahl,
+Profil speichern, Namensprüfung live, eigenes Bild (1,3 MB PNG → 35 KB JPEG), Newsletter mit
+und ohne bestätigte Adresse, Konto löschen, Englisch, 390 px und 1440 px, Nav-Breiten
+1040/1181/1281 px. Gegen Firebase selbst nur mit einem ungültigen Schlüssel: Module laden vom
+CDN, Anmeldestatus kommt, Anfragen erreichen Google. **Die Sicherheitsregeln sind noch nicht
+gegen einen echten Server gelaufen** — nach dem Einrichten einmal alles durchklicken.
+
+### Aufbau
+
+```
+konto-config.js  →  konto/backend.js   Firebase oder Demo, gleiche Schnittstelle
+                    konto/konto.js     Zustand · Nav-Knopf · Dialog   (jede Seite)
+                    konto/profil.js    Kontoseite                      (konto.html)
+```
+
+Firebase kommt als ES-Modul vom CDN, Version fest auf **12.19.0**
+(`https://www.gstatic.com/firebasejs/12.19.0/`). Kein Build-Schritt nötig.
+
+Firestore (Spark-Tarif, kostenlos):
+
+```
+users/{uid}          username, usernameLower, bio, avatar, favChar, lang, createdAt, updatedAt
+usernames/{name}     uid        ← Eindeutigkeit; öffentlich lesbar für „Name schon vergeben"
+newsletter/{uid}     email, lang, consentAt
+```
+
+- **Profilbild** ist `preset:<id>` oder ein im Browser auf 256 px zugeschnittenes JPEG als
+  `data:`-URL (≤ 150.000 Zeichen, in den Regeln begrenzt). Firebase Storage wäre nicht mehr
+  kostenlos.
+- **Newsletter nur mit bestätigter Adresse** (`email_verified` im Token) und nur die eigene
+  Adresse — ersetzt das Double-Opt-in. Nach dem Bestätigen muss das Token erneuert werden
+  (`bestaetigungPruefen()` → `getIdToken(true)`), sonst sehen die Regeln noch `false`.
+- **Verschickt wird noch nichts.** Die Liste steht in Firestore → `newsletter`. Für den
+  Versand braucht es einen Dienst (z. B. Brevo) — nächster Schritt, dann Datenschutz ergänzen.
+- **Namen ändern** geht in einem Schreibvorgang: neuen Namen reservieren, alten freigeben,
+  Profil ändern. Die Regeln lassen keinen Namen doppelt und keinen verwaisten zurück.
+- **Löschen** verlangt bei Firebase eine frische Anmeldung — die wird **vor** dem Löschen
+  der Daten geholt, sonst wären die Daten weg und das Konto noch da.
+
+### Fallstricke
+
+1. **`form.name` ist das `name`-Attribut des Formulars**, nicht das Feld `name="name"`.
+   Das Bestätigungsfeld beim Löschen heißt deshalb `bestaetigung`.
+2. **Nav-Breite.** Neben sieben Links, Countdown-Pille, Sprachwahl und Konto wird es unter
+   1280 px eng: dort nur noch das Profilbild ohne Namen, zwischen 1025 und 1180 px fällt mit
+   aktivem Konto die Countdown-Pille weg. Gemessen: kein Überlauf bei 1040, 1181, 1281 px,
+   an- und abgemeldet, Deutsch und Englisch.
+3. **Lauf-Zähler in `konto.js`.** Beim Registrieren meldet Firebase „angemeldet", bevor das
+   Profil geschrieben ist. Ohne den Zähler überschriebe das verspätete „kein Profil" das
+   gerade gespeicherte.
+4. **Profil nicht geladen ≠ kein Profil.** Schlägt das Laden fehl (Netz), wird nicht nach
+   einem neuen Namen gefragt.
+5. **Am Handy kein Autofokus** im Dialog — sonst schiebt sich die Tastatur sofort drüber.
+6. Wer die Namenswahl wegklickt, wird in derselben Sitzung nicht bei jedem Seitenwechsel
+   erneut gefragt (`sessionStorage konto-profil-spaeter`); die Nav bietet „Profil anlegen".
+
 ## Farben
 
 Grundfarbe `--bg: #0b1124` — dunkelblau, nicht schwarz. Der Nutzer hat mehrfach betont, dass
@@ -557,8 +643,11 @@ Army-Vorgeschichte, deshalb liegen die Werte hier etwas höher.
 - **Deutsche Fließtexte** sind Übersetzung bzw. Zusammenfassung
 - **Cal Hampton, Boobie Ike, Dre'Quan Priest:** Rockstar veröffentlicht zu diesen dreien keine
   Biografie. Die Texte sind aus dem Trailer-2-Material zusammengefasst — bei Bedarf prüfen
-- **News-Stand: 29. August 2026.** Release 19.11.2026, Extended Look seit 27.08.2026,
-  laufende Leak-Serie („CyberLeek"), Rockstar-Statement vom 26.08.2026. **Muss aktualisiert werden**
+- **News-Stand: 17. September 2026.** GTA-VI-DualSense-Controller (PlayStation.Blog, 03.09.),
+  Rob-Nelson-Interview „keine Mikrotransaktionen, keine generative KI" (Ende August), Extended
+  Look (27.08.), Leak-Serie „CyberLeek" mit Subpoenas gegen Microsoft, Discord, X und Google,
+  Download ab 12.11. Der Newswire-Artikel „Pre-Order …" vom 24.06. ist dabei rausgeflogen —
+  passt ohnehin nicht zur Regel „kein Pre-Order". **Vor dem Release erneut aktualisieren**
 
 ## Wünsche des Nutzers, die dauerhaft gelten
 
@@ -567,10 +656,18 @@ Army-Vorgeschichte, deshalb liegen die Werte hier etwas höher.
 - **VI-Logo dauerhaft oben links**
 - Er arbeitet mit Screenshots von `rockstargames.com/VI` als Referenz und vergleicht genau
 - Übergänge sollen weich sein; Ruckeln fällt ihm sofort auf
+- Die Seite soll auch auf Englisch vorzeigbar sein (z. B. für Bewerbungen); Standard bleibt Deutsch
 
 ## Rechtliches
 
 Inoffizielle Fan-Seite, nicht mit Rockstar Games oder Take-Two Interactive verbunden. Alle
-Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. **Nur für den privaten
-Gebrauch — nicht veröffentlichen.** Der Footer trägt den entsprechenden Hinweis samt
+Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. Die Seite ist öffentlich,
+aber privat und nicht kommerziell. Der Footer trägt den entsprechenden Hinweis samt
 Alterskennzeichnung.
+
+**Datenschutz:** `datenschutz.html` ist geschrieben, unter „Wer verantwortlich ist" fehlen aber
+noch **Name, Anschrift und E-Mail** des Betreibers (`konto-config.js → betreiber`). Bis dahin
+steht dort ein Platzhalter, die Seite trägt `noindex`, und der Footer-Link erscheint erst, wenn
+das Kontosystem aktiv ist (`html.konto-an`). Keine Rechtsberatung — vor dem Start der Konten
+gegenlesen lassen. Offener Punkt: Google Fonts wird von Googles Servern geladen; selbst
+gehostete Schriften wären datenschutzrechtlich sauberer.

@@ -46,7 +46,7 @@
       <button type="button" class="lang__btn" data-lang="de" lang="de" aria-pressed="true" title="Deutsch">DE</button>
       <button type="button" class="lang__btn" data-lang="en" lang="en" aria-pressed="false" title="English">EN</button>
     </div>
-    <!-- Anmelden / Konto — wird von konto-nav.js gefüllt -->
+    <!-- Anmelden / Konto — füllt assets/js/konto/konto.js -->
     <div class="acct" data-acct></div>
     <button class="nav__burger" id="burger" aria-label="Menü öffnen" data-en-aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
       <span></span><span></span>
@@ -58,6 +58,11 @@
      Namen aus CHARS stammen und nicht doppelt gepflegt werden müssen. -->
 <div class="mobile-menu mobile-menu--kapitel" id="mobileMenu" hidden>
   <nav aria-label="Charaktere auf dieser Seite" data-en-aria-label="Characters on this page"></nav>
+  <!-- Auf schmalen Handys ist in der Nav kein Platz für die Sprachwahl — dann steht sie hier -->
+  <div class="lang lang--menu" role="group" aria-label="Sprache wählen" data-en-aria-label="Choose language">
+    <button type="button" class="lang__btn" data-lang="de" lang="de" aria-pressed="true" title="Deutsch">DE</button>
+    <button type="button" class="lang__btn" data-lang="en" lang="en" aria-pressed="false" title="English">EN</button>
+  </div>
   <p class="mobile-menu__cd" data-en='<span id="navMiniMobile">—</span> days until release'><span id="navMiniMobile">—</span> bis zum Release</p>
 </div>
 
@@ -90,6 +95,7 @@
     <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
     <a href="https://www.rockstargames.com/VI/" target="_blank" rel="noopener noreferrer" data-en="Official site">Offizielle Seite</a>
     <a href="https://www.rockstargames.com/VI/media" target="_blank" rel="noopener noreferrer">Media &amp; Artwork</a>
+    <a href="datenschutz.html" data-en="Privacy">Datenschutz</a>
     <span class="footer__esrb" data-en="May contain content unsuitable for children.">Kann Inhalte enthalten, die für Kinder ungeeignet sind.</span>
   </div>
 </footer>
@@ -111,5 +117,7 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/data.en.js"></script>
 <script src="assets/js/char.js"></script>
+<script src="assets/js/konto-config.js"></script>
+<script type="module" src="assets/js/konto/konto.js"></script>
 </body>
 </html>

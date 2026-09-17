@@ -473,3 +473,13 @@
   .cv__out{ display:none; }
   .cin{ opacity:1; transform:none; }
 }
+
+/* ══════════ Sprachwahl auf schmalen Handys ══════════ */
+/* Nav der Akten: Logo, Zähler, Zurück, Konto, Menü — für die Sprachwahl
+   reicht der Platz unter 480 px nicht mehr. Sie wandert dann ins Menü. */
+.lang--menu{ display:none; align-self:flex-start; }
+@media (max-width:480px){
+  .nav--char .nav__right > .lang{ display:none; }
+  .mobile-menu .lang--menu{ display:inline-flex; }
+  .lang--menu .lang__btn{ height:34px; min-width:48px; font-size:.78rem; }
+}
