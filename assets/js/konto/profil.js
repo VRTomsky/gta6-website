@@ -7,23 +7,40 @@
      ohne-profil   angemeldet, aber noch kein Name gewählt
      angemeldet    Profilkopf + Bearbeiten, Newsletter, Sicherheit, Löschen
 
+   Der Profilkopf zeigt Titelbild, Profilbild, Name und Beschreibung. Wer
+   ein anderes Bild wählt, sieht es dort sofort — gespeichert wird erst
+   mit „Speichern".
+
+   Eigene Bilder gehen nicht verloren, wenn man zu einer Vorlage wechselt:
+   Sie bleiben als eigene Kachel in der Auswahl stehen, bis man sie
+   ausdrücklich entfernt.
+
    Die Seite wird nur neu aufgebaut, wenn sich der angemeldete Nutzer
    ändert. Speichert man das Profil, werden Kopf und Nav nachgezogen —
    halb ausgefüllte Felder bleiben dabei stehen.
    ═══════════════════════════════════════════════════════════ */
 
 import {
-  zustand, abonnieren, profilSetzen, L, LANG, esc, avatarUrl, meldung,
-  datumMonat, VORLAGEN, NAME_MUSTER, BIO_MAX
+  zustand, abonnieren, profilSetzen, L, LANG, esc, avatarUrl, titelUrl, meldung,
+  datumMonat, VORLAGEN, TITEL_VORLAGEN, TITEL_STANDARD, NAME_MUSTER, BIO_MAX
 } from "./konto.js";
-import { KontoFehler } from "./backend.js";
+import { zuschneiden } from "./zuschnitt.js";
 
 const root = document.getElementById("kontoRoot");
 const FIGUREN = (typeof CHARS !== "undefined" ? CHARS : []).map(c => ({ id: c.id, name: c.name }));
+const STANDARD = { avatar: "preset:vi", titel: TITEL_STANDARD };
 
 let gebautFuer = null;       // uid, für den die Seite gerade steht
-let avatarNeu = null;        // gewähltes Bild, noch nicht gespeichert
 let newsletterAn = false;
+
+/* Bilder — `wahl` ist das, was gerade ausgewählt ist (auch ungespeichert),
+   `eigen` die hochgeladenen Bilder, `quellen` die Originale dieses
+   Besuchs, damit sich der Zuschnitt noch ändern lässt. */
+let wahl = { ...STANDARD };
+let eigen = { avatar: "", titel: "" };
+let quellen = { avatar: null, titel: null };
+let titelGespeichert = "";   // eigenes Titelbild, wie es in der Datenbank liegt
+let titelGeladen = false;
 
 abonnieren(zeichnen);
 
@@ -104,11 +121,15 @@ function leer(art) {
 /* ═══ Angemeldet ══════════════════════════════════════════ */
 function seiteBauen(z) {
   const { nutzer, profil } = z;
-  avatarNeu = profil.avatar || "preset:vi";
+  wahl = { avatar: profil.avatar || STANDARD.avatar, titel: profil.cover || STANDARD.titel };
+  eigen = { avatar: profil.avatarEigen || "", titel: "" };
+  quellen = { avatar: null, titel: null };
+  titelGespeichert = "";
+  titelGeladen = false;
 
   root.innerHTML = `
     <section class="khero">
-      <div class="khero__bg" aria-hidden="true"><img src="assets/img/art/jason_lucia_beach.jpg" alt=""></div>
+      <div class="khero__bg" aria-hidden="true"><img data-k="titel" src="${esc(titelUrl(wahl.titel, ""))}" alt=""></div>
       <div class="khero__inner">
         <img class="khero__av" data-k="av" src="" alt="" width="164" height="164">
         <div class="khero__txt">
@@ -125,29 +146,20 @@ function seiteBauen(z) {
         <p class="kbox__k">${L("Profil", "Profile")}</p>
         <h2 class="kbox__h" id="kProfilH">${L("Profil bearbeiten", "Edit profile")}</h2>
         <form class="kbox__form" id="kProfilForm" novalidate>
-          <div class="kf">
-            <span class="kf__l" id="kAvLabel">${L("Profilbild", "Profile picture")}</span>
-            <div class="kav">
-              <img class="kav__jetzt" id="kAvJetzt" src="${esc(avatarUrl(avatarNeu))}" alt="" width="92" height="92">
-              <div class="kav__seite">
-                <div class="kav__reihe" role="radiogroup" aria-labelledby="kAvLabel">
-                  ${VORLAGEN.map(v => `
-                    <button type="button" role="radio" class="av-wahl" data-vorlage="${v.id}"
-                            aria-checked="${avatarNeu === "preset:" + v.id}" aria-label="${esc(v.name)}" title="${esc(v.name)}">
-                      <img src="assets/img/avatars/${v.id}.jpg" alt="" width="46" height="46" loading="lazy">
-                    </button>`).join("")}
-                </div>
-                <div class="kbox__zeile">
-                  <label class="btn btn--ghost kav__upload">
-                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 16V4m0 0l-5 5m5-5l5 5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>${L("Eigenes Bild", "Upload image")}</span>
-                    <input type="file" id="kAvDatei" accept="image/jpeg,image/png,image/webp,image/gif">
-                  </label>
-                  <span class="kf__h">${L("Wird quadratisch zugeschnitten", "Cropped to a square")}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <fieldset class="kbild">
+            <legend class="kf__l">${L("Titelbild", "Cover image")}</legend>
+            <p class="kf__h kbild__hinweis">${L("Oben im Profilkopf siehst du sofort, wie es aussieht.", "The header above shows right away how it looks.")}</p>
+            <div class="kbild__raster kbild__raster--titel" role="radiogroup"
+                 aria-label="${esc(L("Titelbild", "Cover image"))}" data-raster="titel"></div>
+            <div class="kbox__zeile kbild__aktionen" data-aktionen="titel"></div>
+          </fieldset>
+
+          <fieldset class="kbild">
+            <legend class="kf__l">${L("Profilbild", "Profile picture")}</legend>
+            <div class="kbild__raster kbild__raster--avatar" role="radiogroup"
+                 aria-label="${esc(L("Profilbild", "Profile picture"))}" data-raster="avatar"></div>
+            <div class="kbox__zeile kbild__aktionen" data-aktionen="avatar"></div>
+          </fieldset>
 
           <label class="kf">
             <span class="kf__l">${L("Benutzername", "Username")}</span>
@@ -171,7 +183,7 @@ function seiteBauen(z) {
             </select>
           </label>
 
-          <div class="kbox__zeile">
+          <div class="kbox__zeile kspeichern">
             <button type="submit" class="btn btn--pink btn--lg">${L("Speichern", "Save")}</button>
             <p class="kbox__status" id="kProfilStatus" role="status"></p>
           </div>
@@ -216,14 +228,40 @@ function seiteBauen(z) {
   profilFormular();
   newsletterEinrichten();
   loeschenEinrichten();
+
+  /* Das eigene Titelbild liegt getrennt und kommt nach */
+  const uid = nutzer.uid;
+  zustand.backend.titelbildLaden(uid).then(daten => {
+    if (gebautFuer !== uid) return;
+    eigen.titel = daten || "";
+    titelGespeichert = eigen.titel;
+    titelGeladen = true;
+    if (wahl.titel === "eigen" && !eigen.titel) wahl.titel = STANDARD.titel;
+    bildAuswahlZeichnen("titel");
+    kopfAuffrischen(zustand);
+  }).catch(() => {
+    if (gebautFuer !== uid) return;
+    bildAuswahlZeichnen("titel");
+  });
 }
 
 /* ── Profilkopf ── */
+function ungespeichert() {
+  const p = zustand.profil;
+  if (!p) return false;
+  return wahl.avatar !== p.avatar ||
+         eigen.avatar !== (p.avatarEigen || "") ||
+         (titelGeladen && (wahl.titel !== p.cover || eigen.titel !== titelGespeichert));
+}
+
 function kopfAuffrischen({ nutzer, profil }) {
   const q = s => root.querySelector(`[data-k="${s}"]`);
   if (!q("name")) return;
   document.title = profil.username + " — Grand Theft Auto VI";
-  q("av").src = avatarUrl(profil.avatar);
+  /* Bilder aus der aktuellen Auswahl — Vorschau vor dem Speichern */
+  q("av").src = avatarUrl(wahl.avatar, eigen.avatar);
+  const titel = titelUrl(wahl.titel, eigen.titel);
+  if (q("titel").getAttribute("src") !== titel) q("titel").src = titel;
   q("name").textContent = profil.username;
   q("bio").textContent = profil.bio || "";
   q("seit").textContent = profil.createdAt
@@ -231,18 +269,104 @@ function kopfAuffrischen({ nutzer, profil }) {
     : L("Mitglied", "Member");
 
   const chips = [];
+  if (ungespeichert()) chips.push(`<span class="kchip kchip--vorschau">${L("Vorschau · noch nicht gespeichert", "Preview · not saved yet")}</span>`);
   const fig = FIGUREN.find(f => f.id === profil.favChar);
   if (fig) chips.push(`<span class="kchip"><img src="assets/img/avatars/${fig.id}.jpg" alt="">${L("Lieblingsfigur", "Favorite")}: ${esc(fig.name)}</span>`);
   if (newsletterAn) chips.push(`<span class="kchip kchip--pink">${L("Newsletter aktiv", "Newsletter on")}</span>`);
   if (!nutzer.emailVerified) chips.push(`<span class="kchip kchip--warn">${L("E-Mail nicht bestätigt", "Email not confirmed")}</span>`);
   q("chips").innerHTML = chips.join("");
+
+  const status = document.getElementById("kProfilStatus");
+  if (status && ungespeichert() && !status.textContent) {
+    status.textContent = L("Änderungen noch nicht gespeichert.", "Changes not saved yet.");
+    status.classList.add("is-hinweis");
+  }
+}
+
+/* ── Bildauswahl (Titelbild und Profilbild) ── */
+function bildAuswahlZeichnen(art) {
+  const raster = root.querySelector(`[data-raster="${art}"]`);
+  const aktionen = root.querySelector(`[data-aktionen="${art}"]`);
+  if (!raster) return;
+  const istTitel = art === "titel";
+  const vorlagen = istTitel ? TITEL_VORLAGEN : VORLAGEN;
+  const klasse = istTitel ? "tb-wahl" : "av-wahl";
+  const url = istTitel ? (id => `assets/img/covers/${id}.jpg`) : (id => `assets/img/avatars/${id}.jpg`);
+
+  const kacheln = [];
+  if (eigen[art]) {
+    kacheln.push(`
+      <button type="button" role="radio" class="${klasse} ${klasse}--eigen" data-bild="${art}" data-wert="eigen"
+              aria-checked="${wahl[art] === "eigen"}" aria-label="${esc(L("Eigenes Bild", "Your own image"))}" title="${esc(L("Eigenes Bild", "Your own image"))}">
+        <img src="${esc(eigen[art])}" alt="">
+        <span class="kbild__eigen">${L("Eigenes", "Yours")}</span>
+      </button>`);
+  }
+  vorlagen.forEach(v => kacheln.push(`
+    <button type="button" role="radio" class="${klasse}" data-bild="${art}" data-wert="preset:${v.id}"
+            aria-checked="${wahl[art] === "preset:" + v.id}" aria-label="${esc(v.name)}" title="${esc(v.name)}">
+      <img src="${url(v.id)}" alt="" loading="lazy">
+    </button>`));
+  raster.innerHTML = kacheln.join("");
+
+  const laden = istTitel && !titelGeladen && zustand.profil && zustand.profil.cover === "eigen";
+  aktionen.innerHTML = `
+    <label class="btn btn--ghost kav__upload">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 16V4m0 0l-5 5m5-5l5 5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>${eigen[art] ? L("Neues Bild hochladen", "Upload new image") : L("Eigenes Bild hochladen", "Upload your own")}</span>
+      <input type="file" data-hochladen="${art}" accept="image/jpeg,image/png,image/webp,image/gif">
+    </label>
+    ${quellen[art] || eigen[art] ? `<button type="button" class="btn btn--ghost" data-zuschnitt="${art}">${L("Zuschnitt ändern", "Adjust crop")}</button>` : ""}
+    ${eigen[art] ? `<button type="button" class="kd__link" data-entfernen="${art}">${L("Eigenes Bild entfernen", "Remove your image")}</button>` : ""}
+    ${laden ? `<span class="kf__h">${L("Eigenes Titelbild wird geladen …", "Loading your cover …")}</span>` : ""}`;
+}
+
+function bildGewaehlt(art) {
+  bildAuswahlZeichnen(art);
+  const status = document.getElementById("kProfilStatus");
+  if (status) { status.textContent = ""; status.classList.remove("is-schlecht", "is-hinweis"); }
+  kopfAuffrischen(zustand);
+}
+
+/* Ohne Original aus diesem Besuch (Seite neu geladen) dient das
+   gespeicherte Bild als Vorlage — verschieben und hineinzoomen geht
+   dann weiterhin, nur nicht mehr heraus über den alten Rand. */
+function gespeichertesBild(daten) {
+  return new Promise((ok, nein) => {
+    const i = new Image();
+    i.onload = () => ok({ bild: i, stand: { zoom: 1, mx: 0.5, my: 0.5 } });
+    i.onerror = nein;
+    i.src = daten;
+  });
+}
+
+async function bildZuschneiden(art, datei) {
+  const status = document.getElementById("kProfilStatus");
+  try {
+    let quelle = datei ? undefined : quellen[art];
+    if (!datei && !quelle && eigen[art]) quelle = await gespeichertesBild(eigen[art]);
+    if (!datei && !quelle) return;
+    const erg = await zuschneiden({
+      art,
+      datei: datei || undefined,
+      quelle,
+      vorschau: { avatar: avatarUrl(wahl.avatar, eigen.avatar), name: zustand.profil.username }
+    });
+    if (!erg) return;
+    eigen[art] = erg.daten;
+    quellen[art] = erg.quelle;
+    wahl[art] = "eigen";
+    bildGewaehlt(art);
+  } catch (e) {
+    status.textContent = meldung(e);
+    status.classList.remove("is-hinweis");
+    status.classList.add("is-schlecht");
+  }
 }
 
 /* ── Profil bearbeiten ── */
 function profilFormular() {
   const form = document.getElementById("kProfilForm");
-  const jetzt = document.getElementById("kAvJetzt");
-  const datei = document.getElementById("kAvDatei");
   const status = document.getElementById("kProfilStatus");
   const hinweis = document.getElementById("kNameHinweis");
   const zahl = document.getElementById("kBioZahl");
@@ -250,32 +374,42 @@ function profilFormular() {
 
   const statusSetzen = (text, schlecht) => {
     status.textContent = text || "";
+    status.classList.remove("is-hinweis");
     status.classList.toggle("is-schlecht", !!schlecht);
   };
-  const vorlagenMarkieren = () => form.querySelectorAll("[data-vorlage]").forEach(b =>
-    b.setAttribute("aria-checked", String(avatarNeu === "preset:" + b.dataset.vorlage)));
+
+  bildAuswahlZeichnen("titel");
+  bildAuswahlZeichnen("avatar");
 
   form.addEventListener("click", e => {
-    const b = e.target.closest("[data-vorlage]");
-    if (!b) return;
-    avatarNeu = "preset:" + b.dataset.vorlage;
-    jetzt.src = avatarUrl(avatarNeu);
-    vorlagenMarkieren();
-    statusSetzen("");
+    const kachel = e.target.closest("[data-bild]");
+    if (kachel) {
+      wahl[kachel.dataset.bild] = kachel.dataset.wert;
+      return bildGewaehlt(kachel.dataset.bild);
+    }
+    const neu = e.target.closest("[data-zuschnitt]");
+    if (neu) return bildZuschneiden(neu.dataset.zuschnitt);
+    const weg = e.target.closest("[data-entfernen]");
+    if (weg) {
+      const art = weg.dataset.entfernen;
+      eigen[art] = "";
+      quellen[art] = null;
+      if (wahl[art] === "eigen") wahl[art] = STANDARD[art];
+      return bildGewaehlt(art);
+    }
   });
 
-  datei.addEventListener("change", async () => {
-    const f = datei.files && datei.files[0];
-    datei.value = "";
-    if (!f) return;
-    try {
-      avatarNeu = await bildVerkleinern(f);
-      jetzt.src = avatarNeu;
-      vorlagenMarkieren();
-      statusSetzen(L("Bild bereit — noch speichern.", "Image ready — don’t forget to save."));
-    } catch (e) {
-      statusSetzen(meldung(e), true);
-    }
+  form.addEventListener("change", e => {
+    const feld = e.target.closest("[data-hochladen]");
+    if (!feld) return;
+    const datei = feld.files && feld.files[0];
+    feld.value = "";
+    if (datei) bildZuschneiden(feld.dataset.hochladen, datei);
+  });
+
+  /* Wer ungespeicherte Bilder hat, wird beim Verlassen gefragt */
+  addEventListener("beforeunload", e => {
+    if (gebautFuer && ungespeichert()) { e.preventDefault(); e.returnValue = ""; }
   });
 
   /* Zeichen zählen */
@@ -310,19 +444,30 @@ function profilFormular() {
     e.preventDefault();
     const name = form.username.value.trim();
     if (!NAME_MUSTER.test(name)) { form.username.focus(); return statusSetzen(meldung({ code: "name-ungueltig" }), true); }
+    if (wahl.avatar === "eigen" && !eigen.avatar) wahl.avatar = STANDARD.avatar;
+    if (wahl.titel === "eigen" && titelGeladen && !eigen.titel) wahl.titel = STANDARD.titel;
     const daten = {
       username: name,
       bio: form.bio.value.trim().slice(0, BIO_MAX),
-      avatar: avatarNeu || "preset:vi",
+      avatar: wahl.avatar,
+      avatarEigen: eigen.avatar,
+      /* Solange das eigene Titelbild nicht geladen ist, bleibt es unangetastet */
+      cover: titelGeladen ? wahl.titel : zustand.profil.cover,
       favChar: form.favChar.value,
       lang: LANG
     };
+    const titelNeu = titelGeladen && eigen.titel !== titelGespeichert;
+    if (titelNeu) daten.coverEigen = eigen.titel;
     const knopf = form.querySelector("[type=submit]");
     knopf.disabled = true; knopf.classList.add("is-busy");
     statusSetzen("");
     try {
       await zustand.backend.profilSpeichern(zustand.nutzer.uid, daten, zustand.profil);
-      profilSetzen({ ...daten, createdAt: zustand.profil.createdAt });
+      if (titelNeu) titelGespeichert = eigen.titel;
+      const { coverEigen, ...profil } = daten;
+      profilSetzen({ ...profil, createdAt: zustand.profil.createdAt });
+      bildAuswahlZeichnen("titel");
+      bildAuswahlZeichnen("avatar");
       hinweis.textContent = hinweisText;
       hinweis.classList.remove("is-gut", "is-schlecht");
       statusSetzen(L("Gespeichert.", "Saved."));
@@ -333,38 +478,6 @@ function profilFormular() {
       knopf.disabled = false; knopf.classList.remove("is-busy");
     }
   });
-}
-
-/* Quadratisch zuschneiden, auf 256 px verkleinern, als JPEG ablegen.
-   Die Sicherheitsregeln lassen höchstens 150.000 Zeichen zu. */
-async function bildVerkleinern(datei) {
-  if (!datei || !/^image\//.test(datei.type)) throw new KontoFehler("bild-ungueltig");
-  if (datei.size > 20 * 1024 * 1024) throw new KontoFehler("zu-gross");
-  const url = URL.createObjectURL(datei);
-  try {
-    const img = await new Promise((ok, nein) => {
-      const i = new Image();
-      i.onload = () => ok(i);
-      i.onerror = () => nein(new KontoFehler("bild-ungueltig"));
-      i.src = url;
-    });
-    const seite = Math.min(img.naturalWidth, img.naturalHeight);
-    if (!seite) throw new KontoFehler("bild-ungueltig");
-    const c = document.createElement("canvas");
-    c.width = c.height = 256;
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = "#0b1124";            // Hintergrund für transparente PNGs
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, (img.naturalWidth - seite) / 2, (img.naturalHeight - seite) / 2, seite, seite, 0, 0, 256, 256);
-    for (const q of [0.86, 0.74, 0.6]) {
-      const d = c.toDataURL("image/jpeg", q);
-      if (d.length <= 140000) return d;
-    }
-    throw new KontoFehler("zu-gross");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 /* ── Newsletter ── */

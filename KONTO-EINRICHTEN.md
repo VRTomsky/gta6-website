@@ -27,7 +27,9 @@ Solange das nicht eingerichtet ist:
 | `live: true` in `konto-config.js` | ✅ seit 17.09.2026 |
 
 Mit `live: false` verschwindet der Anmelde-Knopf wieder von luciajason.de; **localhost**
-spricht in beiden Fällen mit dem echten Firebase-Projekt.
+spricht in beiden Fällen mit dem echten Firebase-Projekt — außer mit **`?demo`** in der
+Adresse (`http://localhost:5174/konto.html?demo`): dann läuft der Demo-Modus, gespeichert
+nur im Browser, ohne echte Konten.
 
 ## 0 · HTTPS erzwingen
 
@@ -145,6 +147,39 @@ erreichbaren Seite mit Konten eigentlich trotzdem; soll die Seite breiter bekann
 Abschnitt 1 der Datenschutzerklärung um Name, Anschrift und E-Mail ergänzen.
 Keine Rechtsberatung.
 
+## Regeln aktualisieren
+
+Ändert sich `firestore.rules` (zuletzt am 17.09.2026 für Titelbild und eigene Bilder),
+müssen die Regeln **neu veröffentlicht** werden — sonst lehnt die Datenbank das Speichern
+des Profils ab:
+
+1. **<https://console.firebase.google.com/project/luciajason-27a74/firestore>** → Reiter **„Regeln"**
+2. `firestore.rules` im Editor öffnen → **Strg + A**, **Strg + C**
+3. In Firebase ins Textfeld → **Strg + A**, **Strg + V** → **„Veröffentlichen"**
+
+## Absender der Mails
+
+Bestätigungs- und Passwort-Mails kommen von Firebase. Anpassbar sind **Absendername** und
+**Absenderadresse**; ein **Profilbild neben dem Absender** geht nicht (Gmail verlangt dafür
+BIMI mit einem kostenpflichtigen Markenzertifikat — für ein fremdes Logo wie das GTA-VI-Logo
+gäbe es das ohnehin nicht).
+
+**Absendername** (sofort wirksam):
+
+1. **<https://console.firebase.google.com/project/luciajason-27a74/authentication/emails>**
+   (Authentication → Reiter **„Vorlagen"**)
+2. **„E-Mail-Adressbestätigung"** → Stift-Symbol
+3. **„Absendername"**: `luciajason.de` → **„Speichern"**
+
+**Absenderadresse `noreply@luciajason.de`** statt `…@luciajason-27a74.firebaseapp.com`:
+
+1. Im selben Fenster **„Domain anpassen"** → `luciajason.de` → Weiter
+2. Firebase zeigt mehrere DNS-Einträge (TXT und CNAME) — Fenster offen lassen
+3. Bei **INWX** anmelden → **Domains** → `luciajason.de` → **DNS** (Nameserver-Einträge)
+4. Jeden Eintrag aus Firebase mit **„Eintrag hinzufügen"** anlegen: Typ, Name und Wert genau
+   übernehmen. Die vier **A-Einträge für GitHub nicht anfassen**
+5. Zurück in Firebase **„Bestätigen"** — das kann bis zu 48 Stunden dauern
+
 ## Danach
 
 - **Nutzer ansehen:** Authentication → Reiter **Nutzer**
@@ -167,19 +202,25 @@ Datenschutzerklärung ergänzt werden.
 | `assets/js/konto/backend.js` | Firebase **oder** Demo-Modus, gleiche Schnittstelle |
 | `assets/js/konto/konto.js` | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
 | `assets/js/konto/profil.js` | die Kontoseite `konto.html` |
+| `assets/js/konto/zuschnitt.js` | Bild zuschneiden (Profilbild 1 : 1, Titelbild 3 : 1) |
 | `assets/css/konto.css` | Nav-Knopf, Dialog, Kontoseite, Datenschutzseite |
 | `assets/img/avatars/` | 9 Profilbild-Vorlagen (VI-Logo + 8 Figuren), 256 px |
+| `assets/img/covers/` | 9 Titelbild-Vorlagen, 1500 × 500 px |
 | `firestore.rules` | Sicherheitsregeln — gehören in die Firebase-Konsole |
 | `datenschutz.html` | Datenschutzerklärung (DE/EN) |
 
 Datenmodell in Firestore:
 
 ```
-users/{uid}          username, usernameLower, bio, avatar, favChar, lang, createdAt, updatedAt
-usernames/{name}     uid                       ← klein geschrieben, sorgt für Eindeutigkeit
-newsletter/{uid}     email, lang, consentAt
+users/{uid}                username, usernameLower, bio, favChar, lang, createdAt, updatedAt,
+                           avatar, avatarEigen, cover
+users/{uid}/bilder/titel   daten                ← eigenes Titelbild
+usernames/{name}           uid                  ← klein geschrieben, sorgt für Eindeutigkeit
+newsletter/{uid}           email, lang, consentAt
 ```
 
-`avatar` ist entweder `preset:<id>` (Vorlage) oder ein auf 256 px verkleinertes
-JPEG als `data:`-URL (höchstens 150.000 Zeichen). Ein eigener Speicher-Dienst
+`avatar` und `cover` sind `preset:<id>` (Vorlage) oder `eigen`. Eigene Bilder schneidet der
+Browser zu und speichert sie als JPEG-`data:`-URL: Profilbild 256 × 256 px in `avatarEigen`
+(≤ 150.000 Zeichen), Titelbild 1500 × 500 px in `bilder/titel` (≤ 300.000 Zeichen). Sie
+bleiben gespeichert, auch wenn gerade eine Vorlage gewählt ist. Ein eigener Speicher-Dienst
 (Firebase Storage) wird so nicht gebraucht — der wäre nicht mehr kostenlos.

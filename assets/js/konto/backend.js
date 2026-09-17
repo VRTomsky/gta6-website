@@ -13,6 +13,7 @@
      bestaetigungSenden()      Bestätigungs-Mail erneut schicken
      bestaetigungPruefen()     fragt nach, ob die Mail bestätigt wurde
      profilLaden(uid)          → profil | null
+     titelbildLaden(uid)       → eigenes Titelbild als data:-URL oder ""
      nameFrei(name, uid)       → true, wenn frei oder schon der eigene
      profilSpeichern(uid, daten, vorher)
      newsletterStatus(uid)     → true / false
@@ -20,7 +21,15 @@
      kontoLoeschen(uid, profil, passwort)
 
    nutzer = { uid, email, emailVerified, provider: "password"|"google", name }
-   profil = { username, bio, avatar, favChar, lang, createdAt: Date|null }
+   profil = { username, bio, favChar, lang, createdAt: Date|null,
+              avatar: "preset:<id>"|"eigen", avatarEigen: data:-URL|"",
+              cover:  "preset:<id>"|"eigen" }
+
+   Eigene Bilder bleiben gespeichert, auch wenn gerade eine Vorlage gewählt
+   ist — so lassen sie sich später wieder auswählen. Das eigene Profilbild
+   (klein) steht im Profil selbst, weil die Nav es auf jeder Seite braucht.
+   Das eigene Titelbild (groß) liegt getrennt in users/{uid}/bilder/titel
+   und wird nur auf der Kontoseite geladen.
 
    Fehler kommen als KontoFehler mit einem kurzen `code` — Firebase-Codes
    ohne das Präfix „auth/", dazu eigene wie „name-vergeben".
@@ -52,11 +61,35 @@ export async function backendWaehlen() {
   const heimnetz = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
   const sicher = location.protocol === "https:" || lokal;
 
+  /* ?demo auf dem eigenen Rechner: Demo-Modus trotz Firebase — zum
+     Ausprobieren, ohne echte Konten anzulegen */
+  if (lokal && new URLSearchParams(location.search).has("demo")) return demoBackend();
+
   if (cfg.firebase && cfg.firebase.apiKey) {
     if (!sicher) return null;
     return lokal || cfg.live ? firebaseBackend(cfg.firebase) : null;
   }
   return lokal || heimnetz ? demoBackend() : null;
+}
+
+/* Profil aus der Datenbank in die heutige Form bringen. Ältere Profile
+   hatten das eigene Bild direkt in `avatar` und noch kein Titelbild. */
+const DATEN_URL = /^data:image\/(jpeg|webp);base64,/;
+function profilAusDaten(d) {
+  let avatar = String(d.avatar || "");
+  let avatarEigen = String(d.avatarEigen || "");
+  if (DATEN_URL.test(avatar)) { avatarEigen = avatar; avatar = "eigen"; }
+  if (!/^(preset:[a-z]{2,12}|eigen)$/.test(avatar) || (avatar === "eigen" && !avatarEigen)) avatar = "preset:vi";
+  let cover = String(d.cover || "");
+  if (!/^(preset:[a-z-]{2,20}|eigen)$/.test(cover)) cover = "preset:vice-city";
+  return {
+    username: d.username,
+    bio: d.bio || "",
+    favChar: d.favChar || "",
+    lang: d.lang || "de",
+    createdAt: d.createdAt || null,
+    avatar, avatarEigen, cover
+  };
 }
 
 /* ═══ Firebase ════════════════════════════════════════════ */
@@ -103,11 +136,27 @@ async function firebaseBackend(config) {
     return p;
   };
 
+  /* Nach dem Klick auf den Bestätigungslink zeigt Firebase die Adresse
+     sofort als bestätigt — das Token im Browser trägt aber noch bis zu
+     einer Stunde „nicht bestätigt". Die Sicherheitsregeln lesen nur das
+     Token, der Newsletter meldete deshalb „keine Berechtigung". Weichen
+     beide voneinander ab, wird das Token gleich erneuert. */
+  const tokenAbgleichen = async u => {
+    if (!u || !u.emailVerified) return;
+    try {
+      const t = await u.getIdTokenResult();
+      if (!t.claims.email_verified) await u.getIdToken(true);
+    } catch (e) { /* offline — beim Schreiben wird noch einmal erneuert */ }
+  };
+
   return {
     modus: "firebase",
 
     beiAenderung(cb) {
-      return A.onAuthStateChanged(auth, u => cb(nutzer(u)));
+      return A.onAuthStateChanged(auth, async u => {
+        await tokenAbgleichen(u);
+        cb(nutzer(u));
+      });
     },
 
     async registrieren(email, pw) {
@@ -174,15 +223,21 @@ async function firebaseBackend(config) {
         const s = await frist(F.getDoc(F.doc(db, "users", uid)));
         if (!s.exists()) return null;
         const d = s.data();
-        return {
-          username: d.username,
-          bio: d.bio || "",
-          avatar: d.avatar || "",
-          favChar: d.favChar || "",
-          lang: d.lang || "de",
+        return profilAusDaten({
+          ...d,
           createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : null
-        };
+        });
       } catch (e) { weiter(e); }
+    },
+
+    async titelbildLaden(uid) {
+      try {
+        const s = await frist(F.getDoc(F.doc(db, "users", uid, "bilder", "titel")));
+        return s.exists() ? String(s.data().daten || "") : "";
+      } catch (e) {
+        if (e.code === "unavailable") weiter(e);
+        return "";
+      }
     },
 
     async nameFrei(name, uid) {
@@ -204,10 +259,20 @@ async function firebaseBackend(config) {
         usernameLower: lower,
         bio: daten.bio,
         avatar: daten.avatar,
+        avatarEigen: daten.avatarEigen || "",
+        cover: daten.cover,
         favChar: daten.favChar,
         lang: daten.lang,
         updatedAt: F.serverTimestamp()
       };
+
+      /* Das große Titelbild wird nur geschrieben, wenn es sich geändert
+         hat: undefined = unverändert, "" = entfernen */
+      if (typeof daten.coverEigen === "string") {
+        const ref = F.doc(db, "users", uid, "bilder", "titel");
+        if (daten.coverEigen) batch.set(ref, { daten: daten.coverEigen });
+        else batch.delete(ref);
+      }
 
       if (neuerName) {
         if (!(await this.nameFrei(daten.username, uid))) throw new KontoFehler("name-vergeben");
@@ -234,6 +299,8 @@ async function firebaseBackend(config) {
       const ref = F.doc(db, "newsletter", uid);
       try {
         if (an) {
+          /* Frisches Token — nur darin sehen die Regeln die Bestätigung */
+          await frist(auth.currentUser.getIdToken(true));
           await frist(F.setDoc(ref, { email: auth.currentUser.email, lang, consentAt: F.serverTimestamp() }), 15000);
         } else {
           await frist(F.deleteDoc(ref), 15000);
@@ -253,6 +320,7 @@ async function firebaseBackend(config) {
         }
         const batch = F.writeBatch(db);
         batch.delete(F.doc(db, "newsletter", uid));
+        batch.delete(F.doc(db, "users", uid, "bilder", "titel"));
         if (profil) {
           batch.delete(F.doc(db, "usernames", profil.username.toLowerCase()));
           batch.delete(F.doc(db, "users", uid));
@@ -270,7 +338,7 @@ async function firebaseBackend(config) {
    Oberfläche, bevor Firebase eingerichtet ist. */
 function demoBackend() {
   const SCHLUESSEL = "konto-demo";
-  const leer = () => ({ konten: {}, profile: {}, namen: {}, newsletter: {}, aktiv: null });
+  const leer = () => ({ konten: {}, profile: {}, titel: {}, namen: {}, newsletter: {}, aktiv: null });
   const lese = () => {
     try { return JSON.parse(localStorage.getItem(SCHLUESSEL)) || leer(); }
     catch (e) { return leer(); }
@@ -378,7 +446,12 @@ function demoBackend() {
     async profilLaden(uid) {
       await warte(140);
       const p = lese().profile[uid];
-      return p ? { ...p, createdAt: p.createdAt ? new Date(p.createdAt) : null } : null;
+      return p ? profilAusDaten({ ...p, createdAt: p.createdAt ? new Date(p.createdAt) : null }) : null;
+    },
+
+    async titelbildLaden(uid) {
+      await warte(120);
+      return (lese().titel || {})[uid] || "";
     },
 
     async nameFrei(name, uid) {
@@ -393,10 +466,16 @@ function demoBackend() {
       if (s.namen[lower] && s.namen[lower] !== uid) throw new KontoFehler("name-vergeben");
       if (vorher) delete s.namen[vorher.username.toLowerCase()];
       s.namen[lower] = uid;
+      const { coverEigen, ...rest } = daten;
       s.profile[uid] = {
-        ...daten,
+        ...rest,
         createdAt: vorher && vorher.createdAt ? new Date(vorher.createdAt).toISOString() : new Date().toISOString()
       };
+      s.titel = s.titel || {};
+      if (typeof coverEigen === "string") {
+        if (coverEigen) s.titel[uid] = coverEigen;
+        else delete s.titel[uid];
+      }
       schreibe(s);
     },
 
@@ -427,6 +506,7 @@ function demoBackend() {
       }
       if (profil) delete s.namen[profil.username.toLowerCase()];
       delete s.profile[uid];
+      if (s.titel) delete s.titel[uid];
       delete s.newsletter[uid];
       delete s.konten[uid];
       s.aktiv = null;

@@ -37,13 +37,40 @@ export const VORLAGEN = [
   { id: "brian",   name: "Brian Heder" }
 ];
 
+/* Vorlagen für das Titelbild — 1500 × 500 px (3 : 1) in assets/img/covers/ */
+export const TITEL_VORLAGEN = [
+  { id: "vice-city",   name: "Vice City bei Nacht" },
+  { id: "strand",      name: "Jason & Lucia am Strand" },
+  { id: "ueberfall",   name: "Jason & Lucia — Überfall" },
+  { id: "motel",       name: "Jason & Lucia im Motel" },
+  { id: "cabrio",      name: "Im Cabrio an der Küste" },
+  { id: "feuer",       name: "Vor dem brennenden Wrack" },
+  { id: "schild",      name: "Das Vice-City-Schild" },
+  { id: "keys",        name: "Leonida Keys" },
+  { id: "motel-nacht", name: "Motel bei Nacht" }
+];
+export const TITEL_STANDARD = "preset:vice-city";
+
 export const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-export function avatarUrl(avatar) {
-  if (typeof avatar === "string" && /^data:image\/(jpeg|webp);base64,/.test(avatar)) return avatar;
-  const id = typeof avatar === "string" && avatar.startsWith("preset:") ? avatar.slice(7) : "vi";
+const DATEN_URL = /^data:image\/(jpeg|webp);base64,/;
+
+/* Profilbild als Adresse. Nimmt ein Profil ({ avatar, avatarEigen }) oder
+   einen einzelnen Wert ("preset:lucia", ältere Profile: data:-URL). */
+export function avatarUrl(wert, eigen) {
+  if (wert && typeof wert === "object") { eigen = wert.avatarEigen; wert = wert.avatar; }
+  if (typeof wert === "string" && DATEN_URL.test(wert)) return wert;
+  if (wert === "eigen" && typeof eigen === "string" && DATEN_URL.test(eigen)) return eigen;
+  const id = typeof wert === "string" && wert.startsWith("preset:") ? wert.slice(7) : "vi";
   return "assets/img/avatars/" + (VORLAGEN.some(v => v.id === id) ? id : "vi") + ".jpg";
+}
+
+/* Titelbild als Adresse: Vorlage oder eigenes Bild (data:-URL) */
+export function titelUrl(wert, eigen) {
+  if (wert === "eigen" && typeof eigen === "string" && DATEN_URL.test(eigen)) return eigen;
+  const id = typeof wert === "string" && wert.startsWith("preset:") ? wert.slice(7) : "";
+  return "assets/img/covers/" + (TITEL_VORLAGEN.some(v => v.id === id) ? id : "vice-city") + ".jpg";
 }
 
 /* ═══ Meldungen ═══════════════════════════════════════════ */
@@ -74,6 +101,7 @@ const MELDUNGEN = {
   "unavailable":            ["Der Server ist gerade nicht erreichbar. Versuch es gleich noch einmal.", "The server is unavailable right now. Try again shortly."],
   "zu-gross":               ["Das Bild ist zu groß. Versuch ein anderes.", "That image is too large. Try another one."],
   "bild-ungueltig":         ["Diese Datei lässt sich nicht als Bild öffnen.", "That file can’t be opened as an image."],
+  "bild-zu-klein":          ["Das Bild ist zu klein — mindestens 200 px breit und hoch.", "That image is too small — at least 200 px wide and tall."],
   "api-key-not-valid.-please-pass-a-valid-api-key.": ["Die Firebase-Einstellungen stimmen nicht (API-Key).", "The Firebase settings are wrong (API key)."],
   "invalid-api-key":        ["Die Firebase-Einstellungen stimmen nicht (API-Key).", "The Firebase settings are wrong (API key)."],
   "unbekannt":              ["Da ist etwas schiefgelaufen. Versuch es bitte noch einmal.", "Something went wrong. Please try again."]
@@ -195,12 +223,12 @@ function navZeichnen() {
     box.innerHTML = `
       <button type="button" class="acct__me" aria-expanded="false" aria-controls="acctMenu"
               aria-label="${esc(L("Konto-Menü", "Account menu"))}: ${esc(name)}">
-        <img class="acct__av" src="${esc(avatarUrl(profil && profil.avatar))}" alt="" width="34" height="34">
+        <img class="acct__av" src="${esc(avatarUrl(profil))}" alt="" width="34" height="34">
         <span class="acct__name">${esc(name)}</span>${ICON_PFEIL}
       </button>
       <div class="acct__menu" id="acctMenu" hidden>
         <div class="acct__kopf">
-          <img src="${esc(avatarUrl(profil && profil.avatar))}" alt="" width="44" height="44">
+          <img src="${esc(avatarUrl(profil))}" alt="" width="44" height="44">
           <div><b>${esc(name)}</b><span>${esc(nutzer.email)}</span></div>
         </div>
         ${profil
@@ -499,7 +527,7 @@ const ANSICHTEN = {
           `We’ve sent a confirmation email to <b>${esc(n.email)}</b>. Once you’ve confirmed it, you can subscribe to the GTA VI newsletter.`);
     return `
     <div class="kd__willkommen">
-      <img class="kd__grossav" src="${esc(avatarUrl(p.avatar))}" alt="" width="96" height="96">
+      <img class="kd__grossav" src="${esc(avatarUrl(p))}" alt="" width="96" height="96">
       ${kopf(L("Konto erstellt", "Account created"), L("Willkommen, ", "Welcome, ") + esc(p.username || ""), text)}
       <div class="kd__knoepfe">
         <a class="btn btn--pink btn--lg" href="konto.html">${L("Zu meinem Konto", "Go to my account")}</a>
@@ -579,7 +607,7 @@ async function formRegistrieren(form) {
     /* Name zuerst prüfen — sonst stünde ein Konto ohne Namen da */
     if (!(await zustand.backend.nameFrei(name, null))) throw new KontoFehler("name-vergeben");
     const nutzer = await zustand.backend.registrieren(email, pw);
-    const profil = { username: name, bio: "", avatar: "preset:vi", favChar: "", lang: LANG };
+    const profil = { username: name, bio: "", avatar: "preset:vi", avatarEigen: "", cover: TITEL_STANDARD, favChar: "", lang: LANG };
     try {
       await zustand.backend.profilSpeichern(nutzer.uid, profil, null);
       zustand.nutzer = nutzer;
@@ -627,6 +655,8 @@ async function formProfil(form) {
     username: name,
     bio: "",
     avatar: "preset:" + (gewaehlt ? gewaehlt.getAttribute("data-kd-vorlage") : "vi"),
+    avatarEigen: "",
+    cover: TITEL_STANDARD,
     favChar: "",
     lang: LANG
   };

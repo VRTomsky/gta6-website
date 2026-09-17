@@ -165,7 +165,8 @@ Wer einen deutschen Text ändert, ändert das `data-en` direkt daneben mit.
 ## Benutzerkonten
 
 Freiwillig und kostenlos: Registrieren mit E-Mail oder Google, Profil mit Benutzername,
-Beschreibung, Lieblingsfigur und Profilbild (eigenes Foto oder eine von neun Vorlagen),
+Beschreibung, Lieblingsfigur, Titelbild und Profilbild (je eigenes Bild mit Zuschneiden
+oder eine von neun Vorlagen),
 Newsletter-Anmeldung, Konto selbst löschen. Oben rechts in der Nav sitzt der Anmelde-Knopf.
 
 Das läuft über **Firebase** (Google, Projekt `luciajason-27a74`) und ist seit 17.09.2026

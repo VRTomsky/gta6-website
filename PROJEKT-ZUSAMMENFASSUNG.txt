@@ -101,7 +101,8 @@ CHARAKTER-AKTEN (charakter.html)
 - Deutsch und Englisch: Schalter "DE | EN" oben rechts. Standard ist
   Deutsch. Der Link luciajason.de/?lang=en öffnet direkt Englisch
 - Benutzerkonten (freiwillig): Anmelden mit E-Mail oder Google,
-  Profil mit Name, Beschreibung, Lieblingsfigur und Profilbild,
+  Profil mit Name, Beschreibung, Lieblingsfigur, Titelbild und
+  Profilbild (eigene Bilder zuschneidbar, dazu je 9 Vorlagen),
   Newsletter-Anmeldung, Konto selbst löschen. Seite: konto.html
 
 
@@ -151,6 +152,12 @@ WAS BISHER GEMACHT WURDE
    weil die Seite nur für den Nutzer und seine Freunde ist.
    Newsletter-Anmeldungen werden gesammelt, verschickt wird noch
    nichts - dafür braucht es später einen Mail-Dienst.
+
+10. Profil erweitert (17.09.2026): Titelbild im Profilkopf, Bilder
+   zuschneiden mit Vorschau, eigene Bilder bleiben beim Wechsel zu
+   einer Vorlage auswählbar. Newsletter-Fehler "Keine Berechtigung"
+   behoben. Nach Änderungen an firestore.rules müssen die Regeln in
+   der Firebase-Konsole neu veröffentlicht werden.
 
 
 ----------------------------------------------------------------

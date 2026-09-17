@@ -6,8 +6,11 @@ rules_version = '2';
 //  Einfügen: Firebase-Konsole → Firestore Database → Regeln →
 //  kompletten Inhalt dieser Datei ersetzen → „Veröffentlichen".
 //
-//  Drei Sammlungen:
+//  Sammlungen:
 //    users/{uid}          Profil — nur die Person selbst liest und schreibt
+//    users/{uid}/bilder/titel
+//                         { daten } — eigenes Titelbild, getrennt vom Profil,
+//                         weil es groß ist und nur die Kontoseite es braucht
 //    usernames/{name}     { uid } — sorgt dafür, dass jeder Name nur
 //                         einmal existiert; lesbar für alle, damit sich
 //                         „Name schon vergeben" vor dem Registrieren prüfen lässt
@@ -30,12 +33,21 @@ service cloud.firestore {
     }
 
     function profilFelder() {
-      return ['username', 'usernameLower', 'bio', 'avatar', 'favChar', 'lang', 'createdAt', 'updatedAt'];
+      return ['username', 'usernameLower', 'bio', 'avatar', 'avatarEigen', 'cover',
+              'favChar', 'lang', 'createdAt', 'updatedAt'];
     }
 
-    // Inhalt eines Profils. Das Profilbild ist entweder eine Vorlage
-    // ("preset:lucia") oder ein kleines JPEG/WebP als data:-URL —
-    // der Browser verkleinert eigene Bilder vorher auf 256 px.
+    // Eigenes Bild als data:-URL (JPEG/WebP), im Browser zugeschnitten und
+    // verkleinert — leer, wenn keins hochgeladen ist
+    function eigenesBild(b, max) {
+      return b is string
+        && (b == '' || (b.size() <= max
+            && b.matches('^data:image/(jpeg|webp);base64,[A-Za-z0-9+/=]+$')));
+    }
+
+    // Inhalt eines Profils. Profil- und Titelbild sind jeweils eine Vorlage
+    // ("preset:lucia") oder "eigen". Das eigene Profilbild bleibt auch dann
+    // gespeichert, wenn gerade eine Vorlage gewählt ist.
     function gueltigesProfil(d) {
       return d.keys().hasOnly(profilFelder())
         && d.username is string
@@ -45,10 +57,10 @@ service cloud.firestore {
         && d.favChar is string && d.favChar.matches('^([a-z]{2,12})?$')
         && d.lang in ['de', 'en']
         && d.updatedAt == request.time
-        && d.avatar is string
-        && (d.avatar.matches('^preset:[a-z]{2,12}$')
-            || (d.avatar.size() <= 150000
-                && d.avatar.matches('^data:image/(jpeg|webp);base64,[A-Za-z0-9+/=]+$')));
+        && d.avatar is string && d.avatar.matches('^(preset:[a-z]{2,12}|eigen)$')
+        && eigenesBild(d.avatarEigen, 150000)
+        && (d.avatar != 'eigen' || d.avatarEigen != '')
+        && d.cover is string && d.cover.matches('^(preset:[a-z-]{2,20}|eigen)$');
     }
 
     // ── Profile ─────────────────────────────────────────────────
@@ -72,6 +84,18 @@ service cloud.firestore {
         && (request.resource.data.usernameLower == resource.data.usernameLower
             || !existsAfter(/databases/$(database)/documents/usernames/$(resource.data.usernameLower)));
 
+      allow delete: if istSelbst(uid);
+    }
+
+    // ── Eigenes Titelbild ───────────────────────────────────────
+    match /users/{uid}/bilder/{bild} {
+      allow get: if istSelbst(uid);
+      allow list: if false;
+      allow create, update: if istSelbst(uid)
+        && bild == 'titel'
+        && request.resource.data.keys().hasOnly(['daten'])
+        && request.resource.data.daten != ''
+        && eigenesBild(request.resource.data.daten, 300000);
       allow delete: if istSelbst(uid);
     }
 

@@ -60,10 +60,12 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.l
 | `assets/js/konto-config.js` | 50 | Firebase-Werte und Schalter `live` |
 | `assets/js/konto/backend.js` | 430 | Firebase **oder** Demo-Modus hinter derselben Schnittstelle |
 | `assets/js/konto/konto.js` | 590 | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
-| `assets/js/konto/profil.js` | 570 | Kontoseite |
+| `assets/js/konto/profil.js` | 700 | Kontoseite: Profilkopf, Bildauswahl, Newsletter, Sicherheit, Löschen |
+| `assets/js/konto/zuschnitt.js` | 330 | Bild zuschneiden: ziehen, zoomen, Vorschau |
 | `assets/css/konto.css` | 580 | Nav-Knopf, Dialog, Kontoseite, Datenschutzseite |
 | `firestore.rules` | 120 | Sicherheitsregeln — in die Firebase-Konsole kopieren |
 | `assets/img/avatars/` | 9 | Profilbild-Vorlagen 256 px: VI-Logo + 8 Figuren (Zuschnitte der Artworks) |
+| `assets/img/covers/` | 9 | Titelbild-Vorlagen 1500 × 500 px (3 : 1) aus Artworks und Screenshots |
 | `assets/img/` | 150 | `art/` 20, `chars/` 49, `duo/` 13, `places/` 42, `ultimate/` 26 |
 | `assets/img/app/` | 4 | quadratische Symbole für den Android-Startbildschirm |
 | `assets/video/` | 10 | 2 Scroll-Clips + 8 Charakter-Loops |
@@ -559,6 +561,17 @@ erreichbar". Echte Konten gibt es nie über http:// (außer localhost). Mit `liv
 | WLAN-IP (http) | kein Kontosystem — unverschlüsselt |
 | ohne Firebase-Werte | Demo-Modus auf localhost/WLAN, gespeichert in `localStorage` (`konto-demo`) |
 
+**Testen ohne echte Konten:** `http://localhost:5174/konto.html?demo` erzwingt den
+Demo-Modus, auch wenn Firebase eingetragen ist.
+
+**Regeln neu veröffentlichen**, sobald sich `firestore.rules` ändert — Anleitung in
+`KONTO-EINRICHTEN.md`. Mit alten Regeln schlägt das Speichern des Profils fehl.
+
+Geprüft im Demo-Modus (17.09.2026, Titelbild): eigenes Titel- und Profilbild hochladen,
+ziehen, zoomen, Randbegrenzung, übernehmen, zu Vorlage wechseln und zurück, speichern,
+neu laden, „Zuschnitt ändern" mit gespeichertem Bild, altes Profilformat, Englisch,
+1440 und 390 px.
+
 Geprüft im Demo-Modus: Registrieren, falsches Passwort, Anmelden, Google, Namenswahl,
 Profil speichern, Namensprüfung live, eigenes Bild (1,3 MB PNG → 35 KB JPEG), Newsletter mit
 und ohne bestätigte Adresse, Konto löschen, Englisch, 390 px und 1440 px, Nav-Breiten
@@ -581,14 +594,22 @@ Firebase kommt als ES-Modul vom CDN, Version fest auf **12.19.0**
 Firestore (Spark-Tarif, kostenlos):
 
 ```
-users/{uid}          username, usernameLower, bio, avatar, favChar, lang, createdAt, updatedAt
-usernames/{name}     uid        ← Eindeutigkeit; öffentlich lesbar für „Name schon vergeben"
-newsletter/{uid}     email, lang, consentAt
+users/{uid}                username, usernameLower, bio, favChar, lang, createdAt, updatedAt,
+                           avatar, avatarEigen, cover
+users/{uid}/bilder/titel   daten      ← eigenes Titelbild, nur auf der Kontoseite geladen
+usernames/{name}           uid        ← Eindeutigkeit; öffentlich lesbar für „Name schon vergeben"
+newsletter/{uid}           email, lang, consentAt
 ```
 
-- **Profilbild** ist `preset:<id>` oder ein im Browser auf 256 px zugeschnittenes JPEG als
-  `data:`-URL (≤ 150.000 Zeichen, in den Regeln begrenzt). Firebase Storage wäre nicht mehr
-  kostenlos.
+- **Profil- und Titelbild** sind je `preset:<id>` oder `eigen`. Eigene Bilder schneidet
+  `zuschnitt.js` im Browser zu (256 × 256 bzw. 1500 × 500 px, JPEG als `data:`-URL,
+  ≤ 150.000 bzw. 300.000 Zeichen — in den Regeln begrenzt). Sie **bleiben gespeichert, wenn
+  man zu einer Vorlage wechselt**, und stehen als Kachel „Eigenes" in der Auswahl, bis man
+  sie entfernt. Das Profilbild liegt im Profil selbst (die Nav braucht es auf jeder Seite),
+  das große Titelbild getrennt. Firebase Storage wäre nicht mehr kostenlos.
+- **Ältere Profile** (eigenes Bild direkt in `avatar`, kein `cover`) bringt
+  `profilAusDaten()` in `backend.js` beim Laden in die neue Form; beim nächsten Speichern
+  steht es dann so in der Datenbank.
 - **Newsletter nur mit bestätigter Adresse** (`email_verified` im Token) und nur die eigene
   Adresse — ersetzt das Double-Opt-in. Nach dem Bestätigen muss das Token erneuert werden
   (`bestaetigungPruefen()` → `getIdToken(true)`), sonst sehen die Regeln noch `false`.
@@ -599,8 +620,30 @@ newsletter/{uid}     email, lang, consentAt
 - **Löschen** verlangt bei Firebase eine frische Anmeldung — die wird **vor** dem Löschen
   der Daten geholt, sonst wären die Daten weg und das Konto noch da.
 
+### Profilkopf, Titelbild, Zuschnitt
+
+- Der Profilkopf auf `konto.html` hat genau **3 : 1** (am Desktop gemessen 1440 × 480) —
+  derselbe Rahmen wie beim Zuschneiden. Links Profilbild, daneben Name und Beschreibung.
+  Wird der Inhalt höher (Handy, lange Beschreibung), wächst der Kopf und das Bild wird
+  mittig beschnitten. Auf 390 px bleiben rund **32 %** der Breite sichtbar — die gestrichelten
+  „Handy"-Linien im Zuschneide-Fenster zeigen genau diesen Ausschnitt.
+- **Wer ein Bild wählt, sieht es sofort im Kopf** („Vorschau · noch nicht gespeichert");
+  gespeichert wird erst mit „Speichern". Verlässt man die Seite mit ungespeicherten Bildern,
+  fragt der Browser nach.
+- **Zuschneiden:** ziehen, Mausrad, Regler, zwei Finger, Pfeiltasten, +/−. Das Bild füllt
+  den Rahmen immer ganz, leere Ränder gehen nicht. „Zuschnitt ändern" nimmt das Original
+  dieses Besuchs; nach dem Neuladen das gespeicherte Bild (hineinzoomen und verschieben geht
+  dann weiter, herauszoomen nicht mehr).
+- **Nicht per Klick daneben schließen** — endet ein Ziehen außerhalb des Rahmens, käme
+  sonst ein Klick auf den Hintergrund an und der Zuschnitt wäre weg.
+
 ### Fallstricke
 
+0. **Newsletter „Keine Berechtigung" trotz bestätigter Adresse** (behoben 17.09.2026).
+   Nach dem Klick auf den Bestätigungslink zeigt Firebase `emailVerified: true`, das
+   **Token** im Browser trägt aber bis zu einer Stunde noch `email_verified: false` — und
+   die Regeln lesen nur das Token. Jetzt: beim Anmelden wird das Token erneuert, wenn beides
+   abweicht, und vor dem Abonnieren immer.
 1. **`form.name` ist das `name`-Attribut des Formulars**, nicht das Feld `name="name"`.
    Das Bestätigungsfeld beim Löschen heißt deshalb `bestaetigung`.
 2. **Nav-Breite.** Neben sieben Links, Countdown-Pille, Sprachwahl und Konto wird es unter
