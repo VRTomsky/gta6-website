@@ -31,6 +31,12 @@ const seg = (p, a, b) => clamp((p - a) / (b - a), 0, 1);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const zwei = n => String(n).padStart(2, "0");
 
+/* Sprache: `L("Deutsch", "English")`, Inhalte kommen über data.en.js.
+   Die data-en-Texte im HTML zuerst einsetzen — das Menü unten sucht
+   #navMiniMobile, das dabei neu entsteht. */
+const L = window.L || (de => de);
+if (window.I18N) I18N.anwenden();
+
 const root = $("#charRoot");
 const reihe = (typeof CHARS !== "undefined" ? CHARS : []).filter(c => CHAR_PAGES[c.id]);
 
@@ -38,9 +44,9 @@ if (!reihe.length) {
   root.removeAttribute("aria-busy");
   root.innerHTML = `
     <section class="coutro" style="padding-top:34svh">
-      <h1 class="coutro__h">Keine Akten vorhanden</h1>
+      <h1 class="coutro__h">${L("Keine Akten vorhanden", "No files available")}</h1>
       <div class="coutro__acts">
-        <a class="btn btn--pink btn--lg" href="index.html">Zur Startseite</a>
+        <a class="btn btn--pink btn--lg" href="index.html">${L("Zur Startseite", "Back to home")}</a>
       </div>
     </section>`;
   return;
@@ -64,7 +70,7 @@ function shot(src, alt, cls) {
   return `
     <figure class="cshot ${cls || ""} cin">
       <img src="${url}" alt="${esc(alt)}" loading="lazy" decoding="async">
-      <button class="cshot__zoom" type="button" data-lb="${i}" aria-label="${esc(alt)} vergrößern">
+      <button class="cshot__zoom" type="button" data-lb="${i}" aria-label="${esc(alt)} ${L("vergrößern", "— enlarge")}">
         <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
           <path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"
                 stroke="currentColor" stroke-width="2" fill="none"
@@ -87,7 +93,7 @@ function figurHTML(base, nr) {
     ? `<video class="cv__video" data-scrub
               src="${page.scrub}" poster="${page.scrubPoster}"
               muted playsinline preload="none" disablepictureinpicture
-              aria-label="Clip zu ${esc(base.name)}, läuft über die Scrollposition"></video>`
+              aria-label="${L(`Clip zu ${esc(base.name)}, läuft über die Scrollposition`, `Clip of ${esc(base.name)}, driven by your scroll position`)}"></video>`
     : `<img class="cv__video" src="${page.heroImg}"
             alt="${esc(base.name)} — ${esc(base.sub)}" loading="lazy" decoding="async">`;
 
@@ -128,7 +134,7 @@ function figurHTML(base, nr) {
   </section>
 
   <section class="cquote ${rechts ? "cquote--right" : ""}">
-    <blockquote class="cin">&bdquo;${page.quote1}&ldquo;</blockquote>
+    <blockquote class="cin">${L("&bdquo;", "&ldquo;")}${page.quote1}${L("&ldquo;", "&rdquo;")}</blockquote>
   </section>
 
   <section class="cband ${rechts ? "cband--right" : ""}">
@@ -157,7 +163,7 @@ function figurHTML(base, nr) {
   </section>
 
   <section class="cgal">
-    <h3 class="cgal__head cin">Bilder &middot; ${esc(base.name)}</h3>
+    <h3 class="cgal__head cin">${L("Bilder", "Images")} &middot; ${esc(base.name)}</h3>
     <div class="cgal__grid">
       ${page.gallery.map(([s, a]) => shot(s, a)).join("")}
     </div>
@@ -174,17 +180,17 @@ function figurHTML(base, nr) {
 /* Der Abschluss steht nur einmal ganz unten, hinter Brian Heder. */
 const abschlussHTML = `
 <section class="cende">
-  <p class="cende__kicker cin">Alle ${zwei(reihe.length)} Akten gelesen</p>
-  <h2 class="cende__h cin">Bis dahin<br>bleibt nur Warten.</h2>
+  <p class="cende__kicker cin">${L(`Alle ${zwei(reihe.length)} Akten gelesen`, `All ${zwei(reihe.length)} files read`)}</p>
+  <h2 class="cende__h cin">${L("Bis dahin<br>bleibt nur Warten.", "Until then,<br>all we can do is wait.")}</h2>
   <div class="coutro__acts cin">
     <a class="btn btn--pink btn--lg" href="index.html#charaktere">
       <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Zurück zu den Charakteren
+      ${L("Zurück zu den Charakteren", "Back to the characters")}
     </a>
-    <a class="btn btn--ghost btn--lg" href="index.html">Zur Startseite</a>
+    <a class="btn btn--ghost btn--lg" href="index.html">${L("Zur Startseite", "Back to home")}</a>
     <button class="btn btn--ghost btn--lg" type="button" id="nachOben">
       <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 20V6m0 0l-6 6m6-6l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Nach oben
+      ${L("Nach oben", "Back to top")}
     </button>
   </div>
 </section>`;
@@ -549,15 +555,15 @@ figuren.forEach(heroAufsetzen);
         <a href="#c-${c.id}" data-kapitel="${c.id}">
           <span class="mm__nr">${zwei(i + 1)}</span>${esc(c.name)}
         </a>`).join("") +
-      `<a class="mm__extra" href="index.html#charaktere">Zurück zur Übersicht</a>
-       <a class="mm__extra" href="index.html">Startseite</a>`;
+      `<a class="mm__extra" href="index.html#charaktere">${L("Zurück zur Übersicht", "Back to overview")}</a>
+       <a class="mm__extra" href="index.html">${L("Startseite", "Home")}</a>`;
   }
 
   const schliesseMenue = () => {
     if (!menue || !burger) return;
     menue.hidden = true;
     burger.setAttribute("aria-expanded", "false");
-    burger.setAttribute("aria-label", "Menü öffnen");
+    burger.setAttribute("aria-label", L("Menü öffnen", "Open menu"));
     document.body.classList.remove("is-locked");
   };
   if (burger && menue) {
@@ -565,7 +571,7 @@ figuren.forEach(heroAufsetzen);
       if (burger.getAttribute("aria-expanded") === "true") return schliesseMenue();
       menue.hidden = false;
       burger.setAttribute("aria-expanded", "true");
-      burger.setAttribute("aria-label", "Menü schließen");
+      burger.setAttribute("aria-label", L("Menü schließen", "Close menu"));
       document.body.classList.add("is-locked");
     });
     menue.addEventListener("click", e => { if (e.target.closest("a")) schliesseMenue(); });
@@ -588,7 +594,11 @@ figuren.forEach(heroAufsetzen);
       $$("[data-kapitel]", liste).forEach(a =>
         a.classList.toggle("is-active", a.dataset.kapitel === id));
     }
-    const neu = location.pathname + "?c=" + id;
+    /* ?lang= bleibt erhalten, falls die Sprache nur in der Adresse steht
+       (privates Fenster ohne Speicher) — sonst fiele die Seite beim
+       Neuladen auf Deutsch zurück. */
+    const sprache = new URLSearchParams(location.search).get("lang");
+    const neu = location.pathname + "?c=" + id + (sprache ? "&lang=" + sprache : "");
     if (location.pathname + location.search !== neu) history.replaceState(null, "", neu);
   };
 

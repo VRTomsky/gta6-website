@@ -3,42 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Charakter — Grand Theft Auto VI</title>
-<meta name="description" content="Charakter-Akte zu Grand Theft Auto VI: Biografie, Zitate und Bildergalerie.">
+<title data-en="Character — Grand Theft Auto VI">Charakter — Grand Theft Auto VI</title>
+<meta name="description" content="Charakter-Akte zu Grand Theft Auto VI: Biografie, Zitate und Bildergalerie."
+      data-en-content="Grand Theft Auto VI character files: biography, quotes and image gallery.">
 <meta name="theme-color" content="#0b1124">
 <meta name="color-scheme" content="dark">
+<!-- Sprache zuerst: steht fest, bevor irgendetwas gezeichnet wird -->
+<script src="assets/js/i18n.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/char.css">
+<link rel="stylesheet" href="assets/css/konto.css">
 <link rel="icon" href="assets/img/art/vi_logo.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/img/app/apple-touch-icon.png">
 </head>
 <body class="char-body">
 
-<a class="skip-link" href="#main">Zum Inhalt springen</a>
+<a class="skip-link" href="#main" data-en="Skip to content">Zum Inhalt springen</a>
 
 <!-- ══════════════ NAV ══════════════ -->
 <header class="nav nav--char" id="nav">
-  <a class="nav__logo" href="index.html" aria-label="Grand Theft Auto VI — zur Startseite">
+  <a class="nav__logo" href="index.html" aria-label="Grand Theft Auto VI — zur Startseite" data-en-aria-label="Grand Theft Auto VI — home">
     <svg class="vi-mark" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
       <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/>
       <path d="M49.2 0h11.6v38H49.2z"/>
     </svg>
   </a>
   <span class="nav__sep" aria-hidden="true"></span>
-  <p class="nav__where" id="navWhere">Charaktere</p>
+  <p class="nav__where" id="navWhere" data-en="Characters">Charaktere</p>
 
   <div class="nav__right">
     <!-- Bei rund 55.000 px Seitenlänge braucht es eine Ortsangabe -->
     <span class="nav__fortschritt" id="navFortschritt" aria-hidden="true">01 / 08</span>
     <a class="btn btn--pink btn--sm nav__back" href="index.html#charaktere">
       <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Alle Charaktere</span>
+      <span data-en="All characters">Alle Charaktere</span>
     </a>
-    <button class="nav__burger" id="burger" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobileMenu">
+    <div class="lang" role="group" aria-label="Sprache wählen" data-en-aria-label="Choose language">
+      <button type="button" class="lang__btn" data-lang="de" lang="de" aria-pressed="true" title="Deutsch">DE</button>
+      <button type="button" class="lang__btn" data-lang="en" lang="en" aria-pressed="false" title="English">EN</button>
+    </div>
+    <!-- Anmelden / Konto — wird von konto-nav.js gefüllt -->
+    <div class="acct" data-acct></div>
+    <button class="nav__burger" id="burger" aria-label="Menü öffnen" data-en-aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
       <span></span><span></span>
     </button>
   </div>
@@ -47,17 +57,17 @@
 <!-- Kapitelliste. Der Inhalt kommt aus char.js, damit Reihenfolge und
      Namen aus CHARS stammen und nicht doppelt gepflegt werden müssen. -->
 <div class="mobile-menu mobile-menu--kapitel" id="mobileMenu" hidden>
-  <nav aria-label="Charaktere auf dieser Seite"></nav>
-  <p class="mobile-menu__cd"><span id="navMiniMobile">—</span> bis zum Release</p>
+  <nav aria-label="Charaktere auf dieser Seite" data-en-aria-label="Characters on this page"></nav>
+  <p class="mobile-menu__cd" data-en='<span id="navMiniMobile">—</span> days until release'><span id="navMiniMobile">—</span> bis zum Release</p>
 </div>
 
 <main id="main" tabindex="-1">
   <!-- Die acht Figurennamen sind h2, weil auf einer Seite nur eine erste
        Überschrift stehen darf. Diese hier trägt sie — sichtbar ist sie
        nicht, den Titel zeigt der Hero der jeweiligen Figur. -->
-  <h1 class="sr-only">Charakter-Akten zu Grand Theft Auto VI</h1>
+  <h1 class="sr-only" data-en="Grand Theft Auto VI character files">Charakter-Akten zu Grand Theft Auto VI</h1>
   <div id="charRoot" class="char-root" aria-busy="true">
-    <p class="char-loading">Akten werden geladen …</p>
+    <p class="char-loading" data-en="Loading files …">Akten werden geladen …</p>
   </div>
 </main>
 
@@ -73,32 +83,33 @@
     <svg class="vi-mark vi-mark--foot" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
       <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/><path d="M49.2 0h11.6v38H49.2z"/>
     </svg>
-    <p><strong>Inoffizielle Fan-Seite.</strong> Nicht mit Rockstar Games oder Take-Two Interactive verbunden und von diesen weder unterstützt noch autorisiert. Alle Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. Medien stammen aus dem offiziellen Presse- und Downloadbereich von Rockstar Games.</p>
+    <p data-en="<strong>Unofficial fan site.</strong> Not affiliated with, endorsed or authorized by Rockstar Games or Take-Two Interactive. All images, videos, logos and trademarks belong to their respective owners. Media comes from the official Rockstar Games press and download area."><strong>Inoffizielle Fan-Seite.</strong> Nicht mit Rockstar Games oder Take-Two Interactive verbunden und von diesen weder unterstützt noch autorisiert. Alle Bilder, Videos, Logos und Marken gehören ihren jeweiligen Eigentümern. Medien stammen aus dem offiziellen Presse- und Downloadbereich von Rockstar Games.</p>
   </div>
   <div class="footer__links">
-    <a href="index.html">Startseite</a>
-    <a href="index.html#charaktere">Charaktere</a>
-    <a href="https://www.rockstargames.com/VI/" target="_blank" rel="noopener noreferrer">Offizielle Seite</a>
+    <a href="index.html" data-en="Home">Startseite</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="https://www.rockstargames.com/VI/" target="_blank" rel="noopener noreferrer" data-en="Official site">Offizielle Seite</a>
     <a href="https://www.rockstargames.com/VI/media" target="_blank" rel="noopener noreferrer">Media &amp; Artwork</a>
-    <span class="footer__esrb">Kann Inhalte enthalten, die für Kinder ungeeignet sind.</span>
+    <span class="footer__esrb" data-en="May contain content unsuitable for children.">Kann Inhalte enthalten, die für Kinder ungeeignet sind.</span>
   </div>
 </footer>
 
 <!-- ══════════════ LIGHTBOX ══════════════ -->
-<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Bildansicht">
-  <button class="modal__close" data-close aria-label="Schließen">
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Bildansicht" data-en-aria-label="Image viewer">
+  <button class="modal__close" data-close aria-label="Schließen" data-en-aria-label="Close">
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>
-  <button class="lb__nav lb__prev" id="lbPrev" aria-label="Vorheriges Bild">
+  <button class="lb__nav lb__prev" id="lbPrev" aria-label="Vorheriges Bild" data-en-aria-label="Previous image">
     <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
   <figure class="lb__fig"><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
-  <button class="lb__nav lb__next" id="lbNext" aria-label="Nächstes Bild">
+  <button class="lb__nav lb__next" id="lbNext" aria-label="Nächstes Bild" data-en-aria-label="Next image">
     <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
 </div>
 
 <script src="assets/js/data.js"></script>
+<script src="assets/js/data.en.js"></script>
 <script src="assets/js/char.js"></script>
 </body>
 </html>

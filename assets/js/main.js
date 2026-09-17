@@ -10,6 +10,12 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const pad2 = n => String(n).padStart(2, "0");
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/* Sprache: `L("Deutsch", "English")`. Die englischen Texte im HTML
+   (data-en) müssen eingesetzt sein, bevor unten Elemente gesucht werden —
+   einige davon ersetzt das Einsetzen, etwa #finaleDays. */
+const L = window.L || (de => de);
+if (window.I18N) I18N.anwenden();
+
 /* Touch-Geräte verhalten sich an vier Stellen grundsätzlich anders:
    es gibt keinen Hover, der Browser blendet beim Scrollen die URL-Leiste
    ein und aus (was ein resize auslöst), das Mobilfunknetz ist teuer, und
@@ -37,7 +43,7 @@ document.documentElement.classList.toggle("is-touch", coarse);
     const diff = RELEASE - Date.now();
     if (diff <= 0) {
       out.d.textContent = out.h.textContent = out.m.textContent = out.s.textContent = "00";
-      if (note) note.innerHTML = "<strong>Es ist so weit.</strong> Grand Theft Auto VI ist da.";
+      if (note) note.innerHTML = L("<strong>Es ist so weit.</strong> Grand Theft Auto VI ist da.", "<strong>It’s here.</strong> Grand Theft Auto VI is out now.");
       if (mini) mini.textContent = "OUT NOW";
       if (miniMobile) miniMobile.textContent = "0";
       if (finale) finale.textContent = "0";
@@ -53,7 +59,7 @@ document.documentElement.classList.toggle("is-touch", coarse);
     out.h.textContent = pad2(h);
     out.m.textContent = pad2(m);
     out.s.textContent = pad2(s);
-    if (mini) mini.textContent = d + " Tage";
+    if (mini) mini.textContent = d + L(" Tage", " days");
     if (miniMobile) miniMobile.textContent = d;
     if (finale) finale.textContent = d;
   }
@@ -112,7 +118,7 @@ if (revealIO) {
   const closeMenu = () => {
     menu.hidden = true;
     burger.setAttribute("aria-expanded", "false");
-    burger.setAttribute("aria-label", "Menü öffnen");
+    burger.setAttribute("aria-label", L("Menü öffnen", "Open menu"));
     document.body.classList.remove("is-locked");
   };
   burger.addEventListener("click", () => {
@@ -120,7 +126,7 @@ if (revealIO) {
     if (open) return closeMenu();
     menu.hidden = false;
     burger.setAttribute("aria-expanded", "true");
-    burger.setAttribute("aria-label", "Menü schließen");
+    burger.setAttribute("aria-label", L("Menü schließen", "Close menu"));
     document.body.classList.add("is-locked");
   });
   menu.addEventListener("click", e => { if (e.target.closest("a")) closeMenu(); });
@@ -469,7 +475,7 @@ function cardRise(card) {
      bedienung kommt ohne eigenen Keydown-Handler aus. */
   cast.innerHTML = supporting.map(c => `
     <a class="ccard reveal" href="charakter.html?c=${c.id}" target="_blank" rel="noopener"
-       aria-label="Akte ${c.name} öffnen (neuer Tab)">
+       aria-label="${L(`Akte ${c.name} öffnen (neuer Tab)`, `Open ${c.name}’s file (new tab)`)}">
       <img src="${c.poster}" alt="${c.name}" loading="lazy">
       <video src="${c.video}" muted loop playsinline preload="none" aria-hidden="true"></video>
       <span class="ccard__ring" aria-hidden="true">
@@ -565,8 +571,8 @@ function cardRise(card) {
           <p class="pane__sub">${p.sub}</p>
           <p>${p.text}</p>
           <div class="pane__thumbs">
-            ${p.shots.slice(0, 6).map((s, i) => `<button type="button" data-i="${i}" aria-label="${p.name} Bild ${i + 1} vergrößern">
-              <img src="assets/img/${s}" alt="${p.name} — Bild ${i + 1}" loading="lazy"></button>`).join("")}
+            ${p.shots.slice(0, 6).map((s, i) => `<button type="button" data-i="${i}" aria-label="${p.name} ${L("Bild", "image")} ${i + 1} ${L("vergrößern", "— enlarge")}">
+              <img src="assets/img/${s}" alt="${p.name} — ${L("Bild", "image")} ${i + 1}" loading="lazy"></button>`).join("")}
           </div>
         </div>
       </div>`;
@@ -601,7 +607,7 @@ function cardRise(card) {
 (function ultimate() {
   const grid = $("#ueGrid");
   grid.innerHTML = ULTIMATE.map((u, i) => `
-    <button class="ue-item reveal" type="button" data-i="${i}" aria-label="${u.t} vergrößern">
+    <button class="ue-item reveal" type="button" data-i="${i}" aria-label="${u.t} ${L("vergrößern", "— enlarge")}">
       <img src="assets/img/${u.img}" alt="${u.t}" loading="lazy">
       <span class="ue-item__t"><b>${u.t}</b><span>${u.s}</span></span>
     </button>`).join("");
@@ -651,7 +657,7 @@ function cardRise(card) {
     wrap.addEventListener("pointerleave", () => { ry = -26; rx = -8; apply(); wake(); });
   } else {
     const hint = $(".case__hint");
-    if (hint) hint.textContent = "waagerecht wischen zum Drehen";
+    if (hint) hint.textContent = L("waagerecht wischen zum Drehen", "swipe sideways to spin");
   }
 
   box.addEventListener("pointerdown", e => {
@@ -685,7 +691,7 @@ function cardRise(card) {
     if (reset) { grid.innerHTML = ""; shown = 0; }
     const slice = list.slice(shown, shown + STEP);
     grid.insertAdjacentHTML("beforeend", slice.map((g, i) => `
-      <button class="gitem" type="button" data-i="${shown + i}" aria-label="${g.cap} vergrößern">
+      <button class="gitem" type="button" data-i="${shown + i}" aria-label="${g.cap} ${L("vergrößern", "— enlarge")}">
         <img src="${g.src}" alt="${g.cap}" loading="lazy" decoding="async">
       </button>`).join(""));
     shown += slice.length;

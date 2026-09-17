@@ -1,0 +1,7 @@
+/* ═══════════════════════════════════════════════════════════
+   Konto: Anmelde-Knopf in der Nav, Anmelde-Dialog, Profilseite
+   ═══════════════════════════════════════════════════════════ */
+
+/* Solange die Kontofunktion nicht eingerichtet ist, bleibt der Platz leer
+   und nimmt in der Nav keinen Abstand weg. */
+.acct:empty{ display:none; }

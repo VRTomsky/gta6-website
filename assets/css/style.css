@@ -187,6 +187,34 @@ p strong{ color:var(--fg); font-weight:700; }
   background:rgba(8,13,29,.35); white-space:nowrap;
   text-shadow:0 1px 8px rgba(8,13,29,.8);
 }
+/* Sprachwahl DE | EN — dieselbe Pillenform wie der Countdown daneben */
+.lang{
+  display:inline-flex; align-items:center; flex:none; gap:2px; padding:3px;
+  border:1px solid rgba(255,255,255,.28); border-radius:999px;
+  background:rgba(8,13,29,.35);
+}
+.lang__btn{
+  position:relative;
+  min-width:34px; height:26px; padding:0 8px;
+  border:0; border-radius:999px; background:transparent; cursor:pointer;
+  font-family:var(--f-label); font-size:.68rem; font-weight:700; letter-spacing:.12em;
+  color:rgba(255,255,255,.72); text-shadow:0 1px 8px rgba(8,13,29,.8);
+  transition:background-color .18s var(--ease), color .18s var(--ease);
+}
+/* Die Pille ist schmal — die Trefferfläche reicht trotzdem auf 44 px */
+.lang__btn::after{ content:""; position:absolute; inset:-9px -1px; }
+.lang__btn[aria-pressed="true"]{
+  background:var(--cream); color:var(--ink); text-shadow:none; cursor:default;
+}
+@media (hover:hover){
+  .lang__btn[aria-pressed="false"]:hover{ color:var(--fg); background:rgba(255,255,255,.1); }
+}
+
+/* Englisch: unsichtbar, bis i18n.js die Texte eingesetzt hat — sonst
+   blitzt kurz Deutsch auf. Beim Wechsel blendet die Seite weich aus. */
+html.i18n-warte body{ visibility:hidden; }
+html.lang-wechsel body{ opacity:0; transition:opacity .18s var(--ease); }
+
 .nav__burger{
   display:none; width:44px; height:44px; align-items:center; justify-content:center;
   flex-direction:column; gap:5px; background:none; border:0; cursor:pointer;
