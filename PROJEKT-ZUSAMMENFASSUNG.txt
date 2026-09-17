@@ -1,0 +1,156 @@
+================================================================
+  GTA VI FAN-WEBSITE  -  luciajason.de
+  Projektzusammenfassung für die nächste KI
+================================================================
+
+Stand: 17.09.2026
+
+Ausführliche technische Details, Stolperfallen und Messwerte stehen
+in HANDOVER.md. Arbeitsregeln (z. B. automatisch veröffentlichen)
+stehen in CLAUDE.md. Beide zuerst lesen.
+
+
+----------------------------------------------------------------
+WAS DAS FÜR EINE WEBSITE IST
+----------------------------------------------------------------
+
+luciajason.de ist eine inoffizielle Fan-Website zu Grand Theft
+Auto VI, eine Hype-Seite für die Zeit bis zum Release am
+19. November 2026. Sie ist kein Shop und keine Kopie von Rockstars
+Seite. Sie erzählt beim Runterscrollen selbst eine Geschichte, im
+Look von rockstargames.com/VI. Alle Texte sind auf Deutsch, die
+Zitate von Rockstar bleiben im englischen Original.
+
+Technisch ist sie schlicht gebaut: HTML, CSS und JavaScript ohne
+Build-Schritt. Sie liegt öffentlich bei GitHub Pages unter der
+eigenen Domain luciajason.de.
+
+
+----------------------------------------------------------------
+DER STYLE
+----------------------------------------------------------------
+
+- Farben: Dunkelblau (#0b1124) statt Schwarz. Überschriften in
+  Creme, Leitsätze und Buttons in Pink, dazu ein Vice-City-Magenta.
+  Das sind die Farben von Rockstars Seite.
+
+- Schrift: Große, schmale Großbuchstaben (Barlow Condensed) für
+  Überschriften und Namen, dazu eine ruhige Schrift (Figtree) für
+  den Fließtext. Rockstars eigene Schrift darf man nicht nutzen,
+  beide sind nachgemessene Ersatzschriften.
+
+- Scrollen als Erzählung: Abschnitte bleiben stehen, während man
+  scrollt. Der nächste Abschnitt fährt als abgerundete Karte von
+  unten darüber, und der Hintergrund geht dabei weich in Blau über.
+
+- Magazin-Layout auf den Charakterseiten: Text und Bilder versetzt
+  statt in Reihen. Jason steht links, Lucia gespiegelt rechts.
+
+- Navigation: Immer durchsichtig, das VI-Logo bleibt oben links.
+
+
+----------------------------------------------------------------
+WAS SIE ALLES KANN
+----------------------------------------------------------------
+
+STARTSEITE (index.html)
+
+- Countdown bis zum Release, auch in der Navigation und im
+  Handy-Menü
+- Hero: Beim Scrollen blenden Text, dann Logo, dann Hintergrund
+  nacheinander aus
+- Trailer: Trailer 1 und 2 laufen direkt auf der Seite. Der
+  Extended Look ist als Link zu YouTube und Netflix drin
+- Zwei Scroll-Videos: Lucia im Auto und Jason beim Überfall. Das
+  Video läuft nur, solange man scrollt
+- Story: "Vice City, USA"
+- Charaktere: Acht Figuren. Die Karten spielen einen kurzen Clip
+  ab, beim Maus-Drüberfahren oder auf dem Handy, sobald sie im
+  Bild sind
+- Leonida: Sechs Regionen mit Tabs, Postkarte und Bildern
+- Ultimate Edition: 16 Inhalte und eine 3D-Spielhülle, die man
+  drehen kann
+- News & Leaks: Rockstar Newswire, Leak-Chronik mit Quellen und
+  X-Accounts
+- Galerie: 136 Bilder, 7 Filter und eine Großansicht zum Blättern
+  mit Pfeiltasten oder Wischen
+
+CHARAKTER-AKTEN (charakter.html)
+
+- Alle acht Figuren stehen auf einer durchgehenden Seite. Von
+  Jason scrollt man ohne Klick direkt weiter zu Lucia, Cal Hampton
+  und den anderen
+- Jede Akte hat einen Hero, eine hochfahrende Karte mit Name, Text
+  und Steckbrief (inklusive Alter), Zitate, ein Vollbild und eine
+  Galerie
+- Jason und Lucia haben ein Scroll-Video, die anderen ein
+  hochauflösendes Artwork
+- In der Navigation steht, wo man gerade ist ("03 / 08"), und das
+  Menü springt zu jeder Figur
+- Ein Link wie charakter.html?c=lucia öffnet die Seite direkt bei
+  Lucia
+
+ÜBERALL
+
+- Funktioniert auf PC, Tablet und Handy, auch im Querformat
+- Lässt sich auf Android als App-Symbol auf den Startbildschirm
+  legen
+- Barrierefrei: Tastatur, Vorlesehilfe, gut lesbarer Kontrast und
+  eine ruhige Fassung ohne Bewegung für Leute, die das eingestellt
+  haben
+
+
+----------------------------------------------------------------
+WAS BISHER GEMACHT WURDE
+----------------------------------------------------------------
+
+1. Lokaler Server: Doppelklick auf "Server starten.bat" startet ihn
+   unsichtbar im Hintergrund. Er startet nach jedem Hochfahren von
+   selbst, "Server stoppen.bat" beendet ihn. Mit dem eigenen Server
+   (serve.py) lassen sich die Videos überhaupt erst sauber spulen.
+
+2. Handy-Version: Eigene Regeln für Touch, Performance, Querformat,
+   App-Symbol und Startbildschirm.
+
+3. Charakter-Akten: Komplett neu gebaut, nach dem Vorbild der
+   Rockstar-Seiten. 18 neue Bilder des Nutzers sind eingebaut,
+   später wurden alle acht Figuren zu einer durchgehenden Seite.
+
+4. Galerie: Die neuen Bilder sind drin, dazu der Filter
+   "Jason & Lucia" und echte Bildbeschreibungen.
+
+5. Veröffentlichung: Das GitHub-Repo wurde gefunden und der Zugriff
+   eingerichtet. Mit "Auf GitHub hochladen.bat" geht jede Änderung
+   automatisch auf luciajason.de. Außerdem gab es Domain-Vorschläge.
+
+6. Fehler behoben, unter anderem:
+   - Videos blieben auf dem Handy schwarz, weil der Decoder erst
+     geweckt werden muss
+   - Die Scroll-Animation war auf dem Handy verdeckt, weil sich
+     Trailer und Story überlappt haben
+   - Beim schnellen Scrollen blieben Texte unsichtbar
+   - Beschriftungen auf hellen Bildern waren schlecht lesbar
+   - Klickflächen waren zu klein, Umlaute fehlten
+   - Der Direktsprung zu einer Figur landete daneben
+
+
+----------------------------------------------------------------
+WICHTIG FÜR DIE NÄCHSTE KI
+----------------------------------------------------------------
+
+- Gearbeitet wird in diesem Ordner (OneDrive). Das Git-Repository
+  liegt getrennt unter C:\Users\young\gta6-website.
+
+- Nach jeder fertigen und geprüften Änderung hochladen, ohne zu
+  fragen - so will es der Nutzer:
+      "Auf GitHub hochladen.bat" Kurze Beschreibung
+
+- Inhalte (Texte, Bilder, Charaktere, Galerie) stehen fast alle in
+  assets/js/data.js.
+
+- Nie "Pre-Order" auf die Seite schreiben, die Navigation bleibt
+  immer durchsichtig, das VI-Logo bleibt oben links.
+
+- Der Nutzer bemerkt Ruckeln sofort. Übergänge müssen weich sein.
+
+- Mehr zu allem steht in HANDOVER.md.
