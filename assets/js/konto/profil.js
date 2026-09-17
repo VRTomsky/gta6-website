@@ -56,7 +56,7 @@ const VORFREUDE = [
   { id: "autos",       name: L("Autos & Tuning", "Cars & tuning"),                        bild: "ultimate/ue_cheetah_01.jpg" },
   { id: "online",      name: "GTA Online",                                                 bild: "places/vice_city_05.jpg" },
   { id: "musik",       name: L("Radio & Soundtrack", "Radio & soundtrack"),               bild: "news/album.jpg" },
-  { id: "jiggle",      name: "Lucia Jiggle Physics",                                        bild: "duo/duo_10.jpg" }
+  { id: "jiggle",      name: "Lucia's Jiggle Physics",                                        bild: "duo/duo_10.jpg" }
 ];
 
 /* Ein Ort, den es in der Leonida-Übersicht nicht gibt — Spaß-Eintrag */
