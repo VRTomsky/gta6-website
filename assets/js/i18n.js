@@ -28,6 +28,13 @@
 (function () {
   "use strict";
 
+  /* luciajason.de nur verschlüsselt. GitHub Pages leitet http:// erst um,
+     wenn dort „Enforce HTTPS" gesetzt ist — bis dahin übernimmt das hier.
+     Steht in dieser Datei, weil sie auf jeder Seite als Erstes lädt. */
+  if (location.protocol === "http:" && /(^|\.)luciajason\.de$/.test(location.hostname)) {
+    location.replace("https://" + location.host + location.pathname + location.search + location.hash);
+  }
+
   var SCHLUESSEL = "lang";
   var html = document.documentElement;
 

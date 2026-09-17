@@ -11,17 +11,28 @@ Solange das nicht eingerichtet ist:
 - **localhost** (eigener Rechner) läuft ein **Demo-Modus**: alles funktioniert,
   gespeichert wird aber nur im Browser, und es gehen keine Mails raus
 
-## 0 · Vorher: HTTPS für luciajason.de einschalten
+## Stand
 
-Am 17.09.2026 lief die Seite nur über **http://** — unter https:// lieferte GitHub ein
-Zertifikat für github.com statt für luciajason.de (der Browser warnt dann). Mit Passwörtern
-darf das so nicht live gehen.
+| Schritt | |
+|---|---|
+| HTTPS-Zertifikat für luciajason.de | ✅ seit 17.09.2026 gültig |
+| „Enforce HTTPS" bei GitHub | ⬜ noch offen — bis dahin leitet `i18n.js` http:// auf https:// um |
+| 1 · Projekt `luciajason-27a74` | ✅ |
+| 2 · Web-App, Werte in `konto-config.js` | ✅ |
+| 3 · Anmeldung freischalten | ⬜ |
+| 4 · Datenbank anlegen | ⬜ |
+| 5 · Sicherheitsregeln | ⬜ |
+| 6 · Öffentlicher Name | ⬜ |
+| 7 · Verantwortlicher für den Datenschutz | ⬜ |
+| `live: true` in `konto-config.js` | ⬜ erst wenn 3–7 stehen |
 
-1. <https://github.com/VRTomsky/gta6-website/settings/pages> öffnen
-2. Steht dort ein Hinweis, dass das Zertifikat noch nicht fertig ist: unter
-   **Custom domain** die Domain entfernen, speichern, wieder `luciajason.de` eintragen,
-   speichern — GitHub stellt das Zertifikat dann neu aus (dauert bis zu einer Stunde)
-3. Sobald möglich: Haken bei **Enforce HTTPS** setzen
+Solange `live: false` steht, sieht auf luciajason.de niemand etwas vom Kontosystem. Auf
+**localhost** spricht die Seite schon mit dem echten Firebase-Projekt.
+
+## 0 · HTTPS erzwingen
+
+<https://github.com/VRTomsky/gta6-website/settings/pages> öffnen → Haken bei
+**Enforce HTTPS** setzen.
 
 ## 1 · Projekt anlegen
 
@@ -39,6 +50,9 @@ darf das so nicht live gehen.
 
 Die Werte darin sind **kein Geheimnis**, sie stehen später ohnehin im Seitencode.
 Geschützt werden die Daten durch die Sicherheitsregeln (Schritt 5).
+
+Wurde beim Anlegen Google Analytics mit eingeschaltet (`measurementId` im Block), ist das
+egal: die Seite lädt Analytics nicht und trackt niemanden.
 
 ## 3 · Anmeldung freischalten
 

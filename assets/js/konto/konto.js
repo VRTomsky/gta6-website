@@ -63,6 +63,7 @@ const MELDUNGEN = {
   "popup-blocked":          ["Das Google-Fenster wurde blockiert. Erlaube Pop-ups für diese Seite.", "The Google window was blocked. Allow pop-ups for this site."],
   "unauthorized-domain":    ["Diese Adresse ist in Firebase noch nicht freigegeben.", "This address hasn’t been authorized in Firebase yet."],
   "operation-not-allowed":  ["Diese Anmeldeart ist noch nicht freigeschaltet.", "This sign-in method isn’t enabled yet."],
+  "configuration-not-found": ["Die Anmeldung ist in Firebase noch nicht eingerichtet.", "Sign-in hasn’t been set up in Firebase yet."],
   "account-exists-with-different-credential": ["Diese E-Mail ist schon mit einer anderen Anmeldeart verknüpft.", "This email is already linked to a different sign-in method."],
   "user-disabled":          ["Dieses Konto ist gesperrt.", "This account has been disabled."],
   "requires-recent-login":  ["Bitte melde dich zur Sicherheit noch einmal an.", "For security, please sign in again."],

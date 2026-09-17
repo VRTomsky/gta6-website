@@ -35,17 +35,28 @@ export class KontoFehler extends Error {
   }
 }
 
-/* Gibt es eine Firebase-Konfiguration, wird sie benutzt. Ohne läuft auf
-   dem eigenen Rechner (und im Heimnetz, fürs Handy) der Demo-Modus; auf
-   der öffentlichen Seite gibt es dann gar kein Kontosystem. */
+/* Welches Backend?
+
+     Firebase eingetragen   localhost → Firebase
+                            öffentliche Seite → Firebase nur mit `live: true`
+                            und nur über https://
+     nichts eingetragen     localhost und Heimnetz (fürs Handy) → Demo-Modus
+                            öffentliche Seite → kein Kontosystem
+
+   Über unverschlüsseltes HTTP gibt es nie ein echtes Konto: das Passwort
+   ginge sonst im Klartext durchs Netz. localhost zählt als sicher. */
 export async function backendWaehlen() {
   const cfg = window.KONTO_CONFIG || {};
-  if (cfg.firebase && cfg.firebase.apiKey) return firebaseBackend(cfg.firebase);
-
   const h = location.hostname;
-  const lokal = h === "localhost" || h === "127.0.0.1" || h === "[::1]" ||
-                /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
-  return lokal ? demoBackend() : null;
+  const lokal = h === "localhost" || h === "127.0.0.1" || h === "[::1]";
+  const heimnetz = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+  const sicher = location.protocol === "https:" || lokal;
+
+  if (cfg.firebase && cfg.firebase.apiKey) {
+    if (!sicher) return null;
+    return lokal || cfg.live ? firebaseBackend(cfg.firebase) : null;
+  }
+  return lokal || heimnetz ? demoBackend() : null;
 }
 
 /* ═══ Firebase ════════════════════════════════════════════ */
@@ -77,6 +88,14 @@ async function firebaseBackend(config) {
     const code = e && e.code ? String(e.code).replace(/^(auth|firestore)\//, "") : "unbekannt";
     throw new KontoFehler(code, e && e.message);
   };
+
+  /* Firestore wartet bei fehlender Verbindung (oder einer noch nicht
+     angelegten Datenbank) still und endlos. Nach der Frist gibt es eine
+     Meldung statt eines Knopfs, der sich ewig dreht. */
+  const frist = (versprechen, ms = 12000) => Promise.race([
+    versprechen,
+    new Promise((_, nein) => setTimeout(() => nein(new KontoFehler("unavailable")), ms))
+  ]);
 
   const google = () => {
     const p = new A.GoogleAuthProvider();
@@ -152,7 +171,7 @@ async function firebaseBackend(config) {
 
     async profilLaden(uid) {
       try {
-        const s = await F.getDoc(F.doc(db, "users", uid));
+        const s = await frist(F.getDoc(F.doc(db, "users", uid)));
         if (!s.exists()) return null;
         const d = s.data();
         return {
@@ -168,7 +187,7 @@ async function firebaseBackend(config) {
 
     async nameFrei(name, uid) {
       try {
-        const s = await F.getDoc(F.doc(db, "usernames", name.toLowerCase()));
+        const s = await frist(F.getDoc(F.doc(db, "usernames", name.toLowerCase())));
         return !s.exists() || s.data().uid === uid;
       } catch (e) { weiter(e); }
     },
@@ -198,7 +217,7 @@ async function firebaseBackend(config) {
       if (vorher) batch.update(F.doc(db, "users", uid), felder);
       else batch.set(F.doc(db, "users", uid), { ...felder, createdAt: F.serverTimestamp() });
 
-      try { await batch.commit(); }
+      try { await frist(batch.commit(), 15000); }
       catch (e) {
         /* Zwischen Prüfen und Speichern hat jemand den Namen genommen */
         if (neuerName && e.code === "permission-denied") throw new KontoFehler("name-vergeben");
@@ -207,7 +226,7 @@ async function firebaseBackend(config) {
     },
 
     async newsletterStatus(uid) {
-      try { return (await F.getDoc(F.doc(db, "newsletter", uid))).exists(); }
+      try { return (await frist(F.getDoc(F.doc(db, "newsletter", uid)))).exists(); }
       catch (e) { return false; }
     },
 
@@ -215,9 +234,9 @@ async function firebaseBackend(config) {
       const ref = F.doc(db, "newsletter", uid);
       try {
         if (an) {
-          await F.setDoc(ref, { email: auth.currentUser.email, lang, consentAt: F.serverTimestamp() });
+          await frist(F.setDoc(ref, { email: auth.currentUser.email, lang, consentAt: F.serverTimestamp() }), 15000);
         } else {
-          await F.deleteDoc(ref);
+          await frist(F.deleteDoc(ref), 15000);
         }
       } catch (e) { weiter(e); }
     },
@@ -238,7 +257,7 @@ async function firebaseBackend(config) {
           batch.delete(F.doc(db, "usernames", profil.username.toLowerCase()));
           batch.delete(F.doc(db, "users", uid));
         }
-        await batch.commit();
+        await frist(batch.commit(), 15000);
         await A.deleteUser(u);
       } catch (e) { weiter(e); }
     }

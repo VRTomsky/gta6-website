@@ -57,7 +57,7 @@ Dann `http://localhost:5174` öffnen. Die Adresse fürs Handy steht in `server.l
 | `assets/js/i18n.js` | 125 | Sprachwahl, `data-en`-Einsetzen, `L()` — im `<head>` jeder Seite |
 | `assets/js/data.en.js` | 480 | Englische Texte zu `data.js` |
 | `assets/js/seite.js` | 70 | Menü, Countdown-Pille, Verantwortlicher — für `konto.html` und `datenschutz.html` |
-| `assets/js/konto-config.js` | 40 | Firebase-Werte (noch `null`) und Verantwortlicher |
+| `assets/js/konto-config.js` | 55 | Firebase-Werte, Schalter `live` (noch `false`) und Verantwortlicher |
 | `assets/js/konto/backend.js` | 430 | Firebase **oder** Demo-Modus hinter derselben Schnittstelle |
 | `assets/js/konto/konto.js` | 590 | Zustand, Anmelde-Knopf in der Nav, Anmelde-Dialog |
 | `assets/js/konto/profil.js` | 570 | Kontoseite |
@@ -540,13 +540,24 @@ selbst löschen. Anmelde-Knopf bzw. Profilbild oben rechts in der Nav, Kontoseit
 
 ### Stand
 
-**Gebaut und getestet, aber noch nicht live:** `konto-config.js` hat noch keine
-Firebase-Werte. Das Firebase-Projekt muss der Nutzer selbst anlegen (Google-Konto). Bis dahin:
+**Gebaut und getestet, aber noch nicht live.** Firebase-Projekt `luciajason-27a74` existiert,
+die Werte stehen in `konto-config.js`, dort aber `live: false`. In der Konsole fehlen noch
+Anmeldung, Datenbank und Regeln — aktueller Stand als Tabelle in `KONTO-EINRICHTEN.md`.
+Nachprüfen ohne Anmeldung (nur lesend):
+`identitytoolkit/v3/relyingparty/getProjectConfig?key=…` (Anmeldung eingerichtet?) und
+`firestore.googleapis.com/v1/projects/luciajason-27a74/databases/(default)/documents/usernames/x?key=…`
+(richtige Regeln: 404 bei `usernames`, 403 bei `users`).
+
+Firestore wartet bei fehlender Datenbank oder Verbindung still und endlos — jede
+Firestore-Anfrage hat deshalb eine Frist (12 s lesen, 15 s schreiben), danach „Server nicht
+erreichbar". Echte Konten gibt es nie über http:// (außer localhost). Bis `live: true`:
 
 | Wo | Verhalten |
 |---|---|
 | luciajason.de | kein Anmelde-Knopf, `konto.html` zeigt „Bald verfügbar", Datenschutz-Link im Footer ausgeblendet |
-| localhost, WLAN-IP | **Demo-Modus** — alles funktioniert, gespeichert in `localStorage` (`konto-demo`), keine Mails; im Dialog steht ein Hinweis |
+| localhost | echtes Firebase-Projekt |
+| WLAN-IP (http) | kein Kontosystem — unverschlüsselt |
+| ohne Firebase-Werte | Demo-Modus auf localhost/WLAN, gespeichert in `localStorage` (`konto-demo`) |
 
 Geprüft im Demo-Modus: Registrieren, falsches Passwort, Anmelden, Google, Namenswahl,
 Profil speichern, Namensprüfung live, eigenes Bild (1,3 MB PNG → 35 KB JPEG), Newsletter mit
