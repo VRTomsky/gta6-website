@@ -93,8 +93,28 @@ query NewswireList(
 }
 `;
 
+/* Rockstars Schnittstelle antwortet gelegentlich gar nicht oder mit 5xx.
+   Ein Fehlschlag darf den Lauf nicht rot färben — dann bleibt einfach die
+   bisherige Liste stehen und der nächste Lauf holt sie nach. */
+async function mitVersuchen(arbeit, versuche = 3) {
+  let letzter;
+  for (let i = 1; i <= versuche; i++) {
+    try {
+      return await arbeit();
+    } catch (e) {
+      letzter = e;
+      if (i < versuche) {
+        console.warn(`Versuch ${i} fehlgeschlagen (${e.message}) — neuer Versuch in ${i * 5} s`);
+        await new Promise(r => setTimeout(r, i * 5000));
+      }
+    }
+  }
+  throw letzter;
+}
+
 async function holen(locale) {
   const antwort = await fetch(ENDPUNKT, {
+    signal: AbortSignal.timeout(30000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -128,7 +148,10 @@ function isoDatum(created) {
 const sauber = s => String(s || "").replace(/ /g, " ").replace(/\s+/g, " ").trim();
 
 async function main() {
-  const [en, de] = await Promise.all([holen("en_us"), holen("de_de")]);
+  const [en, de] = await Promise.all([
+    mitVersuchen(() => holen("en_us")),
+    mitVersuchen(() => holen("de_de"))
+  ]);
   const deutsch = new Map(de.map(p => [p.id, p]));
 
   const meldungen = en
@@ -168,5 +191,8 @@ async function main() {
 
 main().catch(e => {
   console.error("Newswire-Abruf fehlgeschlagen:", e.message);
-  process.exit(1);
+  /* Ohne Erfolg bleibt die alte Datei liegen. Mit --streng (lokal) gibt es
+     trotzdem einen Fehlercode, in der Action nicht — sonst stünde dort ein
+     rotes Kreuz, obwohl die Seite völlig in Ordnung ist. */
+  process.exit(process.argv.includes("--streng") ? 1 : 0);
 });

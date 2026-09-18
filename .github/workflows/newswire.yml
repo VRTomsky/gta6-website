@@ -1,5 +1,10 @@
-# Rockstar Newswire alle 15 Minuten abholen und assets/data/newswire.json
-# aktualisieren. Einen Commit gibt es nur, wenn eine neue Meldung da ist.
+# Rockstar Newswire abholen und assets/data/newswire.json aktualisieren.
+# Einen Commit gibt es nur, wenn eine neue Meldung da ist.
+#
+# Der Zeitplan steht auf alle 15 Minuten, GitHub führt geplante Läufe aber
+# nach eigenem Ermessen aus — in der Praxis kommen sie ein paar Mal am Tag.
+# Deshalb läuft der Abruf zusätzlich bei jedem Push auf main mit, damit nach
+# jedem Hochladen der aktuelle Stand daliegt.
 #
 # Von Hand starten: GitHub → Repository → Actions → „Rockstar Newswire"
 # → „Run workflow".
@@ -9,6 +14,10 @@ name: Rockstar Newswire
 on:
   schedule:
     - cron: "*/15 * * * *"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "assets/data/newswire.json"
   workflow_dispatch:
 
 permissions:
