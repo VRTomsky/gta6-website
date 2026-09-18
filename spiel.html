@@ -103,6 +103,24 @@
       </div>
     </div>
 
+    <!-- Figurenwechsel: erscheint, solange Alt gehalten wird -->
+    <div class="swechsel" id="spielWechsel" hidden>
+      <p class="swechsel__k" data-en="Hold Alt · choose with A / D">Alt halten · mit A / D wählen</p>
+      <div class="swechsel__reihe">
+        <button type="button" class="swechsel__karte" data-wechsel="jason">
+          <img src="assets/img/avatars/jason.jpg" alt="Jason Duval" width="120" height="120">
+          <span>Jason</span>
+        </button>
+        <span class="swechsel__herz" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 21s-7.5-4.7-9.3-9C1.3 8.5 3 5 6.4 5c2 0 3.3 1.1 4.1 2.2l1.5 2 1.5-2C14.3 6.1 15.6 5 17.6 5 21 5 22.7 8.5 21.3 12c-1.8 4.3-9.3 9-9.3 9z" fill="currentColor"/></svg>
+        </span>
+        <button type="button" class="swechsel__karte" data-wechsel="lucia">
+          <img src="assets/img/avatars/lucia.jpg" alt="Lucia Caminos" width="120" height="120">
+          <span>Lucia</span>
+        </button>
+      </div>
+    </div>
+
     <div class="spause" id="spielPause" hidden>
       <p data-en="Paused — click to continue">Pause — zum Weiterspielen klicken</p>
     </div>
@@ -115,7 +133,7 @@
       <li><kbd data-en="Shift">Umschalt</kbd><span data-en="run">rennen</span></li>
       <li><kbd>E</kbd><span data-en="get in / out of a car">ein- und aussteigen</span></li>
       <li><kbd data-en="Space">Leertaste</kbd><span data-en="handbrake">Handbremse</span></li>
-      <li><kbd data-en="Tab">Tab</kbd><span data-en="switch between Jason and Lucia">zwischen Jason und Lucia wechseln</span></li>
+      <li><kbd>Alt</kbd><span data-en="hold: switch between Jason and Lucia">halten: zwischen Jason und Lucia wechseln</span></li>
       <li><kbd>P</kbd><span data-en="pause">Pause</span></li>
     </ul>
     <p class="stasten__hinweis" data-en="Touch controls for phones are coming with the next update.">Eine Steuerung für Handys kommt mit dem nächsten Schritt dazu.</p>

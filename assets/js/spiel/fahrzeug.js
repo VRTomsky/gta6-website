@@ -47,6 +47,7 @@ export class Fahrzeug {
   /* gas −1…1, lenken −1…1 */
   fahren(gas, lenken, handbremse, dt) {
     const d = this.daten;
+    this.entklemmen();
     const vor = { x: Math.cos(this.winkel), y: Math.sin(this.winkel) };
     const quer = { x: -vor.y, y: vor.x };
     let vVor = this.vx * vor.x + this.vy * vor.y;
@@ -61,6 +62,14 @@ export class Fahrzeug {
       vVor -= vVor * Math.min(1, dt * 0.9);      // ausrollen
     }
     vVor = Math.max(-14, Math.min(d.spitze, vVor));
+
+    /* Untergrund: neben der Straße wird es zäh — Gehweg, Sand und Rasen
+       bremsen, das hält den Verkehr von selbst auf der Fahrbahn */
+    const boden = Karte.art(Karte.inKachel(this.x), Karte.inKachel(this.y));
+    if (boden !== Karte.ART.STRASSE && boden !== Karte.ART.KREUZUNG && boden !== Karte.ART.PARKPLATZ) {
+      const zaeh = boden === Karte.ART.STRAND || boden === Karte.ART.PARK ? 2.2 : 1.3;
+      vVor -= vVor * Math.min(1, dt * zaeh);
+    }
 
     /* Seitenführung: ohne Handbremse rutscht kaum etwas weg */
     const griff = handbremse ? 0.965 : d.griff;
@@ -94,6 +103,25 @@ export class Fahrzeug {
     return !this.ecken(x, y).some(([ex, ey]) => Karte.festAnPunkt(ex, ey));
   }
 
+  /* Nach einem harten Treffer kann der Wagen mit einer Ecke in der Wand
+     stecken. Dann ist jede Bewegung blockiert und nichts geht mehr —
+     deshalb wird er hier herausgeschoben. */
+  entklemmen() {
+    if (this.frei(this.x, this.y)) return false;
+    for (let r = 0.4; r <= 12; r += 0.4) {
+      for (let i = 0; i < 16; i++) {
+        const w = (i / 16) * Math.PI * 2;
+        const x = this.x + Math.cos(w) * r, y = this.y + Math.sin(w) * r;
+        if (this.frei(x, y)) {
+          this.x = x; this.y = y;
+          this.vx *= 0.2; this.vy *= 0.2;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   schieben(mx, my) {
     let getroffen = false;
     if (this.frei(this.x + mx, this.y)) this.x += mx;
@@ -105,6 +133,10 @@ export class Fahrzeug {
       this.schaden = Math.min(100, this.schaden + wucht * 0.6);
       this.vx *= 0.55;
       this.vy *= 0.55;
+      /* Ein Stück von der Wand wegsetzen, damit der nächste Gasstoß greift */
+      const raus = 0.12;
+      if (this.frei(this.x - Math.sign(mx) * raus, this.y)) this.x -= Math.sign(mx) * raus;
+      if (this.frei(this.x, this.y - Math.sign(my) * raus)) this.y -= Math.sign(my) * raus;
     }
   }
 

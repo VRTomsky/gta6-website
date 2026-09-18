@@ -34,6 +34,7 @@ export class Figur {
   /* dx/dy: gewünschte Richtung (−1…1), rennen: Schub */
   bewegen(dx, dy, rennen, dt) {
     const d = this.daten;
+    this.entklemmen();
     const ziel = rennen ? d.rennen : d.tempo;
     const laenge = Math.hypot(dx, dy);
 
@@ -65,6 +66,25 @@ export class Figur {
     return false;
   }
 
+  /* Steckt die Figur in einer Wand — etwa weil sie dort abgesetzt wurde —,
+     wird der nächste freie Platz gesucht. Ohne das kann man sich nur noch
+     drehen, aber nicht mehr bewegen. */
+  entklemmen() {
+    if (!this.blockiert(this.x, this.y)) return false;
+    for (let r = 0.5; r <= 14; r += 0.5) {
+      for (let i = 0; i < 16; i++) {
+        const w = (i / 16) * Math.PI * 2;
+        const x = this.x + Math.cos(w) * r, y = this.y + Math.sin(w) * r;
+        if (!this.blockiert(x, y)) {
+          this.x = x; this.y = y;
+          this.vx = this.vy = 0;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   get tempo() { return Math.hypot(this.vx, this.vy); }
 
   bildname() {
@@ -77,5 +97,102 @@ export class Figur {
     if (this.imAuto) return;
     schatten(ctx, kamera, this.x, this.y + 0.12, 0.42, 0.3);
     malen(ctx, this.bildname(), kamera, this.x, this.y, this.winkel);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Passanten
+
+   Sie laufen auf Gehwegen, in Parks und am Strand, bleiben ab und zu
+   stehen und rennen weg, wenn ein Auto zu nah kommt. Ihre Wege sind
+   bewusst einfach gehalten: Richtung wählen, laufen, bei Hindernis neue
+   Richtung. Bei 60 Leuten im Bild kostet das kaum Rechenzeit.
+   ═══════════════════════════════════════════════════════════ */
+
+export const PASSANT_ARTEN = [
+  "mann_hemd", "mann_tank", "mann_anzug", "frau_kleid",
+  "frau_top", "frau_sport", "tourist", "rentner"
+];
+
+const GEHBAR = [Karte.ART.GEHWEG, Karte.ART.PARK, Karte.ART.STRAND, Karte.ART.PARKPLATZ];
+
+export class Passant extends Figur {
+  constructor(art, x, y) {
+    super(art, x, y);
+    this.ziel = Math.random() * Math.PI * 2;
+    this.warten = Math.random() * 3;
+    this.flucht = 0;
+  }
+
+  get daten() {
+    const d = FIGUREN[this.art];
+    return d || { name: "", tempo: 1.5, rennen: 5.2, breite: 0.6 };
+  }
+
+  aufGehweg(x, y) {
+    return GEHBAR.includes(Karte.art(Karte.inKachel(x), Karte.inKachel(y)));
+  }
+
+  denken(dt, autos) {
+    /* Kommt ein Auto mit Schwung näher, nichts wie weg */
+    if (this.flucht > 0) this.flucht -= dt;
+    for (const a of autos) {
+      const dx = this.x - a.x, dy = this.y - a.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 64 && Math.hypot(a.vx, a.vy) > 4) {
+        this.ziel = Math.atan2(dy, dx);
+        this.flucht = 1.6;
+        break;
+      }
+    }
+
+    this.warten -= dt;
+    if (this.warten <= 0 && this.flucht <= 0) {
+      this.warten = 1.5 + Math.random() * 4;
+      /* meistens weiterlaufen, manchmal abbiegen oder stehen bleiben */
+      const w = Math.random();
+      if (w < 0.25) this.ziel = null;                        // Pause
+      else if (w < 0.6) this.ziel = Math.round(Math.random() * 4) * (Math.PI / 2);
+      else this.ziel = Math.random() * Math.PI * 2;
+    }
+
+    let dx = 0, dy = 0;
+    if (this.ziel !== null) {
+      dx = Math.cos(this.ziel);
+      dy = Math.sin(this.ziel);
+      /* Vor die Füße schauen: kein Haus, und möglichst auf dem Gehweg */
+      const vx = this.x + dx * 1.4, vy = this.y + dy * 1.4;
+      if (this.blockiert(vx, vy) || (this.flucht <= 0 && !this.aufGehweg(vx, vy))) {
+        this.ziel += Math.PI / 2 + Math.random();
+        dx = dy = 0;
+      }
+    }
+    this.bewegen(dx * (this.flucht > 0 ? 1 : 0.55), dy * (this.flucht > 0 ? 1 : 0.55),
+                 this.flucht > 0, dt);
+  }
+}
+
+/* Passanten rund um einen Punkt aufstellen */
+export function passantenVerteilen(anzahl, umX, umY, radius = 110) {
+  const liste = [];
+  for (let i = 0; i < anzahl; i++) {
+    const p = Karte.freierPunkt(umX + (Math.random() - 0.5) * radius,
+                                umY + (Math.random() - 0.5) * radius, GEHBAR, 40);
+    const art = PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
+    liste.push(new Passant(art, p.x, p.y));
+  }
+  return liste;
+}
+
+/* Wer zu weit weg ist, wird vor dem Spieler wieder aufgestellt —
+   so bleibt die Stadt belebt, ohne tausend Figuren zu rechnen. */
+export function passantenNachziehen(liste, x, y, weite = 150) {
+  for (const p of liste) {
+    if (Math.hypot(p.x - x, p.y - y) < weite) continue;
+    const ziel = Karte.freierPunkt(x + (Math.random() - 0.5) * 120,
+                                   y + (Math.random() - 0.5) * 120, GEHBAR, 50);
+    p.x = ziel.x;
+    p.y = ziel.y;
+    p.vx = p.vy = 0;
   }
 }

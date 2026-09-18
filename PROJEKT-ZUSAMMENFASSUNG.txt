@@ -192,6 +192,19 @@ WAS BISHER GEMACHT WURDE
    selbst gemacht, nichts aus dem echten Spiel. Als Naechstes:
    Verkehr, Passanten, Polizei, Missionen, Handy-Steuerung.
 
+14. Spiel, zweiter Schritt (18.09.2026):
+   - Zwei Fehler behoben: Jason stand im Gebaeude fest, und nach einem
+     Crash ging das Auto nicht mehr weiter.
+   - Figurenwechsel jetzt mit Alt: Auswahlbild wie in GTA VI mit den
+     Portraets von Jason und Lucia, danach faehrt die Kamera hoch,
+     hinueber und wieder herunter.
+   - Passanten laufen durch die Stadt: zehn verschiedene Figuren
+     (Maenner, Frauen, Tourist, Rentner, Polizei) mit eigener Kleidung.
+   - Stadt in vier Gegenden: Innenstadt mit Hochhaeusern und
+     Hubschrauberplaetzen, Strandviertel mit Dachpools und Palmen,
+     Hafen mit Lagerhallen und Containern, Wohngebiet mit Gaerten.
+     Dazu vierspurige Avenues, Ampeln und Zebrastreifen.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

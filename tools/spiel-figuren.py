@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════
-#  Figuren für das Browser-Spiel (Jason, Lucia, Passanten, Polizei)
+#  Figuren für das Browser-Spiel
 #
 #  Im Spiel ist eine Figur nur etwa 25 × 35 Pixel groß. Ein verkleinertes
 #  3D-Bild wird dabei zu Matsch, deshalb werden die Figuren hier direkt
@@ -7,6 +7,11 @@
 #
 #  Blick nach oben (im Spiel wird das Bild gedreht). Maßstab wie bei den
 #  Fahrzeugen: PX_PRO_METER Pixel je Meter.
+#
+#  Jason und Lucia tragen ihre Sachen aus den Trailern: Lucia cremefarbenes
+#  Top, dunkle Jeans, schwarzer Pferdeschwanz; Jason graues Tanktop,
+#  Cargohose, kurze dunkle Haare und Bart. Die Passanten unterscheiden sich
+#  in Frisur, Kleidung, Statur und Hautton, damit die Straße lebt.
 #
 #  Aufruf:  python tools/spiel-figuren.py --ziel assets/img/spiel
 # ═══════════════════════════════════════════════════════════
@@ -21,36 +26,62 @@ UEBER = 4                      # vierfach zeichnen, danach verkleinern
 FELD = 96                      # Kantenlänge des fertigen Bildes
 SCHRITTE = 8                   # Bilder je Laufzyklus
 
+# frisur: "zopf" | "lang" | "kurz" | "glatze" | "kappe" | "duttchen"
 FIGUREN = {
+    # ── Hauptfiguren ──────────────────────────────────────────
     "lucia": dict(
-        haut=(214, 154, 112), haut_dunkel=(176, 120, 84),
-        oben=(240, 232, 214), oben_dunkel=(198, 188, 170),
-        unten=(38, 42, 62), haar=(24, 18, 20),
-        schulter=0.60, kopf=0.23, zopf=True
+        haut=(206, 148, 106), oben=(240, 232, 214), unten=(36, 40, 60),
+        haar=(22, 16, 18), schulter=0.58, kopf=0.235, frisur="zopf",
+        schmuck=(226, 184, 88)                       # goldene Creolen
     ),
     "jason": dict(
-        haut=(224, 168, 126), haut_dunkel=(184, 130, 92),
-        oben=(150, 156, 150), oben_dunkel=(116, 122, 116),
-        unten=(60, 56, 46), haar=(46, 32, 24),
-        schulter=0.70, kopf=0.245, zopf=False
+        haut=(222, 168, 128), oben=(146, 152, 146), unten=(74, 70, 56),
+        haar=(58, 40, 28), schulter=0.72, kopf=0.25, frisur="kurz",
+        bart=True
     ),
-    "passant1": dict(
-        haut=(198, 146, 108), haut_dunkel=(160, 112, 78),
-        oben=(86, 150, 196), oben_dunkel=(62, 116, 158),
-        unten=(52, 54, 64), haar=(38, 28, 22),
-        schulter=0.62, kopf=0.235, zopf=False
+    # ── Passanten ─────────────────────────────────────────────
+    "mann_hemd": dict(
+        haut=(212, 158, 116), oben=(96, 158, 202), unten=(48, 50, 60),
+        haar=(40, 30, 24), schulter=0.68, kopf=0.24, frisur="kurz"
     ),
-    "passant2": dict(
-        haut=(150, 104, 72), haut_dunkel=(116, 78, 54),
-        oben=(232, 138, 92), oben_dunkel=(190, 104, 66),
-        unten=(70, 66, 58), haar=(20, 16, 16),
-        schulter=0.58, kopf=0.23, zopf=True
+    "mann_tank": dict(
+        haut=(150, 102, 70), oben=(238, 236, 230), unten=(62, 66, 78),
+        haar=(18, 14, 14), schulter=0.70, kopf=0.245, frisur="glatze"
+    ),
+    "mann_anzug": dict(
+        haut=(226, 176, 136), oben=(46, 48, 62), unten=(38, 40, 52),
+        haar=(64, 48, 34), schulter=0.66, kopf=0.235, frisur="kurz"
+    ),
+    "frau_kleid": dict(
+        haut=(190, 132, 94), oben=(232, 104, 138), unten=(232, 104, 138),
+        haar=(46, 28, 20), schulter=0.56, kopf=0.23, frisur="lang", rock=True
+    ),
+    "frau_top": dict(
+        haut=(236, 194, 156), oben=(126, 206, 188), unten=(52, 56, 70),
+        haar=(196, 154, 74), schulter=0.55, kopf=0.225, frisur="duttchen"
+    ),
+    "frau_sport": dict(
+        haut=(160, 110, 76), oben=(250, 182, 74), unten=(40, 44, 56),
+        haar=(20, 16, 16), schulter=0.57, kopf=0.23, frisur="zopf"
+    ),
+    "tourist": dict(
+        haut=(238, 196, 160), oben=(246, 142, 92), unten=(226, 220, 204),
+        haar=(96, 74, 46), schulter=0.66, kopf=0.24, frisur="kappe",
+        kappe=(238, 238, 236), hemd_muster=(86, 168, 140)
+    ),
+    "rentner": dict(
+        haut=(226, 188, 152), oben=(176, 180, 186), unten=(104, 100, 92),
+        haar=(212, 210, 206), schulter=0.62, kopf=0.24, frisur="kurz"
     ),
     "polizist": dict(
-        haut=(216, 162, 120), haut_dunkel=(176, 126, 88),
-        oben=(40, 52, 92), oben_dunkel=(28, 38, 70),
-        unten=(30, 34, 54), haar=(32, 26, 22),
-        schulter=0.72, kopf=0.245, zopf=False
+        haut=(216, 162, 120), oben=(40, 52, 92), unten=(30, 34, 54),
+        haar=(32, 26, 22), schulter=0.72, kopf=0.245, frisur="kappe",
+        kappe=(28, 36, 66), weste=(22, 26, 44)
+    ),
+    "polizistin": dict(
+        haut=(188, 134, 98), oben=(40, 52, 92), unten=(30, 34, 54),
+        haar=(26, 20, 18), schulter=0.60, kopf=0.232, frisur="zopf",
+        weste=(22, 26, 44)
     ),
 }
 
@@ -60,85 +91,139 @@ def m(wert):
     return wert * PX_PRO_METER * UEBER
 
 
-def rundes_rechteck(zeichner, mitte, breite, hoehe, radius, farbe, winkel=0):
-    """Rechteck mit runden Ecken, notfalls gedreht — als eigenes Bild,
-       damit die Drehung sauber bleibt."""
+def dunkler(farbe, faktor):
+    return tuple(max(0, min(255, int(c * faktor))) for c in farbe[:3])
+
+
+def rundes_rechteck(mitte, breite, hoehe, radius, farbe):
     b, h = int(breite), int(hoehe)
     teil = Image.new("RGBA", (b + 4, h + 4), (0, 0, 0, 0))
-    d = ImageDraw.Draw(teil)
-    d.rounded_rectangle([2, 2, b + 1, h + 1], radius=radius, fill=farbe)
-    if winkel:
-        teil = teil.rotate(winkel, resample=Image.BICUBIC, expand=True)
+    ImageDraw.Draw(teil).rounded_rectangle([2, 2, b + 1, h + 1], radius=radius, fill=farbe)
     return teil, (int(mitte[0] - teil.width / 2), int(mitte[1] - teil.height / 2))
 
 
 def figur_zeichnen(art, phase):
-    """phase 0..1 im Laufzyklus; 0 = Stand."""
+    """phase 0…1 im Laufzyklus, None = Stand."""
     d = FIGUREN[art]
+    haut = d["haut"]
+    haut_dunkel = dunkler(haut, 0.82)
+    oben = d["oben"]
+    oben_dunkel = dunkler(oben, 0.78)
+    unten = d["unten"]
+    haar = d["haar"]
+    schulter = d["schulter"]
+    frisur = d.get("frisur", "kurz")
+
     gross = FELD * UEBER
     bild = Image.new("RGBA", (gross, gross), (0, 0, 0, 0))
     z = ImageDraw.Draw(bild)
     mx, my = gross / 2, gross / 2
     schwung = math.sin(phase * math.tau) if phase is not None else 0.0
 
-    # ── Beine: schauen unten heraus, wechseln beim Laufen
+    # ── Beine (beim Kleid nur die Unterschenkel) ──
+    bein_laenge = 0.30 if d.get("rock") else 0.42
     for seite in (-1, 1):
         versatz = schwung * seite * m(0.16)
-        x = mx + seite * m(d["schulter"] * 0.21)
-        teil, pos = rundes_rechteck(z, (x, my + m(0.10) + versatz * 0.4),
-                                    m(0.19), m(0.42), int(m(0.08)), d["unten"])
+        x = mx + seite * m(schulter * 0.21)
+        teil, pos = rundes_rechteck((x, my + m(0.16) + versatz * 0.4),
+                                    m(0.19), m(bein_laenge), int(m(0.08)),
+                                    haut if d.get("rock") else unten)
         bild.alpha_composite(teil, pos)
-        # Schuh
-        teil, pos = rundes_rechteck(z, (x, my + m(0.26) + versatz),
-                                    m(0.19), m(0.22), int(m(0.07)), (26, 26, 32))
+        teil, pos = rundes_rechteck((x, my + m(0.28) + versatz),
+                                    m(0.19), m(0.20), int(m(0.07)), (26, 26, 32))
         bild.alpha_composite(teil, pos)
 
-    # ── Arme, schwingen gegenläufig zu den Beinen
+    # Rock als breiter Saum über den Beinen
+    if d.get("rock"):
+        teil, pos = rundes_rechteck((mx, my + m(0.14)), m(schulter * 1.15), m(0.34),
+                                    int(m(0.12)), unten)
+        bild.alpha_composite(teil, pos)
+
+    # ── Arme ──
     for seite in (-1, 1):
         versatz = -schwung * seite * m(0.13)
-        x = mx + seite * m(d["schulter"] * 0.52)
-        teil, pos = rundes_rechteck(z, (x, my - m(0.02) + versatz),
-                                    m(0.17), m(0.46), int(m(0.08)), d["haut_dunkel"])
+        x = mx + seite * m(schulter * 0.52)
+        teil, pos = rundes_rechteck((x, my - m(0.02) + versatz),
+                                    m(0.17), m(0.46), int(m(0.08)), haut_dunkel)
         bild.alpha_composite(teil, pos)
-        # Hand
         z.ellipse([x - m(0.085), my + m(0.16) + versatz - m(0.085),
-                   x + m(0.085), my + m(0.16) + versatz + m(0.085)], fill=d["haut"])
+                   x + m(0.085), my + m(0.16) + versatz + m(0.085)], fill=haut)
 
-    # ── Rumpf: Schultern breit, nach unten schmaler
-    teil, pos = rundes_rechteck(z, (mx, my + m(0.02)),
-                                m(d["schulter"]), m(0.52), int(m(0.16)), d["oben"])
+    # ── Haar, das hinter dem Körper liegt (Zopf, lange Haare) ──
+    kyv = my - m(0.16)
+    rv = m(d["kopf"])
+    if frisur == "zopf":
+        zy = kyv + rv * 1.30
+        z.ellipse([mx - rv * 0.24, zy - rv * 0.55, mx + rv * 0.24, zy + rv * 0.45], fill=haar)
+        z.ellipse([mx - rv * 0.17, zy + rv * 0.30, mx + rv * 0.17, zy + rv * 0.90], fill=haar)
+    elif frisur == "lang":
+        for seite in (-1, 1):
+            z.ellipse([mx + seite * rv * 0.86 - rv * 0.30, kyv + rv * 0.10,
+                       mx + seite * rv * 0.86 + rv * 0.30, kyv + rv * 1.35], fill=haar)
+        z.ellipse([mx - rv * 0.62, kyv + rv * 0.55, mx + rv * 0.62, kyv + rv * 1.30], fill=haar)
+
+    # ── Rumpf ──
+    teil, pos = rundes_rechteck((mx, my + m(0.02)), m(schulter), m(0.52), int(m(0.16)), oben)
     bild.alpha_composite(teil, pos)
-    # Schattenkante hinten, damit der Rumpf Tiefe bekommt
-    teil, pos = rundes_rechteck(z, (mx, my + m(0.22)),
-                                m(d["schulter"] * 0.92), m(0.16), int(m(0.07)), d["oben_dunkel"])
+    teil, pos = rundes_rechteck((mx, my + m(0.22)), m(schulter * 0.92), m(0.16), int(m(0.07)), oben_dunkel)
     bild.alpha_composite(teil, pos)
 
-    # ── Kopf mit Haaren, sitzt leicht vor der Rumpfmitte
+    # Hawaiihemd-Tupfen für den Touristen
+    if d.get("hemd_muster"):
+        for i, (ox, oy) in enumerate([(-0.14, -0.08), (0.12, -0.02), (-0.05, 0.10), (0.16, 0.14)]):
+            r = m(0.035 + (i % 2) * 0.012)
+            z.ellipse([mx + m(ox) - r, my + m(oy) - r, mx + m(ox) + r, my + m(oy) + r],
+                      fill=d["hemd_muster"])
+
+    # Schutzweste der Polizei
+    if d.get("weste"):
+        teil, pos = rundes_rechteck((mx, my + m(0.03)), m(schulter * 0.74), m(0.40),
+                                    int(m(0.10)), d["weste"])
+        bild.alpha_composite(teil, pos)
+
+    # ── Kopf ──
     ky = my - m(0.16)
     r = m(d["kopf"])
-    z.ellipse([mx - r, ky - r, mx + r, ky + r], fill=d["haut"])
-    # Haare als Kappe über dem hinteren Teil des Kopfes
-    haar = Image.new("RGBA", bild.size, (0, 0, 0, 0))
-    hz = ImageDraw.Draw(haar)
-    hz.ellipse([mx - r * 1.06, ky - r * 0.98, mx + r * 1.06, ky + r * 1.06], fill=d["haar"])
-    hz.ellipse([mx - r * 0.74, ky - r * 1.30, mx + r * 0.74, ky + r * 0.30], fill=(0, 0, 0, 0))
-    bild.alpha_composite(haar)
-    if d["zopf"]:
-        zy = ky + r * 1.25
-        z.ellipse([mx - r * 0.30, zy - r * 0.62, mx + r * 0.30, zy + r * 0.55], fill=d["haar"])
-        z.ellipse([mx - r * 0.22, zy + r * 0.35, mx + r * 0.22, zy + r * 1.05], fill=d["haar"])
+    z.ellipse([mx - r, ky - r, mx + r, ky + r], fill=haut)
 
-    # Gesichtsandeutung: Augenbrauen als kurze dunkle Striche
-    z.rounded_rectangle([mx - r * 0.52, ky - r * 0.44, mx - r * 0.12, ky - r * 0.30],
-                        radius=int(r * 0.07), fill=d["haar"])
-    z.rounded_rectangle([mx + r * 0.12, ky - r * 0.44, mx + r * 0.52, ky - r * 0.30],
-                        radius=int(r * 0.07), fill=d["haar"])
+    # Haare: Kappe über dem hinteren Teil, Gesicht bleibt frei
+    if frisur != "glatze":
+        haare = Image.new("RGBA", bild.size, (0, 0, 0, 0))
+        hz = ImageDraw.Draw(haare)
+        weite = 1.02 if frisur in ("kurz", "zopf", "duttchen") else 1.10
+        hz.ellipse([mx - r * weite, ky - r * 0.96, mx + r * weite, ky + r * 1.02], fill=haar)
+        hz.ellipse([mx - r * 0.86, ky - r * 1.30, mx + r * 0.86, ky + r * 0.46], fill=(0, 0, 0, 0))
+        bild.alpha_composite(haare)
 
-    # ── Licht von oben links, Schatten unten rechts
+    if frisur == "duttchen":
+        zy = ky + r * 1.12
+        z.ellipse([mx - r * 0.38, zy - r * 0.38, mx + r * 0.38, zy + r * 0.38], fill=haar)
+    elif frisur == "kappe":
+        kf = d.get("kappe", (40, 44, 60))
+        z.ellipse([mx - r * 1.08, ky - r * 1.02, mx + r * 1.08, ky + r * 1.02], fill=kf)
+        z.rounded_rectangle([mx - r * 0.78, ky - r * 1.42, mx + r * 0.78, ky - r * 0.62],
+                            radius=int(r * 0.35), fill=dunkler(kf, 0.82))
+
+    # Ohrringe
+    if d.get("schmuck"):
+        for seite in (-1, 1):
+            z.ellipse([mx + seite * r * 0.92 - r * 0.13, ky + r * 0.12,
+                       mx + seite * r * 0.92 + r * 0.13, ky + r * 0.38], fill=d["schmuck"])
+
+    # Gesicht: Augenbrauen (und Bart, wenn vorhanden)
+    if d.get("bart"):
+        z.ellipse([mx - r * 0.62, ky - r * 0.34, mx + r * 0.62, ky + r * 0.42], fill=dunkler(haar, 0.9))
+        z.ellipse([mx - r * 0.44, ky - r * 0.50, mx + r * 0.44, ky + r * 0.18], fill=haut)
+    z.rounded_rectangle([mx - r * 0.52, ky - r * 0.46, mx - r * 0.12, ky - r * 0.32],
+                        radius=int(r * 0.07), fill=haar)
+    z.rounded_rectangle([mx + r * 0.12, ky - r * 0.46, mx + r * 0.52, ky - r * 0.32],
+                        radius=int(r * 0.07), fill=haar)
+
+    # ── Licht von oben links, Schatten unten rechts ──
     licht = Image.new("RGBA", bild.size, (0, 0, 0, 0))
     lz = ImageDraw.Draw(licht)
     lz.ellipse([mx - m(0.42), my - m(0.52), mx + m(0.10), my + m(0.10)], fill=(255, 255, 255, 34))
-    lz.ellipse([mx - m(0.05), my - m(0.10), mx + m(0.46), my + m(0.44)], fill=(0, 0, 0, 40))
+    lz.ellipse([mx - m(0.05), my - m(0.10), mx + m(0.46), my + m(0.44)], fill=(0, 0, 0, 44))
     licht.putalpha(ImageChops.multiply(licht.split()[3], bild.split()[3]))
     bild.alpha_composite(licht.filter(ImageFilter.GaussianBlur(m(0.05))))
 
@@ -158,8 +243,7 @@ def kontur(bild, staerke_px, farbe=(12, 14, 24, 235)):
 
 
 def fertig(bild):
-    klein = bild.resize((FELD, FELD), Image.LANCZOS)
-    return kontur(klein, 1)
+    return kontur(bild.resize((FELD, FELD), Image.LANCZOS), 1)
 
 
 def main():

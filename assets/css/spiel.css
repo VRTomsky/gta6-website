@@ -105,3 +105,53 @@
 @media (prefers-reduced-motion:reduce){
   .shud__hinweis{ transition:none; }
 }
+
+/* ── Figurenwechsel (Alt halten) ──
+   Angelehnt an die Auswahl in GTA VI: zwei Porträts nebeneinander, das
+   aktive ist hell umrandet. */
+.swechsel{
+  position:absolute; inset:0; display:grid; place-items:end center;
+  padding-bottom:clamp(20px, 6vh, 64px);
+  background:linear-gradient(180deg, rgba(6,10,24,0) 40%, rgba(6,10,24,.72) 100%);
+  pointer-events:none;
+  opacity:0; transition:opacity .16s var(--ease);
+}
+.swechsel.is-an{ opacity:1; }
+.swechsel[hidden]{ display:none; }
+.swechsel__k{
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom:calc(clamp(20px, 6vh, 64px) + 142px);
+  margin:0; font-family:var(--f-label); font-size:.72rem; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--cream); opacity:.9;
+}
+.swechsel__reihe{
+  display:flex; align-items:center; gap:clamp(10px, 2vw, 22px);
+  padding:12px 16px; border-radius:20px;
+  background:rgba(8,13,29,.72); border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(8px);
+}
+.swechsel__karte{
+  position:relative; display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:0; border:0; background:none; cursor:default;
+}
+.swechsel__karte img{
+  width:clamp(72px, 9vw, 112px); height:clamp(72px, 9vw, 112px);
+  object-fit:cover; border-radius:14px;
+  border:2px solid rgba(255,255,255,.18);
+  filter:grayscale(.55) brightness(.62);
+  transition:filter .18s var(--ease), border-color .18s var(--ease), transform .18s var(--ease-out);
+}
+.swechsel__karte span{
+  font-family:var(--f-label); font-size:.7rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--fg-dim);
+}
+.swechsel__karte.is-gewaehlt img{
+  filter:none; border-color:var(--pink); transform:translateY(-4px) scale(1.04);
+  box-shadow:0 12px 30px -12px rgba(255,79,112,.8);
+}
+.swechsel__karte.is-gewaehlt span{ color:var(--cream); }
+.swechsel__herz{ color:var(--pink); display:grid; place-items:center; }
+
+@media (prefers-reduced-motion:reduce){
+  .swechsel, .swechsel__karte img{ transition:none; }
+}

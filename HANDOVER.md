@@ -765,8 +765,9 @@ Browser: assets/js/newswire.js
 ## Vice City Run — das Browser-Spiel
 
 `spiel.html` + `assets/js/spiel/` + `assets/css/spiel.css`. Reines Canvas-2D,
-keine Fremdbibliothek, kein Build. Stand: Stadt, Laufen, Autofahren
-(Schritt 1 von 6; Verkehr, Passanten, Polizei, Missionen folgen).
+keine Fremdbibliothek, kein Build. Stand: Stadt mit vier Gegenden, Laufen,
+Autofahren, Passanten, Figurenwechsel mit Kamerafahrt (Schritt 1–2 von 6;
+Verkehr, Polizei, Missionen folgen).
 
 ```
 spiel/karte.js      Stadt als Kachelraster (4 m je Kachel), Kollision, Zeichnen
@@ -793,6 +794,21 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige
   Körpergröße nicht mehr zu erkennen, eine gezeichnete Figur schon.
   `tools/spiel-nachbearbeiten.py` setzt Konturen und beschneidet mittig.
   Alle Grafiken sind eigens entstanden — **nichts stammt aus Rockstar-Bildern**.
+- **Figurenwechsel:** Alt halten öffnet die Auswahl (Porträts wie in GTA VI,
+  `.swechsel` in `spiel.html`), A/D wählt, Loslassen wechselt. Danach fährt die
+  Kamera hoch, hinüber und wieder herunter (`fahrtRechnen()` in `spiel.js`);
+  auf halber Strecke übernimmt die neue Figur. Bei „Bewegung reduzieren"
+  springt sie ohne Fahrt.
+- **Passanten** (`Passant` in `wesen.js`): laufen auf Gehwegen, Parks und Strand,
+  bleiben stehen, biegen ab und rennen weg, wenn ein schnelles Auto näher als
+  8 m kommt. Gerechnet wird nur im Umkreis von 90 m, weiter entfernte werden vor
+  dem Spieler neu aufgestellt (`passantenNachziehen`).
+- **Steckenbleiben:** Figuren und Autos haben `entklemmen()` — steckt etwas in
+  einer Wand, wird der nächste freie Platz gesucht. Ohne das konnte man nach
+  einem Crash nicht mehr fahren und die zweite Figur stand im Haus fest.
+- Neben der Fahrbahn bremst der Untergrund (Gehweg leicht, Sand und Rasen stark).
+- Die aktive Figur bekommt einen pinken Ring, die zweite einen blauen — sonst
+  findet man sich zwischen den Passanten nicht wieder.
 - Neu erzeugen:
 
 ```bash
