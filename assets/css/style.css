@@ -778,6 +778,38 @@ html.lang-wechsel body{ opacity:0; transition:opacity .18s var(--ease); }
   cursor:pointer; text-align:left; padding:0;
   transition:transform .35s var(--ease-out), border-color .25s var(--ease);
 }
+
+/* Einblenden der Ultimate-Kacheln: die Kachel schiebt sich von unten frei,
+   das Bild darin zoomt aus und die Farbe kommt zurück. Innerhalb einer
+   Reihe versetzt (--d), damit nicht vier Stück gleichzeitig aufploppen. */
+.reveal--ue{
+  opacity:0;
+  transform:translateY(38px) scale(.94);
+  clip-path:inset(0 0 26% 0 round 12px);
+  filter:saturate(.45) brightness(.72);
+  transition:opacity .65s var(--ease-out), transform .9s var(--ease-out),
+             clip-path .9s var(--ease-out), filter .9s var(--ease);
+  transition-delay:var(--d, 0ms);
+}
+.reveal--ue.is-in{
+  opacity:1; transform:none;
+  clip-path:inset(0 0 0 0 round 12px);
+  filter:none;
+}
+.reveal--ue > img{
+  transform:scale(1.14);
+  transition:transform 1.15s var(--ease-out);
+  transition-delay:var(--d, 0ms);
+}
+.reveal--ue.is-in > img{ transform:none; }
+/* Der Schriftzug kommt einen Tick später als das Bild */
+.reveal--ue .ue-item__t{
+  opacity:0; transform:translateY(10px);
+  transition:opacity .5s var(--ease-out), transform .6s var(--ease-out);
+  transition-delay:calc(var(--d, 0ms) + 220ms);
+}
+.reveal--ue.is-in .ue-item__t{ opacity:1; transform:none; }
+
 .ue-item:hover{ transform:translateY(-4px); border-color:var(--pink); }
 .ue-item img{ width:100%; aspect-ratio:16/10; object-fit:cover; }
 .ue-item__t{ display:block; padding:14px 16px 16px; }
@@ -1136,6 +1168,8 @@ html.lang-wechsel body{ opacity:0; transition:opacity .18s var(--ease); }
     transition-duration:.001ms !important;
   }
   .reveal{ opacity:1; transform:none; }
+  .reveal--ue, .reveal--ue.is-in{ clip-path:none; filter:none; }
+  .reveal--ue > img, .reveal--ue .ue-item__t{ opacity:1; transform:none; transition:none; }
   .ticker__track{ animation:none; }
   .case.is-idle{ animation:none; }
   .scrub{ height:auto; }

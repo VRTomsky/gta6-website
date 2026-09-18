@@ -606,8 +606,10 @@ function cardRise(card) {
 /* ═══ 8 · ULTIMATE EDITION ════════════════════════════════ */
 (function ultimate() {
   const grid = $("#ueGrid");
+  /* Die Kacheln blenden nicht als Block auf, sondern laufen innerhalb
+     einer Reihe von links nach rechts durch — Verzögerung über --d. */
   grid.innerHTML = ULTIMATE.map((u, i) => `
-    <button class="ue-item reveal" type="button" data-i="${i}" aria-label="${u.t} ${L("vergrößern", "— enlarge")}">
+    <button class="ue-item reveal reveal--ue" type="button" data-i="${i}" style="--d:${(i % 4) * 95}ms" aria-label="${u.t} ${L("vergrößern", "— enlarge")}">
       <img src="assets/img/${u.img}" alt="${u.t}" loading="lazy">
       <span class="ue-item__t"><b>${u.t}</b><span>${u.s}</span></span>
     </button>`).join("");
