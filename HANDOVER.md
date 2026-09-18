@@ -762,6 +762,45 @@ Browser: assets/js/newswire.js
 - Der Aufmacher (Album) und „Rund ums Spiel" sind handgepflegt in `index.html`.
 - Lokal testen: `node tools/newswire-holen.mjs`.
 
+## Vice City Run — das Browser-Spiel
+
+`spiel.html` + `assets/js/spiel/` + `assets/css/spiel.css`. Reines Canvas-2D,
+keine Fremdbibliothek, kein Build. Stand: Stadt, Laufen, Autofahren
+(Schritt 1 von 6; Verkehr, Passanten, Polizei, Missionen folgen).
+
+```
+spiel/karte.js      Stadt als Kachelraster (4 m je Kachel), Kollision, Zeichnen
+spiel/bilder.js     Sprites laden, gedreht malen, Schatten
+spiel/wesen.js      Figuren zu Fuß (Laufanimation über die Strecke)
+spiel/fahrzeug.js   Fahrmodell und Fahrzeugdaten
+spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige
+```
+
+- **Die Karte liegt nicht als Datei vor**, sondern wird aus den Koordinaten
+  berechnet (`art(tx, ty)`, immer gleicher Zufall über `streu()`). Ändert sich
+  das Raster, stimmt der Startpunkt trotzdem: `startSuchen()` sucht den nächsten
+  Gehweg an einer Straße.
+- Gezeichnet wird nur der sichtbare Ausschnitt, rund 60 Kacheln je Bild — auf
+  dem Testrechner 60 Bilder pro Sekunde bei 1440 × 900.
+- Gebäude bekommen aus Höhe und Nachbarschaft eine Wand und einen Schatten nach
+  unten rechts. Das ist kein 3D, sieht aber so aus.
+- **Fahrmodell:** Geschwindigkeitsvektor, der anteilig in Blickrichtung gezogen
+  wird. Der Anteil ist der Grip — mit Handbremse rutscht der Wagen. Gelenkt wird
+  nur bei Fahrt und mit steigendem Tempo weniger.
+- **Sprites:** Fahrzeuge kommen aus Blender (`tools/spiel-sprites.py`, Kamera
+  20° geneigt, orthografisch, 64 px je Meter), Figuren werden gezeichnet
+  (`tools/spiel-figuren.py`) — ein heruntergerechnetes 3D-Bild ist bei 25 Pixeln
+  Körpergröße nicht mehr zu erkennen, eine gezeichnete Figur schon.
+  `tools/spiel-nachbearbeiten.py` setzt Konturen und beschneidet mittig.
+  Alle Grafiken sind eigens entstanden — **nichts stammt aus Rockstar-Bildern**.
+- Neu erzeugen:
+
+```bash
+"C:\Program Files\Blender Foundation\Blender 5.0lender.exe" -b -P tools/spiel-sprites.py -- --ziel assets/img/spiel --nur autos
+python tools/spiel-figuren.py --ziel assets/img/spiel
+python tools/spiel-nachbearbeiten.py --ordner assets/img/spiel
+```
+
 ## Farben
 
 Grundfarbe `--bg: #0b1124` — dunkelblau, nicht schwarz. Der Nutzer hat mehrfach betont, dass

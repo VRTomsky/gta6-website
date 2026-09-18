@@ -1,0 +1,107 @@
+/* ══════════════════════════════════════════════════════════
+   Vice City Run — Spielseite
+
+   Die Bühne ist 16:9 und so hoch, wie der Bildschirm erlaubt. Alles
+   Weitere (Anzeige, Startbild, Pause) liegt als Ebene darüber.
+   ══════════════════════════════════════════════════════════ */
+
+.sseite{
+  min-height:100svh;
+  padding:calc(var(--nav-h) + var(--s5)) var(--pad) var(--s6);
+  max-width:1400px; margin-inline:auto;
+}
+.sseite__kopf{ max-width:760px; margin-bottom:var(--s3); }
+.sseite__kopf h1{ margin:.1em 0 .25em; }
+.sseite__t{ color:var(--fg-mid); max-width:62ch; }
+
+.sbuehne{
+  position:relative; width:100%; aspect-ratio:16/9;
+  max-height:min(76svh, 780px);
+  margin-inline:auto;
+  border-radius:var(--r); overflow:hidden;
+  border:1px solid var(--line2);
+  background:#0b1124;
+  box-shadow:0 40px 90px -40px rgba(0,0,0,.9);
+}
+#spielFeld{
+  position:absolute; inset:0; width:100%; height:100%;
+  display:block; touch-action:none; outline:none;
+  image-rendering:auto;
+}
+#spielFeld:focus-visible{ outline:2px solid var(--pink); outline-offset:-2px; }
+
+/* ── Anzeige ── */
+.shud{
+  position:absolute; inset:0; pointer-events:none;
+  padding:clamp(10px, 1.6vw, 18px);
+  display:flex; justify-content:space-between; align-items:flex-start;
+  font-family:var(--f-label);
+}
+.shud__links, .shud__rechts{
+  display:flex; flex-direction:column; gap:4px;
+  background:rgba(8,13,29,.55); backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.08); border-radius:12px;
+  padding:8px 12px;
+}
+.shud__rechts{ align-items:flex-end; }
+.shud__figur{
+  font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--cream); font-size:.95rem;
+}
+.shud__ort{ font-size:.7rem; letter-spacing:.16em; text-transform:uppercase; color:var(--pink); }
+.shud__tempo{
+  font-weight:800; font-size:1.05rem; color:#fff;
+  font-variant-numeric:tabular-nums;
+}
+.shud__hinweis{
+  position:absolute; left:50%; bottom:clamp(14px, 3vw, 28px); transform:translateX(-50%) translateY(6px);
+  margin:0; padding:8px 16px; border-radius:999px;
+  background:rgba(8,13,29,.72); border:1px solid rgba(255,255,255,.1);
+  color:var(--fg); font-size:.82rem; letter-spacing:.04em;
+  opacity:0; transition:opacity .25s var(--ease), transform .25s var(--ease-out);
+}
+.shud__hinweis.is-an{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── Startbild und Pause ── */
+.sstart, .spause{
+  position:absolute; inset:0; display:grid; place-items:center;
+  background:radial-gradient(120% 90% at 50% 20%, rgba(28,20,58,.86), rgba(8,12,26,.94));
+  text-align:center; padding:var(--s3);
+}
+.sstart__karte{ max-width:520px; display:flex; flex-direction:column; gap:12px; align-items:center; }
+.sstart__karte h2{ margin:0; font-size:clamp(2.4rem, 6vw, 4rem); }
+.sstart__karte p{ color:var(--fg-mid); margin:0; }
+.sstart__klein{ font-size:.78rem; color:var(--fg-dim); }
+.sstart.is-laden #spielStartKnopf{ opacity:.6; pointer-events:none; }
+.spause{ cursor:pointer; background:rgba(8,12,26,.72); }
+.spause p{ font-family:var(--f-label); letter-spacing:.14em; text-transform:uppercase; color:var(--cream); }
+.spause[hidden]{ display:none; }
+.sstart[hidden]{ display:none; }
+
+/* ── Tastenliste ── */
+.stasten{ margin:var(--s4) auto 0; max-width:1400px; }
+.stasten__h{
+  font-family:var(--f-label); font-size:.72rem; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--pink); margin:0 0 12px;
+}
+.stasten ul{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px 22px;
+}
+.stasten li{ display:flex; align-items:center; gap:8px; color:var(--fg-mid); font-size:.9rem; }
+.stasten kbd{
+  font-family:var(--f-label); font-size:.72rem; font-weight:700;
+  background:rgba(255,255,255,.07); border:1px solid var(--line2);
+  border-bottom-width:2px; border-radius:6px; padding:3px 7px; color:var(--cream);
+}
+.stasten__hinweis{ margin-top:14px; font-size:.82rem; color:var(--fg-dim); }
+
+@media (max-width:760px){
+  .sbuehne{ aspect-ratio:4/3; max-height:62svh; }
+  .shud{ padding:8px; }
+  .shud__figur{ font-size:.82rem; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .shud__hinweis{ transition:none; }
+}

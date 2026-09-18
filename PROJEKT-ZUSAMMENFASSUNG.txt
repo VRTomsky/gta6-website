@@ -185,6 +185,13 @@ WAS BISHER GEMACHT WURDE
      (Stripclub) und Vorfreude "Lucia Jiggle Physics".
    - firestore.rules noch einmal geändert - erneut veröffentlichen.
 
+13. Browser-Spiel "Vice City Run" (18.09.2026, erster Schritt):
+   Eigene Seite spiel.html, im Menü unter "Spiel". Vice City von
+   oben, laufen und Auto fahren, Wechsel zwischen Jason und Lucia.
+   Fahrzeuge sind in Blender gebaut, die Figuren gezeichnet - alles
+   selbst gemacht, nichts aus dem echten Spiel. Als Naechstes:
+   Verkehr, Passanten, Polizei, Missionen, Handy-Steuerung.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

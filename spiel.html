@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-en="Vice City Run — Grand Theft Auto VI">Vice City Run — Grand Theft Auto VI</title>
+<meta name="description" content="Kleines Browser-Spiel im Vice-City-Stil: als Jason oder Lucia zu Fuß und im Auto durch die Stadt."
+      data-en-content="A small browser game in Vice City style: roam the city as Jason or Lucia, on foot or by car.">
+<meta name="theme-color" content="#0b1124">
+<meta name="color-scheme" content="dark">
+<!-- Sprache zuerst: steht fest, bevor irgendetwas gezeichnet wird -->
+<script src="assets/js/i18n.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/konto.css">
+<link rel="stylesheet" href="assets/css/spiel.css">
+<link rel="icon" href="assets/img/art/vi_logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/img/app/apple-touch-icon.png">
+</head>
+<body>
+
+<a class="skip-link" href="#main" data-en="Skip to content">Zum Inhalt springen</a>
+
+<!-- ══════════════ NAV ══════════════ -->
+<header class="nav" id="nav">
+  <a class="nav__logo" href="index.html" aria-label="Grand Theft Auto VI — zur Startseite" data-en-aria-label="Grand Theft Auto VI — home">
+    <svg class="vi-mark" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
+      <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/>
+      <path d="M49.2 0h11.6v38H49.2z"/>
+    </svg>
+  </a>
+
+  <nav class="nav__links" aria-label="Hauptnavigation" data-en-aria-label="Main navigation">
+    <a href="index.html#trailer">Trailer</a>
+    <a href="index.html#story">Story</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="index.html#leonida">Leonida</a>
+    <a href="index.html#ultimate">Ultimate</a>
+    <a href="index.html#news">News</a>
+    <a href="spiel.html" aria-current="page" data-en="Game">Spiel</a>
+  </nav>
+
+  <div class="nav__right">
+    <span class="nav__mini" id="navMini" aria-hidden="true"></span>
+    <div class="lang" role="group" aria-label="Sprache wählen" data-en-aria-label="Choose language">
+      <button type="button" class="lang__btn" data-lang="de" lang="de" aria-pressed="true" title="Deutsch">DE</button>
+      <button type="button" class="lang__btn" data-lang="en" lang="en" aria-pressed="false" title="English">EN</button>
+    </div>
+    <div class="acct" data-acct></div>
+    <button class="nav__burger" id="burger" aria-label="Menü öffnen" data-en-aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" hidden>
+  <nav aria-label="Mobile Navigation" data-en-aria-label="Mobile navigation">
+    <a href="index.html#trailer">Trailer</a>
+    <a href="index.html#story">Story</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="index.html#leonida">Leonida</a>
+    <a href="index.html#ultimate">Ultimate Edition</a>
+    <a href="index.html#news">News &amp; Leaks</a>
+    <a href="index.html#galerie" data-en="Media">Medien</a>
+    <a href="spiel.html" data-en="Game">Spiel</a>
+  </nav>
+  <p class="mobile-menu__cd" data-en='<span id="navMiniMobile">—</span> days until release'><span id="navMiniMobile">—</span> bis zum Release</p>
+</div>
+
+<main id="main" class="sseite" tabindex="-1">
+
+  <header class="sseite__kopf">
+    <p class="kicker" data-en="Fan-made mini game">Kleines Fan-Spiel</p>
+    <h1 class="h-display">Vice City Run</h1>
+    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel. Switch between Jason and Lucia at any time. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer. Zwischen Jason und Lucia kannst du jederzeit wechseln. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
+  </header>
+
+  <div class="sbuehne">
+    <canvas id="spielFeld" tabindex="0" aria-label="Spielfeld" data-en-aria-label="Game canvas"></canvas>
+
+    <div class="shud" aria-hidden="true">
+      <div class="shud__links">
+        <span class="shud__figur" data-hud="figur">Lucia</span>
+        <span class="shud__ort" data-hud="ort">Vice City</span>
+      </div>
+      <div class="shud__rechts">
+        <span class="shud__tempo" data-hud="tempo">0 km/h</span>
+      </div>
+      <p class="shud__hinweis" data-hud="hinweis"></p>
+    </div>
+
+    <div class="sstart" id="spielStart">
+      <div class="sstart__karte">
+        <p class="kicker" data-en="Vice City, 1986-ish">Vice City, irgendwann in den Achtzigern</p>
+        <h2 class="h-display">Vice City Run</h2>
+        <p data-en="Drive, walk, explore. Traffic, pedestrians, police and missions are coming in the next updates.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei und Missionen kommen in den nächsten Schritten dazu.</p>
+        <button type="button" class="btn btn--pink btn--lg" id="spielStartKnopf" data-en="Start game">Spiel starten</button>
+        <p class="sstart__klein" data-en="Loads about 1 MB of graphics.">Lädt rund 1 MB Grafik.</p>
+      </div>
+    </div>
+
+    <div class="spause" id="spielPause" hidden>
+      <p data-en="Paused — click to continue">Pause — zum Weiterspielen klicken</p>
+    </div>
+  </div>
+
+  <section class="stasten">
+    <h2 class="stasten__h" data-en="Controls">Steuerung</h2>
+    <ul>
+      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span data-en="walk and drive">laufen und fahren</span></li>
+      <li><kbd data-en="Shift">Umschalt</kbd><span data-en="run">rennen</span></li>
+      <li><kbd>E</kbd><span data-en="get in / out of a car">ein- und aussteigen</span></li>
+      <li><kbd data-en="Space">Leertaste</kbd><span data-en="handbrake">Handbremse</span></li>
+      <li><kbd data-en="Tab">Tab</kbd><span data-en="switch between Jason and Lucia">zwischen Jason und Lucia wechseln</span></li>
+      <li><kbd>P</kbd><span data-en="pause">Pause</span></li>
+    </ul>
+    <p class="stasten__hinweis" data-en="Touch controls for phones are coming with the next update.">Eine Steuerung für Handys kommt mit dem nächsten Schritt dazu.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer__top">
+    <svg class="vi-mark vi-mark--foot" viewBox="0 0 62 38" aria-hidden="true" focusable="false">
+      <path d="M0 0h11.6l9.1 26.4L29.8 0h11.6L27.2 38H14.2z"/><path d="M49.2 0h11.6v38H49.2z"/>
+    </svg>
+    <p data-en="<strong>Unofficial fan site.</strong> Not affiliated with, endorsed or authorized by Rockstar Games or Take-Two Interactive. The game on this page is fan-made: all graphics were created for this site."><strong>Inoffizielle Fan-Seite.</strong> Nicht mit Rockstar Games oder Take-Two Interactive verbunden und von diesen weder unterstützt noch autorisiert. Das Spiel auf dieser Seite ist selbst gebaut: Alle Grafiken sind eigens dafür entstanden.</p>
+  </div>
+  <div class="footer__links">
+    <a href="index.html" data-en="Home">Startseite</a>
+    <a href="index.html#charaktere" data-en="Characters">Charaktere</a>
+    <a href="datenschutz.html" data-en="Privacy">Datenschutz</a>
+    <a href="https://www.rockstargames.com/de/VI/" data-en-href="https://www.rockstargames.com/VI/" target="_blank" rel="noopener noreferrer" data-en="Official site">Offizielle Seite</a>
+    <span class="footer__esrb" data-en="May contain content unsuitable for children.">Kann Inhalte enthalten, die für Kinder ungeeignet sind.</span>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/data.en.js"></script>
+<script src="assets/js/konto-config.js"></script>
+<script src="assets/js/seite.js"></script>
+<script type="module" src="assets/js/konto/konto.js"></script>
+<script type="module" src="assets/js/spiel/spiel.js"></script>
+</body>
+</html>
