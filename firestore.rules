@@ -17,6 +17,9 @@ rules_version = '2';
 //                         „Name schon vergeben" vor dem Registrieren prüfen lässt
 //    newsletter/{uid}     { email, lang, consentAt } — nur mit bestätigter
 //                         E-Mail-Adresse, nur die eigene Adresse
+//    bestenliste/{uid}    { name, punkte, updatedAt } — Bestwert im
+//                         Browser-Spiel; für alle lesbar, schreiben nur
+//                         den eigenen Eintrag
 //
 //  Alles andere ist gesperrt. Auslesen der Newsletter-Liste geht nur
 //  über die Firebase-Konsole (Projektinhaber).
@@ -118,6 +121,22 @@ service cloud.firestore {
           && request.resource.data.daten.size() <= 700000)
       );
 
+      allow delete: if istSelbst(uid);
+    }
+
+    // ── Bestenliste des Browser-Spiels ──────────────────────────
+    // Öffentlich lesbar (die Liste steht auf der Spielseite), schreiben
+    // darf jeder nur seinen eigenen Eintrag.
+    match /bestenliste/{uid} {
+      allow read: if true;
+      allow create, update: if istSelbst(uid)
+        && request.resource.data.keys().hasOnly(['name', 'punkte', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 20
+        && request.resource.data.punkte is int
+        && request.resource.data.punkte >= 0
+        && request.resource.data.punkte <= 9999999;
       allow delete: if istSelbst(uid);
     }
 

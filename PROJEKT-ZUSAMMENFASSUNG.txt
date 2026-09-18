@@ -205,6 +205,23 @@ WAS BISHER GEMACHT WURDE
      Hafen mit Lagerhallen und Containern, Wohngebiet mit Gaerten.
      Dazu vierspurige Avenues, Ampeln und Zebrastreifen.
 
+15. Spiel, dritter Schritt (18.09.2026) - jetzt komplett:
+   - Namensschilder ueber Jason und Lucia, beide etwas groesser.
+   - Figurenwechsel: Alt halten, Maus nach links = Jason, nach
+     rechts = Lucia.
+   - Echte Texturen: Asphalt mit Rissen, Gehwegplatten, Sand, Gras,
+     Kiesdaecher, richtige Baeume und Palmen.
+   - Kein Abbremsen mehr auf dem Gehweg.
+   - Vollbild-Knopf (oder Taste F) und Ton an/aus (Taste M).
+   - Verkehr faehrt auf Spuren und haelt an roten Ampeln.
+   - Polizei mit Fahndungsstufe 1-5, Leben, Geld, "Verhaftet" und
+     "Erledigt".
+   - Vier Auftraege: Paket ausliefern, Wagen besorgen, kleiner
+     Ueberfall, Streifen abhaengen.
+   - Minikarte unten links, Ton per Web Audio, Steuerung fuer Handys.
+   - Bestenliste: Bestwert kommt ins Konto und steht unter dem Spiel.
+     ACHTUNG: firestore.rules dafuer erneut veroeffentlichen.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

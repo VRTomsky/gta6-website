@@ -21,6 +21,9 @@
      kontoLoeschen(uid, profil, passwort)
 
    nutzer = { uid, email, emailVerified, provider: "password"|"google", name }
+
+   Dazu die Bestenliste des Browser-Spiels: bestwertLaden, bestwertSetzen,
+   bestenliste — ein Dokument je Konto in der Sammlung "bestenliste".
    profil = { username, bio, favChar, lang, createdAt: Date|null,
               stand: Zahl (letzte Änderung, für den Bild-Zwischenspeicher),
               avatar: "preset:<id>"|"eigen", avatarEigen: data:-URL|"",
@@ -369,6 +372,35 @@ async function firebaseBackend(config, slot) {
       catch (e) { return false; }
     },
 
+    /* ── Bestenliste des Spiels ──
+       Ein Dokument je Konto, öffentlich lesbar. Geschrieben wird nur der
+       eigene Eintrag und nur, wenn der Wert größer ist als bisher. */
+    async bestwertLaden(uid) {
+      try {
+        const s = await frist(F.getDoc(F.doc(db, "bestenliste", uid)));
+        return s.exists() ? (s.data().punkte | 0) : 0;
+      } catch (e) { return 0; }
+    },
+
+    async bestwertSetzen(uid, name, punkte) {
+      try {
+        await frist(F.setDoc(F.doc(db, "bestenliste", uid), {
+          name: String(name || "").slice(0, 20),
+          punkte: Math.max(0, Math.min(9999999, Math.round(punkte))),
+          updatedAt: F.serverTimestamp()
+        }), 15000);
+      } catch (e) { /* Bestenliste ist Beiwerk — Fehler bleiben still */ }
+    },
+
+    async bestenliste(anzahl = 10) {
+      try {
+        const q = F.query(F.collection(db, "bestenliste"),
+                          F.orderBy("punkte", "desc"), F.limit(anzahl));
+        const s = await frist(F.getDocs(q));
+        return s.docs.map(d => ({ name: d.data().name || "?", punkte: d.data().punkte | 0 }));
+      } catch (e) { return []; }
+    },
+
     async newsletterSetzen(uid, an, lang) {
       const ref = F.doc(db, "newsletter", uid);
       try {
@@ -575,6 +607,26 @@ function demoBackend(slot) {
 
     async newsletterStatus(uid) {
       return !!lese().newsletter[uid];
+    },
+
+    /* Bestenliste im Demo-Modus: nur in diesem Browser */
+    async bestwertLaden(uid) {
+      const s = lese();
+      return (s.bestenliste && s.bestenliste[uid] && s.bestenliste[uid].punkte) || 0;
+    },
+
+    async bestwertSetzen(uid, name, punkte) {
+      const s = lese();
+      s.bestenliste = s.bestenliste || {};
+      s.bestenliste[uid] = { name, punkte: Math.round(punkte) };
+      schreibe(s);
+    },
+
+    async bestenliste(anzahl = 10) {
+      const s = lese();
+      return Object.values(s.bestenliste || {})
+        .sort((a, b) => b.punkte - a.punkte)
+        .slice(0, anzahl);
     },
 
     async newsletterSetzen(uid, an, lang) {

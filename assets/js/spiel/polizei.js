@@ -11,39 +11,81 @@
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
-import { Fahrzeug } from "./fahrzeug.js";
+import { VerkehrsAuto } from "./verkehr.js";
 import { Figur } from "./wesen.js";
 
 export const STUFEN = 5;
 const SICHT = 95;                     // so weit sieht die Polizei
 
-export class Streife extends Fahrzeug {
-  constructor(x, y, winkel) {
-    super("streife", x, y, winkel);
+export class Streife extends VerkehrsAuto {
+  constructor(x, y, dx, dy) {
+    super("streife", x, y, dx, dy);
+    this.wunschTempo = 22;                   // deutlich schneller als der Verkehr
     this.blinken = Math.random() * 10;
+    this.ziel = null;
+    this.jagdZiel = null;
+    this.zielSuchen();
+  }
+
+  /* An der Kreuzung die Richtung nehmen, die näher an den Spieler führt —
+     dadurch fahren die Streifen durch das Straßennetz statt gegen Wände. */
+  abbiegen() {
+    const z = this.jagdZiel;
+    if (!z) return super.abbiegen();
+    const wahl = [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }]
+      .filter(r => Karte.istStrasse(Karte.inKachel(this.x) + r.dx * 3, Karte.inKachel(this.y) + r.dy * 3))
+      .map(r => ({
+        r,
+        weit: Math.hypot(z.x - (this.x + r.dx * 40), z.y - (this.y + r.dy * 40))
+      }))
+      .sort((a, b) => a.weit - b.weit);
+    const beste = wahl[0] ? wahl[0].r : { dx: -this.dx, dy: -this.dy };
+    this.dx = beste.dx;
+    this.dy = beste.dy;
+    this.zielSuchen();
+  }
+
+  /* Freie Sicht auf den Spieler? Dann direkt drauf zu. */
+  freieSicht(ziel) {
+    const dx = ziel.x - this.x, dy = ziel.y - this.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 45) return false;
+    const schritte = Math.ceil(d / 3);
+    for (let i = 1; i < schritte; i++) {
+      const t = i / schritte;
+      if (Karte.festAnPunkt(this.x + dx * t, this.y + dy * t)) return false;
+    }
+    return true;
   }
 
   jagen(dt, ziel, autos) {
     this.blinken += dt;
-    const zx = ziel.x - this.x, zy = ziel.y - this.y;
-    const entfernung = Math.hypot(zx, zy);
+    this.jagdZiel = ziel;
 
-    let ab = Math.atan2(zy, zx) - this.winkel;
+    if (this.freieSicht(ziel)) {
+      /* Direkt drauf zu — rammen ist erlaubt */
+      const zx = ziel.x - this.x, zy = ziel.y - this.y;
+      let ab = Math.atan2(zy, zx) - this.winkel;
+      while (ab > Math.PI) ab -= Math.PI * 2;
+      while (ab < -Math.PI) ab += Math.PI * 2;
+      const entfernung = Math.hypot(zx, zy);
+      let gas = 1;
+      if (Math.abs(ab) > 1.9 && entfernung < 12) gas = -0.7;       // vorbeigeschossen
+      this.fahren(gas, Math.max(-1, Math.min(1, ab * 2.2)), false, dt);
+      this.ziel = null;
+      return;
+    }
+
+    /* Sonst über das Straßennetz heranfahren, ohne auf Ampeln zu achten */
+    if (!this.ziel) this.zielSuchen();
+    if (!this.ziel) { this.abbiegen(); return; }
+    const dx = this.ziel.x - this.x, dy = this.ziel.y - this.y;
+    if (Math.hypot(dx, dy) < 5) { this.abbiegen(); return; }
+    let ab = Math.atan2(dy, dx) - this.winkel;
     while (ab > Math.PI) ab -= Math.PI * 2;
     while (ab < -Math.PI) ab += Math.PI * 2;
-
-    /* Vor Hindernissen ausweichen: etwas nach der freien Seite lenken */
-    const vor = { x: Math.cos(this.winkel), y: Math.sin(this.winkel) };
-    const blick = 6 + Math.abs(this.tempo) * 0.6;
-    const hindernis = Karte.festAnPunkt(this.x + vor.x * blick, this.y + vor.y * blick);
-    let lenken = Math.max(-1, Math.min(1, ab * 2.0));
-    if (hindernis) lenken = ab > 0 ? -1 : 1;
-
-    let gas = 1;
-    if (entfernung < 6 && Math.abs(ab) > 1.2) gas = -0.6;          // vorbeigeschossen
-    if (Math.abs(this.tempo) > 22 && Math.abs(ab) > 0.9) gas = 0;  // vor der Kurve vom Gas
-
-    this.fahren(gas, lenken, false, dt);
+    const frei = this.freiVoraus(autos, []);
+    this.fahren(frei ? 1 : -0.4, Math.max(-1, Math.min(1, ab * 2.2)), false, dt);
   }
 
   zeichnen(ctx, kamera) {
@@ -115,7 +157,10 @@ export class Fahndung {
                                   [Karte.ART.STRASSE], 70);
       const weit = Math.hypot(p.x - zielX, p.y - zielY);
       if (weit < 45) { /* zu nah: trotzdem nehmen, sonst hängt die Schleife */ }
-      this.streifen.push(new Streife(p.x, p.y, Math.random() * Math.PI * 2));
+      const senkrecht = Math.random() < 0.5;
+      this.streifen.push(new Streife(p.x, p.y,
+        senkrecht ? 0 : (Math.random() < 0.5 ? 1 : -1),
+        senkrecht ? (Math.random() < 0.5 ? 1 : -1) : 0));
     }
     while (this.streifen.length > this.sollWagen) this.streifen.pop();
   }

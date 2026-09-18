@@ -24,13 +24,13 @@ export const bild = name => bilder.get(name) || null;
 
 /* Sprite an Weltposition zeichnen. winkel in Radiant, 0 = nach rechts —
    die Bilder zeigen nach oben, deshalb kommt eine Vierteldrehung dazu. */
-export function malen(ctx, name, kamera, x, y, winkel, breiteM = 0) {
+export function malen(ctx, name, kamera, x, y, winkel, breiteM = 0, faktor = 1) {
   const b = bilder.get(name);
   if (!b) return;
   const z = kamera.zoom;
   const px = (x - kamera.x) * z + kamera.breite / 2;
   const py = (y - kamera.y) * z + kamera.hoehe / 2;
-  const skala = (breiteM ? (breiteM * SPRITE_PX) / b.width : 1) * (z / SPRITE_PX);
+  const skala = (breiteM ? (breiteM * SPRITE_PX) / b.width : 1) * (z / SPRITE_PX) * faktor;
   const w = b.width * skala, h = b.height * skala;
 
   ctx.save();

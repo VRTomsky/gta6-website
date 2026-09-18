@@ -149,8 +149,8 @@ Keine Rechtsberatung.
 
 ## Regeln aktualisieren
 
-Ändert sich `firestore.rules` (zuletzt am 17.09.2026 abends: neue Profilfelder, Titelbild
-in voller Auflösung, „Vorfreude" als Muster statt fester Liste),
+Ändert sich `firestore.rules` (zuletzt am 18.09.2026: Sammlung `bestenliste` für das
+Browser-Spiel),
 müssen die Regeln **neu veröffentlicht** werden — sonst lehnt die Datenbank das Speichern
 des Profils ab:
 
@@ -219,6 +219,9 @@ users/{uid}                username, usernameLower, bio, favChar, lang, createdA
                            plattform, edition, lieblingsort, vorfreude, gamertag
 users/{uid}/bilder/titel      teile, typ        ← eigenes Titelbild (Anzahl Teile, Format)
 users/{uid}/bilder/titel-0…7  daten             ← das Bild in Teilen
+bestenliste/{uid}             name, punkte, updatedAt
+                                                ← Bestwert im Browser-Spiel,
+                                                  für alle lesbar
 usernames/{name}           uid                  ← klein geschrieben, sorgt für Eindeutigkeit
 newsletter/{uid}           email, lang, consentAt
 ```

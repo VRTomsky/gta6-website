@@ -27,6 +27,9 @@ export class Figur {
     this.winkel = -Math.PI / 2;         // schaut nach oben
     this.strecke = 0;
     this.imAuto = null;
+    /* Jason und Lucia sind etwas größer gezeichnet als die Passanten —
+       zusammen mit Ring und Namensschild erkennt man sie sofort. */
+    this.faktor = art === "lucia" || art === "jason" ? 1.16 : 1;
   }
 
   get daten() { return FIGUREN[this.art] || FIGUREN.lucia; }
@@ -96,7 +99,7 @@ export class Figur {
   zeichnen(ctx, kamera) {
     if (this.imAuto) return;
     schatten(ctx, kamera, this.x, this.y + 0.12, 0.42, 0.3);
-    malen(ctx, this.bildname(), kamera, this.x, this.y, this.winkel);
+    malen(ctx, this.bildname(), kamera, this.x, this.y, this.winkel, 0, this.faktor);
   }
 }
 

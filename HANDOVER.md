@@ -765,16 +765,24 @@ Browser: assets/js/newswire.js
 ## Vice City Run — das Browser-Spiel
 
 `spiel.html` + `assets/js/spiel/` + `assets/css/spiel.css`. Reines Canvas-2D,
-keine Fremdbibliothek, kein Build. Stand: Stadt mit vier Gegenden, Laufen,
-Autofahren, Passanten, Figurenwechsel mit Kamerafahrt (Schritt 1–2 von 6;
-Verkehr, Polizei, Missionen folgen).
+keine Fremdbibliothek, kein Build. Stand: komplett — Stadt mit vier Gegenden
+und eigenen Texturen, Laufen, Autofahren, Verkehr, Passanten, Polizei mit
+Fahndungsstufen, vier Aufträge, Minikarte, Ton, Handy-Steuerung, Vollbild
+und Bestenliste im Konto.
 
 ```
 spiel/karte.js      Stadt als Kachelraster (4 m je Kachel), Kollision, Zeichnen
+spiel/texturen.js   Asphalt, Gehweg, Sand, Gras, Kiesdach, Bäume, Palmen —
+                    alles beim Start im Browser gezeichnet, keine Bilddateien
 spiel/bilder.js     Sprites laden, gedreht malen, Schatten
-spiel/wesen.js      Figuren zu Fuß (Laufanimation über die Strecke)
+spiel/wesen.js      Figuren zu Fuß und Passanten (Laufanimation über die Strecke)
 spiel/fahrzeug.js   Fahrmodell und Fahrzeugdaten
-spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige
+spiel/verkehr.js    Verkehr: Spuren, Abbiegen, Ampeln, Auffahren vermeiden
+spiel/polizei.js    Streifen, Polizisten, Fahndungsstufe 0–5
+spiel/missionen.js  vier Aufträge als Schrittfolgen mit Fristen
+spiel/minikarte.js  Radar unten links (Karte gepuffert, Punkte je Bild)
+spiel/ton.js        Motor, Sirene, Rumms, Kasse — per Web Audio erzeugt
+spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 ```
 
 - **Die Karte liegt nicht als Datei vor**, sondern wird aus den Koordinaten
@@ -806,7 +814,20 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige
 - **Steckenbleiben:** Figuren und Autos haben `entklemmen()` — steckt etwas in
   einer Wand, wird der nächste freie Platz gesucht. Ohne das konnte man nach
   einem Crash nicht mehr fahren und die zweite Figur stand im Haus fest.
-- Neben der Fahrbahn bremst der Untergrund (Gehweg leicht, Sand und Rasen stark).
+- **Verkehr** steuert wie ein Spieler: Ziel auf der eigenen Spur, hinlenken, Gas.
+  An Kreuzungen wird gewürfelt (62 % geradeaus), Rot heißt anhalten, und wer
+  zu lange steht, sucht sich eine neue Richtung.
+- **Polizei** erbt vom Verkehr, hält sich aber an keine Ampel: Bei freier Sicht
+  fährt sie direkt auf den Spieler zu, sonst über das Straßennetz — an jeder
+  Kreuzung die Richtung, die näher an den Spieler führt. Zu Fuß steigen
+  Polizisten aus und verhaften bei Berührung.
+- **Fahndung 0–5:** steigt beim Anfahren von Passanten und beim Rammen von
+  Streifen, fällt nach 14 Sekunden ohne Sichtkontakt um eine Stufe.
+- **Punkte** = Geld + 750 je erledigtem Auftrag. Mit Konto landet der Bestwert
+  in Firestore (`bestenliste/{uid}`, öffentlich lesbar) und auf der Spielseite;
+  ohne Konto nur im `localStorage`.
+- **Vollbild** über den Knopf oder `F`, Ton über `M`. Auf Touch-Geräten
+  erscheinen Stick und Knöpfe automatisch (`pointer: coarse`).
 - Die aktive Figur bekommt einen pinken Ring, die zweite einen blauen — sonst
   findet man sich zwischen den Passanten nicht wieder.
 - Neu erzeugen:

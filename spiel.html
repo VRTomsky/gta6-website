@@ -76,11 +76,29 @@
   <header class="sseite__kopf">
     <p class="kicker" data-en="Fan-made mini game">Kleines Fan-Spiel</p>
     <h1 class="h-display">Vice City Run</h1>
-    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel. Switch between Jason and Lucia at any time. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer. Zwischen Jason und Lucia kannst du jederzeit wechseln. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
+    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel, with traffic, pedestrians, cops and four jobs. Hold Alt to switch between Jason and Lucia. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer, mit Verkehr, Passanten, Polizei und vier Aufträgen. Mit gehaltener Alt-Taste wechselst du zwischen Jason und Lucia. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
   </header>
 
   <div class="sbuehne">
     <canvas id="spielFeld" tabindex="0" aria-label="Spielfeld" data-en-aria-label="Game canvas"></canvas>
+
+    <div class="stouch" id="spielTouch" hidden aria-hidden="true">
+      <div class="stouch__stick" id="spielStick"><i></i></div>
+      <div class="stouch__knoepfe">
+        <button type="button" data-touch="wechsel">⇄</button>
+        <button type="button" data-touch="bremse">B</button>
+        <button type="button" data-touch="e">E</button>
+      </div>
+    </div>
+
+    <button type="button" class="ston" id="spielTon" aria-label="Ton an/aus"
+            data-en-aria-label="Sound on/off" title="Ton (M)" data-en-title="Sound (M)">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+        <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" data-ton-wellen/>
+      </svg>
+    </button>
 
     <button type="button" class="svoll" id="spielVollbild"
             aria-label="Vollbild" data-en-aria-label="Fullscreen" title="Vollbild (F)"
@@ -103,13 +121,15 @@
         <span class="shud__tempo" data-hud="tempo">0 km/h</span>
       </div>
       <p class="shud__hinweis" data-hud="hinweis"></p>
+      <p class="shud__auftrag" data-hud="auftrag"></p>
+      <canvas class="skarte" id="spielKarte" width="168" height="168"></canvas>
     </div>
 
     <div class="sstart" id="spielStart">
       <div class="sstart__karte">
         <p class="kicker" data-en="Vice City, 1986-ish">Vice City, irgendwann in den Achtzigern</p>
         <h2 class="h-display">Vice City Run</h2>
-        <p data-en="Drive, walk, explore. Traffic, pedestrians, police and missions are coming in the next updates.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei und Missionen kommen in den nächsten Schritten dazu.</p>
+        <p data-en="Drive, walk, explore. Traffic, pedestrians, police with a wanted level, four jobs and a leaderboard are in.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei mit Fahndungsstufe, vier Aufträge und eine Bestenliste sind drin.</p>
         <button type="button" class="btn btn--pink btn--lg" id="spielStartKnopf" data-en="Start game">Spiel starten</button>
         <p class="sstart__klein" data-en="Loads about 1 MB of graphics.">Lädt rund 1 MB Grafik.</p>
       </div>
@@ -143,6 +163,13 @@
     </div>
   </div>
 
+  <section class="sbeste">
+    <h2 class="stasten__h" data-en="Leaderboard">Bestenliste</h2>
+    <p class="sbeste__t" data-en="Money plus finished jobs count. With an account your best run is saved and shows up here.">Gezählt werden Geld und erledigte Aufträge. Mit Konto wird dein bester Lauf gespeichert und erscheint hier.</p>
+    <ol class="sbeste__liste" id="spielBeste"></ol>
+    <p class="sbeste__eigen" id="spielEigen"></p>
+  </section>
+
   <section class="stasten">
     <h2 class="stasten__h" data-en="Controls">Steuerung</h2>
     <ul>
@@ -153,8 +180,9 @@
       <li><kbd>Alt</kbd><span data-en="hold: switch between Jason and Lucia">halten: zwischen Jason und Lucia wechseln</span></li>
       <li><kbd>P</kbd><span data-en="pause">Pause</span></li>
       <li><kbd>F</kbd><span data-en="fullscreen">Vollbild</span></li>
+      <li><kbd>M</kbd><span data-en="sound on/off">Ton an/aus</span></li>
     </ul>
-    <p class="stasten__hinweis" data-en="Touch controls for phones are coming with the next update.">Eine Steuerung für Handys kommt mit dem nächsten Schritt dazu.</p>
+    <p class="stasten__hinweis" data-en="On a phone you get a thumbstick on the left and buttons on the right: ⇄ switch character, B handbrake, E get in or out.">Auf dem Handy erscheinen links ein Steuerkreuz und rechts drei Knöpfe: ⇄ Figur wechseln, B Handbremse, E ein- und aussteigen.</p>
   </section>
 </main>
 

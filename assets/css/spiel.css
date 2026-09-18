@@ -218,3 +218,112 @@
 @media (prefers-reduced-motion:reduce){
   .shud__leben i{ transition:none; }
 }
+
+/* ── Auftragszeile und Minikarte ── */
+.shud__auftrag{
+  position:absolute; left:50%; top:clamp(10px, 1.8vw, 20px); transform:translateX(-50%);
+  margin:0; padding:7px 16px; border-radius:999px; max-width:min(560px, 80%);
+  background:rgba(8,13,29,.7); border:1px solid rgba(255,255,255,.12);
+  color:var(--cream); font-size:.8rem; letter-spacing:.04em; text-align:center;
+  opacity:0; transition:opacity .2s var(--ease);
+}
+.shud__auftrag.is-an{ opacity:1; }
+.skarte{
+  position:absolute; left:clamp(10px, 1.6vw, 18px); bottom:clamp(10px, 1.6vw, 18px);
+  width:clamp(112px, 13vw, 168px); height:clamp(112px, 13vw, 168px);
+  border-radius:50%; border:2px solid rgba(255,255,255,.16);
+  background:rgba(8,13,29,.8);
+  box-shadow:0 12px 30px -14px rgba(0,0,0,.9);
+}
+
+@media (max-width:760px){
+  .skarte{ width:96px; height:96px; }
+  .shud__auftrag{ font-size:.72rem; }
+}
+@media (prefers-reduced-motion:reduce){
+  .shud__auftrag{ transition:none; }
+}
+
+/* ── Ton-Knopf ── */
+.ston{
+  position:absolute; right:calc(clamp(10px, 1.6vw, 18px) + 48px); bottom:clamp(10px, 1.6vw, 18px);
+  z-index:3; width:40px; height:40px; display:grid; place-items:center;
+  border-radius:12px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(8,13,29,.6); color:var(--cream); cursor:pointer;
+  backdrop-filter:blur(6px);
+}
+.ston:hover{ background:var(--pink); color:var(--ink); border-color:var(--pink); }
+.ston.is-aus [data-ton-wellen]{ opacity:.25; }
+
+/* ── Steuerung für Handys ── */
+.stouch{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+.stouch[hidden]{ display:none; }
+.stouch__stick{
+  position:absolute; left:18px; bottom:18px;
+  width:132px; height:132px; border-radius:50%;
+  background:rgba(8,13,29,.45); border:1px solid rgba(255,255,255,.16);
+  pointer-events:auto; touch-action:none;
+}
+.stouch__stick i{
+  position:absolute; left:50%; top:50%; width:52px; height:52px; margin:-26px 0 0 -26px;
+  border-radius:50%; background:rgba(255,138,180,.75);
+  box-shadow:0 6px 18px -6px rgba(0,0,0,.8);
+}
+.stouch__knoepfe{
+  position:absolute; right:18px; bottom:18px;
+  display:grid; grid-template-columns:repeat(2, 64px); gap:10px; justify-items:center;
+  pointer-events:auto;
+}
+.stouch__knoepfe button{
+  width:64px; height:64px; border-radius:50%;
+  border:1px solid rgba(255,255,255,.18); background:rgba(8,13,29,.55);
+  color:var(--cream); font-family:var(--f-label); font-weight:800; font-size:1.1rem;
+  touch-action:none;
+}
+.stouch__knoepfe button:last-child{ grid-column:2; background:rgba(255,138,180,.35); }
+.stouch__knoepfe button:active{ background:var(--pink); color:var(--ink); }
+
+/* ── Bestenliste ── */
+.sbeste{ margin:var(--s4) auto 0; max-width:1400px; }
+.sbeste__t{ color:var(--fg-dim); font-size:.86rem; margin:0 0 14px; max-width:60ch; }
+.sbeste__liste{
+  list-style:none; margin:0; padding:0; counter-reset:platz;
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:8px 20px;
+}
+.sbeste__liste li{
+  counter-increment:platz;
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px; border-radius:12px;
+  background:rgba(255,255,255,.04); border:1px solid var(--line);
+}
+.sbeste__liste li::before{
+  content:counter(platz) ".";
+  font-family:var(--f-label); font-weight:800; font-size:.8rem;
+  color:var(--pink); min-width:22px;
+}
+.sbeste__liste b{ color:var(--cream); font-weight:700; font-size:.92rem; flex:1; }
+.sbeste__liste span{ font-family:var(--f-label); font-weight:800; color:#9ff0b6; }
+.sbeste__liste li.is-ich{ border-color:var(--pink); background:rgba(255,120,168,.1); }
+.sbeste__eigen{ margin-top:12px; font-size:.86rem; color:var(--fg-mid); }
+
+/* ── Handy: Bedienung an die Ecken, Radar nach rechts oben ──
+   Auf dem Telefon liegen Daumen links unten und rechts unten — dort darf
+   nichts anderes sein. */
+@media (max-width:760px), (pointer: coarse) {
+  .sbuehne{ aspect-ratio:3/4; max-height:74svh; }
+  .skarte{
+    left:auto; bottom:auto;
+    right:10px; top:104px;
+    width:84px; height:84px; border-width:1px;
+  }
+  .svoll{ right:auto; bottom:auto; left:10px; top:96px; width:34px; height:34px; border-radius:10px; }
+  .ston{ right:auto; bottom:auto; left:52px; top:96px; width:34px; height:34px; border-radius:10px; }
+  .svoll svg, .ston svg{ width:16px; height:16px; }
+  .stouch__stick{ width:104px; height:104px; left:12px; bottom:12px; }
+  .stouch__stick i{ width:42px; height:42px; margin:-21px 0 0 -21px; }
+  .stouch__knoepfe{ right:12px; bottom:12px; grid-template-columns:repeat(2, 52px); gap:8px; }
+  .stouch__knoepfe button{ width:52px; height:52px; font-size:.95rem; }
+  .shud__hinweis{ bottom:132px; font-size:.74rem; padding:6px 12px; }
+  .shud__auftrag{ top:auto; bottom:170px; font-size:.72rem; }
+  .shud__leben{ width:72px; }
+}

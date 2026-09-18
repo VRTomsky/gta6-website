@@ -20,6 +20,10 @@ import { Figur, passantenVerteilen, passantenNachziehen, PASSANT_ARTEN } from ".
 import { Fahrzeug, autosVerteilen, TYPEN } from "./fahrzeug.js";
 import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
+import { Missionen } from "./missionen.js";
+import * as Minikarte from "./minikarte.js";
+import * as Ton from "./ton.js";
+import { zustand as konto } from "../konto/konto.js";
 
 const EN = (window.LANG || document.documentElement.lang || "de").startsWith("en");
 const L = (de, en) => (EN ? en : de);
@@ -34,8 +38,15 @@ const hud = {
   geld: document.querySelector("[data-hud=geld]"),
   sterne: document.querySelector("[data-hud=sterne]"),
   leben: document.querySelector("[data-hud=leben]"),
-  endeText: document.querySelector("[data-hud=endeText]")
+  endeText: document.querySelector("[data-hud=endeText]"),
+  auftrag: document.querySelector("[data-hud=auftrag]")
 };
+const radar = document.getElementById("spielKarte");
+const besteListe = document.getElementById("spielBeste");
+const eigenText = document.getElementById("spielEigen");
+const tonKnopf = document.getElementById("spielTon");
+const touchFeld = document.getElementById("spielTouch");
+const stick = document.getElementById("spielStick");
 const endeFeld = document.getElementById("spielEnde");
 const start = document.getElementById("spielStart");
 const pauseFeld = document.getElementById("spielPause");
@@ -67,6 +78,8 @@ const zustand = {
   leben: 100,
   geld: 0,
   fahndung: new Fahndung(),
+  missionen: new Missionen(Karte.START.x, Karte.START.y),
+  bestwert: 0,
   ende: 0,              // Restzeit der Einblendung „Busted"/„Erledigt"
   /* Wechsel-Anzeige und -Fahrt der Kamera */
   wahl: null,          // Figur, die gerade im Wechselmenü gewählt ist
@@ -101,6 +114,7 @@ addEventListener("keydown", e => {
   }
   if (e.code === "KeyE") einUndAussteigen();
   if (e.code === "KeyF") vollbildUmschalten();
+  if (e.code === "KeyM") tonUmschalten();
   if (e.code === "KeyP" || e.code === "Escape") pauseUmschalten();
 });
 addEventListener("keyup", e => {
@@ -108,6 +122,57 @@ addEventListener("keyup", e => {
   if (e.code === "AltLeft" || e.code === "AltRight") wechselSchliessen(true);
 });
 addEventListener("blur", () => tasten.clear());
+
+/* ── Steuerung mit dem Finger ──
+   Links ein Kreuz, das wie ein Stick funktioniert, rechts drei Knöpfe.
+   Erscheint nur, wenn das Gerät Touch kann. */
+const finger = { x: 0, y: 0, aktiv: false, bremse: false };
+const istTouch = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+
+function touchEinrichten() {
+  if (!istTouch) return;
+  touchFeld.hidden = false;
+  const knopf = stick.querySelector("i");
+  let mitte = null;
+
+  const setzen = e => {
+    const r = stick.getBoundingClientRect();
+    mitte = mitte || { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const dx = e.clientX - mitte.x, dy = e.clientY - mitte.y;
+    const weite = Math.min(1, Math.hypot(dx, dy) / (r.width * 0.42));
+    const w = Math.atan2(dy, dx);
+    finger.x = Math.cos(w) * weite;
+    finger.y = Math.sin(w) * weite;
+    finger.aktiv = true;
+    knopf.style.transform = `translate(${finger.x * r.width * 0.3}px, ${finger.y * r.height * 0.3}px)`;
+  };
+  const los = () => {
+    finger.aktiv = false;
+    finger.x = finger.y = 0;
+    knopf.style.transform = "";
+    mitte = null;
+  };
+
+  stick.addEventListener("pointerdown", e => { stick.setPointerCapture(e.pointerId); setzen(e); });
+  stick.addEventListener("pointermove", e => { if (finger.aktiv) setzen(e); });
+  stick.addEventListener("pointerup", los);
+  stick.addEventListener("pointercancel", los);
+
+  touchFeld.querySelectorAll("[data-touch]").forEach(b => {
+    const art = b.dataset.touch;
+    b.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      if (art === "e") einUndAussteigen();
+      if (art === "bremse") finger.bremse = true;
+      if (art === "wechsel") {
+        if (zustand.wahl) wechselSchliessen(true);
+        else { wechselOeffnen(); wechselWaehlen(zustand.aktiv === "lucia" ? "jason" : "lucia"); }
+      }
+    });
+    b.addEventListener("pointerup", () => { if (art === "bremse") finger.bremse = false; });
+    b.addEventListener("pointercancel", () => { if (art === "bremse") finger.bremse = false; });
+  });
+}
 
 /* ── Spielwelt aufbauen ──────────────────────────────────── */
 function weltBauen() {
@@ -307,6 +372,7 @@ function zusammenstoesse(dt, f, alleAutos) {
       auto.vy -= ny * wucht * 0.5;
       auto.schaden = Math.min(120, auto.schaden + wucht * 1.2);
       zustand.leben -= wucht * 0.35;
+      if (wucht > 3) Ton.rumms(Math.min(1, wucht / 14));
       if (zustand.fahndung.streifen.includes(a) && rammPause <= 0 && wucht > 4) {
         zustand.fahndung.melden(1);
         hinweis(L("Streifenwagen gerammt", "You rammed a cop car"));
@@ -345,6 +411,7 @@ function neustartAn(x, y) {
 }
 
 function verhaftet() {
+  bestwertSichern();
   const f = spieler();
   zustand.geld = Math.round(zustand.geld * 0.7);
   endeZeigen(L("VERHAFTET", "BUSTED"), false);
@@ -352,6 +419,7 @@ function verhaftet() {
 }
 
 function erledigt() {
+  bestwertSichern();
   const f = spieler();
   endeZeigen(L("ERLEDIGT", "WASTED"), true);
   zustand.geld = Math.round(zustand.geld * 0.85);
@@ -431,11 +499,16 @@ function rechnen(dt) {
   if (zustand.wahl) return;                        // Auswahl offen: Spiel wartet
 
   const f = spieler();
-  const vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
-  const quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
+  let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
+  let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
+  if (finger.aktiv) {                               // Finger hat Vorrang
+    quer = finger.x;
+    vor = -finger.y;
+  }
+  const bremse = tasten.has("Space") || finger.bremse;
 
   if (f.imAuto) {
-    f.imAuto.fahren(vor, quer, tasten.has("Space"), dt);
+    f.imAuto.fahren(vor, quer, bremse, dt);
     f.x = f.imAuto.x;
     f.y = f.imAuto.y;
     f.winkel = f.imAuto.winkel;
@@ -475,11 +548,22 @@ function rechnen(dt) {
   /* ── Zusammenstöße ── */
   zusammenstoesse(dt, f, alleAutos);
 
+  /* ── Missionen ── */
+  const geldVorher = zustand.geld;
+  zustand.missionen.rechnen(dt, f, zustand);
+  if (zustand.geld > geldVorher) { Ton.kasse(); bestwertSichern(); }
+  const auftrag = zustand.missionen.anzeige();
+  hud.auftrag.textContent = auftrag;
+  hud.auftrag.classList.toggle("is-an", !!auftrag);
+
   /* ── Polizei ── */
   zustand.fahndung.rechnen(dt, f, alleAutos.concat(zustand.fahndung.streifen));
   if (zustand.fahndung.verhaftet(f)) verhaftet();
   if (zustand.leben <= 0) erledigt();
   hudFahndung();
+
+  /* ── Ton ── */
+  Ton.laufen(f.imAuto ? Math.hypot(f.imAuto.vx, f.imAuto.vy) : 0, zustand.fahndung.stufe, dt);
 
   kameraFolgen(dt);
 
@@ -499,6 +583,7 @@ function rechnen(dt) {
 }
 
 function zeichnen() {
+  Minikarte.zeichnen(radar, zustand, spieler());
   ctx.fillStyle = "#0b1124";
   ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
   Karte.zeichnen(ctx, kamera, zustand.zeit * 1000);
@@ -551,6 +636,7 @@ function zeichnen() {
   for (const a of zustand.autos) if (sichtbar(a)) a.zeichnen(ctx, kamera);
   for (const a of zustand.verkehr) if (sichtbar(a)) a.zeichnen(ctx, kamera);
   zustand.fahndung.zeichnen(ctx, kamera, sichtbar);
+  zustand.missionen.zeichnen(ctx, kamera, zustand.zeit);
   for (const name of Object.keys(zustand.figuren)) {
     const f = zustand.figuren[name];
     if (sichtbar(f)) f.zeichnen(ctx, kamera);
@@ -575,6 +661,78 @@ function zeichnen() {
     }
   }
 }
+
+/* ── Punkte und Bestenliste ──
+   Punkte = Geld + 750 je erledigtem Auftrag. Wer angemeldet ist, dessen
+   Bestwert steht in der Datenbank und damit in der Liste auf der Seite;
+   ohne Konto bleibt er in diesem Browser. */
+const PUNKTE_JE_AUFTRAG = 750;
+const punkteStand = () => zustand.geld + zustand.missionen.erledigt.size * PUNKTE_JE_AUFTRAG;
+
+function bestwertLesenLokal() {
+  try { return parseInt(localStorage.getItem("spiel-bestwert") || "0", 10) || 0; } catch (e) { return 0; }
+}
+
+async function bestwertLaden() {
+  if (konto.backend && konto.nutzer) {
+    zustand.bestwert = await konto.backend.bestwertLaden(konto.nutzer.uid);
+  } else {
+    zustand.bestwert = bestwertLesenLokal();
+  }
+  eigenZeigen();
+}
+
+let speichernLaeuft = false;
+async function bestwertSichern() {
+  const punkte = punkteStand();
+  if (punkte <= zustand.bestwert || speichernLaeuft) return;
+  zustand.bestwert = punkte;
+  eigenZeigen();
+  try { localStorage.setItem("spiel-bestwert", String(punkte)); } catch (e) {}
+  if (!konto.backend || !konto.nutzer || !konto.profil) return;
+  speichernLaeuft = true;
+  try {
+    await konto.backend.bestwertSetzen(konto.nutzer.uid, konto.profil.username, punkte);
+    bestenlisteZeigen();
+  } finally {
+    speichernLaeuft = false;
+  }
+}
+
+function eigenZeigen() {
+  const punkte = punkteStand();
+  eigenText.textContent = konto.nutzer
+    ? L(`Dein Bestwert: ${zustand.bestwert.toLocaleString("de-DE")} · dieser Lauf: ${punkte.toLocaleString("de-DE")}`,
+        `Your best: ${zustand.bestwert.toLocaleString("en-US")} · this run: ${punkte.toLocaleString("en-US")}`)
+    : L(`Bestwert in diesem Browser: ${zustand.bestwert.toLocaleString("de-DE")} — mit Konto landest du in der Liste.`,
+        `Best in this browser: ${zustand.bestwert.toLocaleString("en-US")} — with an account you make the list.`);
+}
+
+async function bestenlisteZeigen() {
+  if (!konto.backend) {
+    besteListe.innerHTML = `<li><b>${L("Noch keine Einträge", "No entries yet")}</b><span>—</span></li>`;
+    return;
+  }
+  const liste = await konto.backend.bestenliste(10);
+  if (!liste.length) {
+    besteListe.innerHTML = `<li><b>${L("Noch keine Einträge — sei der Erste", "No entries yet — be the first")}</b><span>—</span></li>`;
+    return;
+  }
+  const ich = konto.profil && konto.profil.username;
+  besteListe.innerHTML = liste.map(e => `
+    <li class="${e.name === ich ? "is-ich" : ""}">
+      <b>${e.name.replace(/[&<>"]/g, "")}</b>
+      <span>${e.punkte.toLocaleString(EN ? "en-US" : "de-DE")}</span>
+    </li>`).join("");
+}
+
+/* ── Ton an und aus ─────────────────────────────────────── */
+function tonUmschalten() {
+  const an = Ton.stumm();
+  tonKnopf.classList.toggle("is-aus", !an);
+  hinweis(an ? L("Ton an", "Sound on") : L("Ton aus", "Sound off"));
+}
+tonKnopf.addEventListener("click", tonUmschalten);
 
 /* ── Vollbild ───────────────────────────────────────────── */
 function vollbildUmschalten() {
@@ -610,12 +768,17 @@ async function starten() {
   Tex.bauen();
   await Bilder.laden([...autos, ...figuren]);
 
+  Ton.bereit();
+  touchEinrichten();
   weltBauen();
   groesseAnpassen();
   start.hidden = true;
   leinwand.focus();
   zustand.laeuft = true;
   hud.figur.textContent = spieler().daten.name;
+  bestwertLaden();
+  bestenlisteZeigen();
+  addEventListener("pagehide", bestwertSichern);
   hinweis(L("E drücken, um einzusteigen · Alt halten zum Wechseln",
             "Press E to get in a car · hold Alt to switch"));
   letzte = performance.now();
