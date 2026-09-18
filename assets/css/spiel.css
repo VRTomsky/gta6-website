@@ -155,3 +155,66 @@
 @media (prefers-reduced-motion:reduce){
   .swechsel, .swechsel__karte img{ transition:none; }
 }
+
+/* ── Vollbild ──
+   Im Vollbild füllt die Bühne den Bildschirm; Seitenrand und Verhältnis
+   fallen weg, damit man mehr von der Stadt sieht. */
+.svoll{
+  position:absolute; right:clamp(10px, 1.6vw, 18px); bottom:clamp(10px, 1.6vw, 18px);
+  z-index:3; width:40px; height:40px; display:grid; place-items:center;
+  border-radius:12px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(8,13,29,.6); color:var(--cream); cursor:pointer;
+  backdrop-filter:blur(6px);
+  transition:background-color .18s var(--ease), border-color .18s var(--ease);
+}
+.svoll:hover{ background:var(--pink); color:var(--ink); border-color:var(--pink); }
+
+.sbuehne:fullscreen{
+  width:100vw; height:100vh; max-height:none; aspect-ratio:auto;
+  border:0; border-radius:0;
+}
+.sbuehne:fullscreen #spielFeld{ border-radius:0; }
+
+@media (prefers-reduced-motion:reduce){
+  .svoll{ transition:none; }
+}
+
+/* ── Anzeige: Geld, Fahndungssterne, Leben ── */
+.shud__geld{
+  font-weight:800; font-size:1rem; color:#9ff0b6;
+  font-variant-numeric:tabular-nums;
+}
+.shud__sterne{ display:flex; gap:3px; min-height:14px; }
+.shud__sterne i{
+  width:14px; height:14px; display:block;
+  clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background:rgba(255,255,255,.18);
+}
+.shud__sterne i.is-an{ background:#ffd24a; }
+.shud__leben{
+  width:96px; height:7px; border-radius:99px;
+  background:rgba(255,255,255,.14); overflow:hidden;
+}
+.shud__leben i{
+  display:block; height:100%; width:100%;
+  background:linear-gradient(90deg, #ff4f70, #ffd24a 60%, #3fdc7a);
+  transition:width .2s var(--ease);
+}
+
+/* ── Verhaftet / Erledigt ── */
+.sende{
+  position:absolute; inset:0; display:grid; place-items:center;
+  background:rgba(8,12,26,.6); backdrop-filter:blur(2px);
+  pointer-events:none;
+}
+.sende[hidden]{ display:none; }
+.sende__t{
+  margin:0; font-family:var(--f-display); font-weight:800;
+  font-size:clamp(3rem, 12vw, 8rem); letter-spacing:.06em;
+  color:#ff6a86; text-shadow:0 8px 40px rgba(255,60,90,.5);
+}
+.sende--tot .sende__t{ color:#ffd24a; text-shadow:0 8px 40px rgba(255,190,60,.45); }
+
+@media (prefers-reduced-motion:reduce){
+  .shud__leben i{ transition:none; }
+}

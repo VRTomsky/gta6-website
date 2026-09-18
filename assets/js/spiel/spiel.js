@@ -15,8 +15,11 @@
 
 import * as Karte from "./karte.js";
 import * as Bilder from "./bilder.js";
+import * as Tex from "./texturen.js";
 import { Figur, passantenVerteilen, passantenNachziehen, PASSANT_ARTEN } from "./wesen.js";
 import { Fahrzeug, autosVerteilen, TYPEN } from "./fahrzeug.js";
+import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
+import { Fahndung, STUFEN } from "./polizei.js";
 
 const EN = (window.LANG || document.documentElement.lang || "de").startsWith("en");
 const L = (de, en) => (EN ? en : de);
@@ -27,11 +30,18 @@ const hud = {
   figur: document.querySelector("[data-hud=figur]"),
   tempo: document.querySelector("[data-hud=tempo]"),
   ort: document.querySelector("[data-hud=ort]"),
-  hinweis: document.querySelector("[data-hud=hinweis]")
+  hinweis: document.querySelector("[data-hud=hinweis]"),
+  geld: document.querySelector("[data-hud=geld]"),
+  sterne: document.querySelector("[data-hud=sterne]"),
+  leben: document.querySelector("[data-hud=leben]"),
+  endeText: document.querySelector("[data-hud=endeText]")
 };
+const endeFeld = document.getElementById("spielEnde");
 const start = document.getElementById("spielStart");
 const pauseFeld = document.getElementById("spielPause");
 const wechselFeld = document.getElementById("spielWechsel");
+const buehne = document.querySelector(".sbuehne");
+const vollKnopf = document.getElementById("spielVollbild");
 const ruhig = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const kamera = { x: Karte.START.x, y: Karte.START.y, zoom: 30, breite: 0, hoehe: 0 };
@@ -51,14 +61,22 @@ const zustand = {
   },
   aktiv: "lucia",
   autos: [],
+  verkehr: [],
   passanten: [],
   zeit: 0,
+  leben: 100,
+  geld: 0,
+  fahndung: new Fahndung(),
+  ende: 0,              // Restzeit der Einblendung „Busted"/„Erledigt"
   /* Wechsel-Anzeige und -Fahrt der Kamera */
   wahl: null,          // Figur, die gerade im Wechselmenü gewählt ist
   fahrt: null          // { von, nach, t } während der Kamerafahrt
 };
 
 const spieler = () => zustand.figuren[zustand.aktiv];
+
+/* Für Tests im Browser erreichbar: window.__spiel */
+window.__spiel = zustand;
 
 /* ── Eingabe ─────────────────────────────────────────────── */
 const tasten = new Set();
@@ -82,6 +100,7 @@ addEventListener("keydown", e => {
     return;
   }
   if (e.code === "KeyE") einUndAussteigen();
+  if (e.code === "KeyF") vollbildUmschalten();
   if (e.code === "KeyP" || e.code === "Escape") pauseUmschalten();
 });
 addEventListener("keyup", e => {
@@ -94,6 +113,7 @@ addEventListener("blur", () => tasten.clear());
 function weltBauen() {
   zustand.autos = autosVerteilen(30, Karte.START.x, Karte.START.y, 110);
   zustand.passanten = passantenVerteilen(55, Karte.START.x, Karte.START.y);
+  zustand.verkehr = verkehrAufbauen(22, Karte.START.x, Karte.START.y);
   /* Ein Wagen steht auf der Straße neben dem Start — nah genug zum
      Einsteigen, aber nicht auf der Figur */
   let nah = null;
@@ -122,7 +142,7 @@ function einUndAussteigen() {
     return;
   }
   let naechstes = null, beste = 4.2;
-  for (const a of zustand.autos) {
+  for (const a of zustand.autos.concat(zustand.verkehr)) {
     if (a.fahrer) continue;
     const d = Math.hypot(a.x - f.x, a.y - f.y);
     if (d < beste) { beste = d; naechstes = a; }
@@ -143,10 +163,21 @@ function einUndAussteigen() {
 function wechselOeffnen() {
   if (zustand.wahl || zustand.fahrt) return;
   zustand.wahl = zustand.aktiv;
+  mausWeg = 0;
   wechselFeld.hidden = false;
   requestAnimationFrame(() => wechselFeld.classList.add("is-an"));
   wechselZeichnen();
 }
+
+/* Die Maus wählt, solange Alt gehalten wird: nach links Jason, nach
+   rechts Lucia — wie mit dem Stick in GTA. */
+let mausWeg = 0;
+addEventListener("mousemove", e => {
+  if (!zustand.wahl) return;
+  mausWeg += e.movementX || 0;
+  if (mausWeg < -26) { wechselWaehlen("jason"); mausWeg = 0; }
+  if (mausWeg > 26) { wechselWaehlen("lucia"); mausWeg = 0; }
+});
 
 function wechselWaehlen(art) {
   if (!zustand.wahl || !zustand.figuren[art]) return;
@@ -222,11 +253,116 @@ function fahrtRechnen(dt) {
 
 const keyOf = figur => Object.keys(zustand.figuren).find(k => zustand.figuren[k] === figur);
 
+function hudFahndung() {
+  const stufe = zustand.fahndung.stufe;
+  if (hud.sterne.childElementCount !== STUFEN) {
+    hud.sterne.innerHTML = Array.from({ length: STUFEN }, () => "<i></i>").join("");
+  }
+  [...hud.sterne.children].forEach((st, i) => st.classList.toggle("is-an", i < stufe));
+  hud.leben.style.width = Math.max(0, Math.min(100, zustand.leben)) + "%";
+  hud.geld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
+}
+
 let hinweisZeit = 0;
 function hinweis(text) {
   hud.hinweis.textContent = text;
   hud.hinweis.classList.add("is-an");
   hinweisZeit = 2.6;
+}
+
+/* ── Zusammenstöße ──
+   Alles bewusst einfach: Kreis gegen Kreis. Wer im Auto sitzt, rammt;
+   wer zu Fuß ist, wird umgerissen. */
+let rammPause = 0;
+function zusammenstoesse(dt, f, alleAutos) {
+  rammPause = Math.max(0, rammPause - dt);
+  const auto = f.imAuto;
+
+  if (auto) {
+    const tempo = Math.hypot(auto.vx, auto.vy);
+    /* Fußgänger anfahren */
+    for (const p of zustand.passanten) {
+      if (Math.hypot(p.x - auto.x, p.y - auto.y) > 2.2) continue;
+      if (tempo > 3) {
+        p.x += (p.x - auto.x) * 0.6 + auto.vx * 0.12;
+        p.y += (p.y - auto.y) * 0.6 + auto.vy * 0.12;
+        p.flucht = 3;
+        if (rammPause <= 0) {
+          zustand.fahndung.melden(1);
+          hinweis(L("Fußgänger angefahren", "You hit a pedestrian"));
+          rammPause = 2.5;
+        }
+      }
+    }
+    /* Andere Autos und Streifenwagen rammen */
+    for (const a of alleAutos.concat(zustand.fahndung.streifen)) {
+      if (a === auto) continue;
+      const d = Math.hypot(a.x - auto.x, a.y - auto.y);
+      if (d > auto.daten.lang * 0.5 + a.daten.lang * 0.5) continue;
+      const nx = (a.x - auto.x) / (d || 1), ny = (a.y - auto.y) / (d || 1);
+      const wucht = Math.abs(auto.vx * nx + auto.vy * ny);
+      a.vx += nx * wucht * 0.8;
+      a.vy += ny * wucht * 0.8;
+      auto.vx -= nx * wucht * 0.5;
+      auto.vy -= ny * wucht * 0.5;
+      auto.schaden = Math.min(120, auto.schaden + wucht * 1.2);
+      zustand.leben -= wucht * 0.35;
+      if (zustand.fahndung.streifen.includes(a) && rammPause <= 0 && wucht > 4) {
+        zustand.fahndung.melden(1);
+        hinweis(L("Streifenwagen gerammt", "You rammed a cop car"));
+        rammPause = 2.5;
+      }
+    }
+    if (auto.schaden > 110) {                     // Wagen ist Schrott
+      hinweis(L("Der Wagen ist hin", "The car is wrecked"));
+      zustand.leben -= 10;
+      einUndAussteigen();
+    }
+  } else {
+    /* Zu Fuß: von einem Auto erwischt zu werden tut weh */
+    for (const a of alleAutos.concat(zustand.fahndung.streifen)) {
+      const d = Math.hypot(a.x - f.x, a.y - f.y);
+      if (d > 1.8) continue;
+      const tempo = Math.hypot(a.vx, a.vy);
+      if (tempo < 3) continue;
+      zustand.leben -= tempo * 1.6 * dt * 10;
+      f.x += (f.x - a.x) * 0.4;
+      f.y += (f.y - a.y) * 0.4;
+      hinweis(L("Angefahren!", "You got hit!"));
+    }
+  }
+}
+
+function neustartAn(x, y) {
+  const f = spieler();
+  if (f.imAuto) { f.imAuto.fahrer = null; f.imAuto = null; }
+  const p = Karte.freierPunkt(x, y, [Karte.ART.GEHWEG, Karte.ART.PARKPLATZ], 40);
+  f.x = p.x; f.y = p.y;
+  f.vx = f.vy = 0;
+  kamera.x = p.x; kamera.y = p.y;
+  zustand.leben = 100;
+  zustand.fahndung.loeschen();
+}
+
+function verhaftet() {
+  const f = spieler();
+  zustand.geld = Math.round(zustand.geld * 0.7);
+  endeZeigen(L("VERHAFTET", "BUSTED"), false);
+  neustartAn(f.x + 60, f.y + 40);
+}
+
+function erledigt() {
+  const f = spieler();
+  endeZeigen(L("ERLEDIGT", "WASTED"), true);
+  zustand.geld = Math.round(zustand.geld * 0.85);
+  neustartAn(f.x - 50, f.y - 30);
+}
+
+function endeZeigen(text, tot) {
+  hud.endeText.textContent = text;
+  endeFeld.classList.toggle("sende--tot", tot);
+  endeFeld.hidden = false;
+  zustand.ende = 2.2;
 }
 
 /* ── Kamera und Größe ───────────────────────────────────── */
@@ -318,8 +454,17 @@ function rechnen(dt) {
     }
   }
 
+  /* Verkehr: fahren lassen, was in der Nähe ist */
+  const alleAutos = zustand.autos.concat(zustand.verkehr);
+  for (const a of zustand.verkehr) {
+    if (a.fahrer) continue;                      // gerade vom Spieler gefahren
+    if (Math.abs(a.x - f.x) > 120 || Math.abs(a.y - f.y) > 120) continue;
+    a.denken(dt, zustand.zeit * 1000, alleAutos, zustand.passanten);
+  }
+  verkehrNachziehen(zustand.verkehr, f.x, f.y);
+
   /* Passanten: nur die in der Nähe bewegen, der Rest ruht */
-  const naheAutos = zustand.autos.filter(a =>
+  const naheAutos = alleAutos.filter(a =>
     Math.abs(a.x - f.x) < 60 && Math.abs(a.y - f.y) < 60 && Math.hypot(a.vx, a.vy) > 3);
   for (const p of zustand.passanten) {
     if (Math.abs(p.x - f.x) > 90 || Math.abs(p.y - f.y) > 90) continue;
@@ -327,11 +472,24 @@ function rechnen(dt) {
   }
   passantenNachziehen(zustand.passanten, f.x, f.y);
 
+  /* ── Zusammenstöße ── */
+  zusammenstoesse(dt, f, alleAutos);
+
+  /* ── Polizei ── */
+  zustand.fahndung.rechnen(dt, f, alleAutos.concat(zustand.fahndung.streifen));
+  if (zustand.fahndung.verhaftet(f)) verhaftet();
+  if (zustand.leben <= 0) erledigt();
+  hudFahndung();
+
   kameraFolgen(dt);
 
   if (hinweisZeit > 0) {
     hinweisZeit -= dt;
     if (hinweisZeit <= 0) hud.hinweis.classList.remove("is-an");
+  }
+  if (zustand.ende > 0) {
+    zustand.ende -= dt;
+    if (zustand.ende <= 0) endeFeld.hidden = true;
   }
 
   hud.tempo.textContent = f.imAuto
@@ -367,10 +525,32 @@ function zeichnen() {
     ctx.lineWidth = Math.max(1.5, kamera.zoom * 0.07);
     ctx.stroke();
     ctx.restore();
+
+    /* Namensschild über dem Kopf — sonst sieht Lucia aus wie jede andere
+       Passantin. Nur, wenn nah genug herangezoomt ist. */
+    if (kamera.zoom > 16) {
+      const text = f.daten.name.toUpperCase();
+      ctx.save();
+      ctx.font = `700 ${Math.round(kamera.zoom * 0.32)}px "Barlow Condensed", system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const breite = ctx.measureText(text).width + kamera.zoom * 0.34;
+      const hoehe = kamera.zoom * 0.46;
+      const ty2 = py - kamera.zoom * 1.05;
+      ctx.fillStyle = aktiv ? "rgba(255,120,168,.92)" : "rgba(20,28,52,.8)";
+      ctx.beginPath();
+      ctx.roundRect(px - breite / 2, ty2 - hoehe / 2, breite, hoehe, hoehe / 2);
+      ctx.fill();
+      ctx.fillStyle = aktiv ? "#1b1024" : "rgba(220,232,255,.9)";
+      ctx.fillText(text, px, ty2 + 1);
+      ctx.restore();
+    }
   }
 
   for (const p of zustand.passanten) if (sichtbar(p)) p.zeichnen(ctx, kamera);
   for (const a of zustand.autos) if (sichtbar(a)) a.zeichnen(ctx, kamera);
+  for (const a of zustand.verkehr) if (sichtbar(a)) a.zeichnen(ctx, kamera);
+  zustand.fahndung.zeichnen(ctx, kamera, sichtbar);
   for (const name of Object.keys(zustand.figuren)) {
     const f = zustand.figuren[name];
     if (sichtbar(f)) f.zeichnen(ctx, kamera);
@@ -379,9 +559,9 @@ function zeichnen() {
   /* Hinweisring um Autos, in die man einsteigen kann */
   const f = spieler();
   if (!f.imAuto) {
-    for (const a of zustand.autos) {
+    for (const a of zustand.autos.concat(zustand.verkehr)) {
       if (a.fahrer) continue;
-      if (Math.hypot(a.x - f.x, a.y - f.y) > 3) continue;
+      if (Math.hypot(a.x - f.x, a.y - f.y) > 3.4) continue;
       const px = (a.x - kamera.x) * kamera.zoom + kamera.breite / 2;
       const py = (a.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
       ctx.strokeStyle = "rgba(255,138,180,.85)";
@@ -396,6 +576,20 @@ function zeichnen() {
   }
 }
 
+/* ── Vollbild ───────────────────────────────────────────── */
+function vollbildUmschalten() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else if (buehne.requestFullscreen) {
+    buehne.requestFullscreen().catch(() => hinweis(L("Vollbild geht hier nicht", "Fullscreen is not available here")));
+  }
+}
+vollKnopf.addEventListener("click", vollbildUmschalten);
+document.addEventListener("fullscreenchange", () => {
+  groesseAnpassen();
+  if (document.fullscreenElement) leinwand.focus();
+});
+
 /* ── Pause, Start ───────────────────────────────────────── */
 function pauseUmschalten(an) {
   zustand.pause = an === undefined ? !zustand.pause : an;
@@ -409,10 +603,11 @@ async function starten() {
   start.classList.add("is-laden");
   const autos = Object.keys(TYPEN).map(t => "auto_" + t);
   const figuren = [];
-  for (const art of ["lucia", "jason", ...PASSANT_ARTEN]) {
+  for (const art of ["lucia", "jason", "polizist", "polizistin", ...PASSANT_ARTEN]) {
     figuren.push(`${art}_steht`);
     for (let i = 0; i < 8; i++) figuren.push(`${art}_lauf${i}`);
   }
+  Tex.bauen();
   await Bilder.laden([...autos, ...figuren]);
 
   weltBauen();

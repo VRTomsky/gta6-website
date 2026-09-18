@@ -82,12 +82,24 @@
   <div class="sbuehne">
     <canvas id="spielFeld" tabindex="0" aria-label="Spielfeld" data-en-aria-label="Game canvas"></canvas>
 
+    <button type="button" class="svoll" id="spielVollbild"
+            aria-label="Vollbild" data-en-aria-label="Fullscreen" title="Vollbild (F)"
+            data-en-title="Fullscreen (F)">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
     <div class="shud" aria-hidden="true">
       <div class="shud__links">
         <span class="shud__figur" data-hud="figur">Lucia</span>
         <span class="shud__ort" data-hud="ort">Vice City</span>
       </div>
       <div class="shud__rechts">
+        <span class="shud__geld" data-hud="geld">$0</span>
+        <span class="shud__sterne" data-hud="sterne"></span>
+        <span class="shud__leben"><i data-hud="leben"></i></span>
         <span class="shud__tempo" data-hud="tempo">0 km/h</span>
       </div>
       <p class="shud__hinweis" data-hud="hinweis"></p>
@@ -105,7 +117,7 @@
 
     <!-- Figurenwechsel: erscheint, solange Alt gehalten wird -->
     <div class="swechsel" id="spielWechsel" hidden>
-      <p class="swechsel__k" data-en="Hold Alt · choose with A / D">Alt halten · mit A / D wählen</p>
+      <p class="swechsel__k" data-en="Hold Alt · move the mouse left or right">Alt halten · Maus nach links oder rechts</p>
       <div class="swechsel__reihe">
         <button type="button" class="swechsel__karte" data-wechsel="jason">
           <img src="assets/img/avatars/jason.jpg" alt="Jason Duval" width="120" height="120">
@@ -119,6 +131,11 @@
           <span>Lucia</span>
         </button>
       </div>
+    </div>
+
+    <!-- Einblendung bei Verhaftung oder Ableben -->
+    <div class="sende" id="spielEnde" hidden>
+      <p class="sende__t" data-hud="endeText">BUSTED</p>
     </div>
 
     <div class="spause" id="spielPause" hidden>
@@ -135,6 +152,7 @@
       <li><kbd data-en="Space">Leertaste</kbd><span data-en="handbrake">Handbremse</span></li>
       <li><kbd>Alt</kbd><span data-en="hold: switch between Jason and Lucia">halten: zwischen Jason und Lucia wechseln</span></li>
       <li><kbd>P</kbd><span data-en="pause">Pause</span></li>
+      <li><kbd>F</kbd><span data-en="fullscreen">Vollbild</span></li>
     </ul>
     <p class="stasten__hinweis" data-en="Touch controls for phones are coming with the next update.">Eine Steuerung für Handys kommt mit dem nächsten Schritt dazu.</p>
   </section>

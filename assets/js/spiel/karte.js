@@ -20,6 +20,8 @@
      zeichnen(ctx, kamera)    sichtbaren Ausschnitt malen
    ═══════════════════════════════════════════════════════════ */
 
+import * as Tex from "./texturen.js";
+
 export const KACHEL = 4;                  // Meter je Kachel
 export const BREITE = 210;                // Kacheln in x
 export const HOEHE = 190;                 // Kacheln in y
@@ -162,6 +164,7 @@ function dunkler(hex, faktor) {
 function strasseMalen(ctx, tx, ty, px, py, g, a) {
   ctx.fillStyle = FARBE.strasse;
   ctx.fillRect(px, py, g + 1, g + 1);
+  Tex.malen(ctx, "asphalt", streu(tx, ty, 101), px, py, g);
 
   if (a === ART.KREUZUNG) {
     ctx.fillStyle = "rgba(236,232,220,.42)";
@@ -206,25 +209,13 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
 function gehwegMalen(ctx, tx, ty, px, py, g, geg) {
   ctx.fillStyle = FARBE.gehweg;
   ctx.fillRect(px, py, g + 1, g + 1);
-  ctx.strokeStyle = "rgba(0,0,0,.14)";
-  ctx.lineWidth = Math.max(1, g * 0.02);
-  ctx.strokeRect(px + 0.5, py + 0.5, g, g);
+  Tex.malen(ctx, "gehweg", streu(tx, ty, 103), px, py, g);
 
   const l = streu(tx, ty, 13);
-  const palmen = geg === "strand" ? 0.74 : 0.92;
-  if (l > palmen) {                                    // Palme mit Schatten
-    ctx.fillStyle = "rgba(8,14,26,.3)";
-    ctx.beginPath();
-    ctx.arc(px + g * 0.57, py + g * 0.58, g * 0.25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#1f3b2a";
-    ctx.beginPath();
-    ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#2f6b45";
-    ctx.beginPath();
-    ctx.arc(px + g * 0.45, py + g * 0.45, g * 0.18, 0, Math.PI * 2);
-    ctx.fill();
+  const palmen = geg === "strand" ? 0.72 : 0.9;
+  if (l > palmen) {                                    // Palme oder Baum
+    const bild = Tex.tex(geg === "strand" ? "palme" : "baum", streu(tx, ty, 107));
+    if (bild) ctx.drawImage(bild, px - g * 0.16, py - g * 0.16, g * 1.32, g * 1.32);
   } else if (l > 0.86) {                               // Laterne
     ctx.fillStyle = "#23252c";
     ctx.fillRect(px + g * 0.44, py + g * 0.44, g * 0.12, g * 0.12);
@@ -236,12 +227,23 @@ function gehwegMalen(ctx, tx, ty, px, py, g, geg) {
   }
 }
 
+/* Ampelphase einer Kreuzung: true = Nord-Süd hat Grün.
+   Zeichnen und Verkehr fragen dieselbe Funktion, damit beides passt. */
+export function ampelNordSued(tx, ty, zeit) {
+  const takt = (zeit / 1000 + streu(blockNr(tx), blockNr(ty), 53) * 12) % 12;
+  return takt < 5.5;
+}
+
+/* Darf ein Auto über diese Kreuzung? senkrecht = Fahrt in Nord-Süd-Richtung */
+export function ampelGruen(tx, ty, zeit, senkrecht) {
+  return ampelNordSued(tx, ty, zeit) === senkrecht;
+}
+
 /* Ampeln an den Ecken der Kreuzung, im Takt umschaltend */
 function ampelMalen(ctx, tx, ty, px, py, g, zeit) {
-  const takt = (zeit / 1000 + streu(blockNr(tx), blockNr(ty), 53) * 12) % 12;
   ctx.fillStyle = "#1b1d24";
   ctx.fillRect(px + g * 0.34, py + g * 0.34, g * 0.32, g * 0.32);
-  ctx.fillStyle = takt < 5.5 ? "#3fdc7a" : "#ff4a55";
+  ctx.fillStyle = ampelNordSued(tx, ty, zeit) ? "#3fdc7a" : "#ff4a55";
   ctx.beginPath();
   ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.1, 0, Math.PI * 2);
   ctx.fill();
@@ -255,6 +257,7 @@ function gebaeudeMalen(ctx, tx, ty, px, py, g) {
   ctx.fillRect(px, py, g + 1, g + 1);
   ctx.fillStyle = `rgba(255,255,255,${0.02 + h * 0.09})`;
   ctx.fillRect(px, py, g + 1, g + 1);
+  Tex.malen(ctx, "dach", streu(tx, ty, 127), px, py, g);
 
   /* Fugen zwischen den Häusern eines Blocks */
   const kante = (a, innen) => Math.floor((a / innen) * id.teile) !== Math.floor(((a + 1) / innen) * id.teile);
@@ -332,10 +335,12 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.WASSER: {
       ctx.fillStyle = FARBE.wasser;
       ctx.fillRect(px, py, g + 1, g + 1);
+      Tex.malen(ctx, "wasser", streu(tx, ty, 109), px, py, g);
+      /* Lichtreflex, der langsam über das Wasser wandert */
       const w = Math.sin((tx * 0.7 + ty * 0.4) + zeit * 0.0009) * 0.5 + 0.5;
-      ctx.fillStyle = FARBE.wasser2;
-      ctx.globalAlpha = 0.25 + w * 0.3;
-      ctx.fillRect(px, py + g * 0.32, g + 1, g * 0.16);
+      ctx.globalAlpha = 0.10 + w * 0.16;
+      ctx.fillStyle = "#bfe4ff";
+      ctx.fillRect(px, py + g * (0.28 + w * 0.2), g + 1, g * 0.1);
       ctx.globalAlpha = 1;
       break;
     }
@@ -343,6 +348,7 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.STRAND: {
       ctx.fillStyle = FARBE.strand;
       ctx.fillRect(px, py, g + 1, g + 1);
+      Tex.malen(ctx, "sand", streu(tx, ty, 111), px, py, g);
       const s = streu(tx, ty, 5);
       if (s > 0.9) {
         ctx.fillStyle = "rgba(240,120,140,.75)";       // Sonnenschirm
@@ -373,15 +379,17 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.PARK: {
       ctx.fillStyle = FARBE.park;
       ctx.fillRect(px, py, g + 1, g + 1);
+      Tex.malen(ctx, "gras", streu(tx, ty, 113), px, py, g);
       const b = streu(tx, ty, 17);
-      if (b > 0.5) {
-        ctx.fillStyle = "rgba(20,60,40,.85)";
-        ctx.beginPath();
-        ctx.arc(px + g * (0.3 + b * 0.4), py + g * (0.3 + streu(tx, ty, 19) * 0.4), g * 0.22, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (b < 0.12) {
-        ctx.fillStyle = "#3f7d55";                     // Weg durch den Park
+      if (b < 0.12) {                                  // Weg durch den Park
+        ctx.fillStyle = "rgba(200,180,140,.5)";
         ctx.fillRect(px, py + g * 0.4, g + 1, g * 0.2);
+      } else if (b > 0.62) {                           // Baum
+        const bild = Tex.tex("baum", streu(tx, ty, 117));
+        if (bild) ctx.drawImage(bild, px - g * 0.2, py - g * 0.2, g * 1.4, g * 1.4);
+      } else if (b > 0.42) {                           // Busch
+        const bild = Tex.tex("busch", streu(tx, ty, 119));
+        if (bild) ctx.drawImage(bild, px, py, g, g);
       }
       break;
     }
@@ -389,6 +397,7 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.PARKPLATZ:
       ctx.fillStyle = FARBE.parkplatz;
       ctx.fillRect(px, py, g + 1, g + 1);
+      Tex.malen(ctx, "beton", streu(tx, ty, 121), px, py, g);
       ctx.strokeStyle = "rgba(230,230,210,.22)";
       ctx.lineWidth = Math.max(1, g * 0.03);
       ctx.beginPath();
@@ -400,6 +409,7 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.HAFEN: {
       ctx.fillStyle = FARBE.hafen;
       ctx.fillRect(px, py, g + 1, g + 1);
+      Tex.malen(ctx, "beton", streu(tx, ty, 123), px, py, g);
       const c = streu(tx, ty, 61);
       if (c > 0.8) {                                   // Container
         ctx.fillStyle = ["#c0533f", "#2f6f8f", "#c9a23a", "#4a7d52"][Math.floor(c * 100) % 4];
@@ -507,6 +517,51 @@ function startSuchen(mx = 100, my = 92) {
 }
 
 export const START = startSuchen();
+
+/* ── Spuren für den Verkehr ──
+   Rechtsverkehr: In Fahrtrichtung liegt die eigene Spur rechts. Die
+   Funktionen liefern die Mitte der passenden Spur in Metern. */
+export const bandStart = t => Math.floor(t / BLOCK) * BLOCK;
+
+export function spurMitte(t, richtung, senkrecht) {
+  /* t = irgendeine Kachel im Straßenband, richtung = +1/−1 */
+  const s = bandStart(t);
+  const w = bandBreite(t);
+  let kachel;
+  if (senkrecht) {                       // Fahrt in y, Spur liegt in x
+    kachel = richtung < 0 ? s + w - 1 : s;         // nach oben → rechte Seite ist Osten
+    if (w === AVENUE) kachel = richtung < 0 ? s + w - 1 - Math.round(Math.random()) : s + Math.round(Math.random());
+  } else {                               // Fahrt in x, Spur liegt in y
+    kachel = richtung > 0 ? s + w - 1 : s;         // nach rechts → rechte Seite ist Süden
+    if (w === AVENUE) kachel = richtung > 0 ? s + w - 1 - Math.round(Math.random()) : s + Math.round(Math.random());
+  }
+  return inMeter(kachel) + KACHEL / 2;
+}
+
+/* Gibt es an dieser Stelle eine Straße in der gewünschten Richtung? */
+export function istStrasse(tx, ty) {
+  const a = art(tx, ty);
+  return a === ART.STRASSE || a === ART.KREUZUNG;
+}
+
+/* Nächste Kreuzungsmitte in Fahrtrichtung (in Metern) */
+export function naechsteKreuzung(x, y, dx, dy) {
+  const schritt = KACHEL;
+  for (let i = 1; i < 60; i++) {
+    const px = x + dx * schritt * i, py = y + dy * schritt * i;
+    const tx = inKachel(px), ty = inKachel(py);
+    if (art(tx, ty) === ART.KREUZUNG) {
+      const bx = bandStart(tx), by = bandStart(ty);
+      return {
+        tx, ty,
+        x: inMeter(bx) + (bandBreite(tx) * KACHEL) / 2,
+        y: inMeter(by) + (bandBreite(ty) * KACHEL) / 2
+      };
+    }
+    if (!istStrasse(tx, ty)) return null;
+  }
+  return null;
+}
 
 /* Freien Platz in der Nähe suchen (für Autos, Figuren, Missionen) */
 export function freierPunkt(nahX, nahY, arten, radius = 40) {

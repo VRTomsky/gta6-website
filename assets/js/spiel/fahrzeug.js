@@ -63,14 +63,6 @@ export class Fahrzeug {
     }
     vVor = Math.max(-14, Math.min(d.spitze, vVor));
 
-    /* Untergrund: neben der Straße wird es zäh — Gehweg, Sand und Rasen
-       bremsen, das hält den Verkehr von selbst auf der Fahrbahn */
-    const boden = Karte.art(Karte.inKachel(this.x), Karte.inKachel(this.y));
-    if (boden !== Karte.ART.STRASSE && boden !== Karte.ART.KREUZUNG && boden !== Karte.ART.PARKPLATZ) {
-      const zaeh = boden === Karte.ART.STRAND || boden === Karte.ART.PARK ? 2.2 : 1.3;
-      vVor -= vVor * Math.min(1, dt * zaeh);
-    }
-
     /* Seitenführung: ohne Handbremse rutscht kaum etwas weg */
     const griff = handbremse ? 0.965 : d.griff;
     vQuer *= Math.pow(1 - griff, dt * 8);
