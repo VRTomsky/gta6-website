@@ -765,10 +765,11 @@ Browser: assets/js/newswire.js
 ## Vice City Run — das Browser-Spiel
 
 `spiel.html` + `assets/js/spiel/` + `assets/css/spiel.css`. Reines Canvas-2D,
-keine Fremdbibliothek, kein Build. Stand: komplett — Stadt mit vier Gegenden
+keine Fremdbibliothek, kein Build. Stand: komplett — Stadt mit fünf Gegenden
 und eigenen Texturen, Laufen, Autofahren, Verkehr, Passanten, Polizei mit
-Fahndungsstufen, vier Aufträge, Minikarte, Ton, Handy-Steuerung, Vollbild
-und Bestenliste im Konto.
+Fahndungsstufen, Fäuste und Waffen mit Waffenladen, vier Aufträge, Minikarte
+und große Karte mit Wegpunkt, Ton, Handy-Steuerung, Vollbild und Bestenliste
+im Konto.
 
 ```
 spiel/stadtplan.js  baut die Stadt beim Start: Wasser, Autobahnring, Haupt- und
@@ -784,8 +785,10 @@ spiel/fahrzeug.js   Fahrmodell und Fahrzeugdaten
 spiel/verkehr.js    Verkehr: Spuren, Abbiegen, Ampeln, Auffahren vermeiden
 spiel/polizei.js    Streifen, Polizisten, Fahndungsstufe 0–5
 spiel/missionen.js  vier Aufträge als Schrittfolgen mit Fristen
-spiel/minikarte.js  Radar unten links (Karte gepuffert, Punkte je Bild)
-spiel/ton.js        Motor, Sirene, Rumms, Kasse — per Web Audio erzeugt
+spiel/waffen.js     Fäuste, Pistole, MP, Schrotflinte, Waffenläden
+spiel/wege.js       Wegfindung über die Straßen (A*) für die Route
+spiel/minikarte.js  Minikarte unten links und große Karte (beide gepuffert)
+spiel/ton.js        Motor, Sirene, Rumms, Schuss, Kasse — per Web Audio erzeugt
 spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 ```
 
@@ -823,15 +826,33 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   zu lange steht, sucht sich eine neue Richtung.
 - **Polizei** erbt vom Verkehr, hält sich aber an keine Ampel: Bei freier Sicht
   fährt sie direkt auf den Spieler zu, sonst über das Straßennetz — an jeder
-  Kreuzung die Richtung, die näher an den Spieler führt. Zu Fuß steigen
-  Polizisten aus und verhaften bei Berührung.
-- **Fahndung 0–5:** steigt beim Anfahren von Passanten und beim Rammen von
-  Streifen, fällt nach 14 Sekunden ohne Sichtkontakt um eine Stufe.
+  Kreuzung die Richtung, die näher an den Spieler führt.
+  **Härte hängt an der Stufe** (21.09.2026): bis zwei Sterne bleiben die Wagen
+  ein paar Meter hinter dem Spieler und rammen nicht, zu Fuß wird nur verhaftet.
+  Ab drei Sternen wird gerammt und geschossen. Wagen je Stufe: 1 · 2 · 3 · 4 · 6.
+  Eine Festnahme braucht 0,8 s Kontakt (`Polizist.griff`), nach jedem Neustart
+  gibt es 4 s Schonzeit — vorher war man nach einem Rempler sofort „Busted".
+  Polizisten haben Leben und können ausgeschaltet werden; das kostet einen Stern
+  mehr.
+- **Fahndung 0–5:** Ein angefahrener Fußgänger allein ist **kein** Stern mehr.
+  Es gibt einen Stern ab drei Angefahrenen in 20 s, beim Totfahren, beim Rammen
+  eines Streifenwagens (zwei) und beim Schießen vor Zeugen; zwei Sterne beim
+  Erschießen von Passanten. Abkühlung: eine Stufe je 12 s ohne Sichtkontakt.
+  Im Code läuft alles über `mindestens(n)` in `spiel.js` — Delikte heben die
+  Stufe nur an, sie summieren sich nicht mehr.
+- **Kämpfen** (`waffen.js`): Maustaste schlägt oder schießt, gezielt wird zur
+  Maus, Q oder das Mausrad wechselt die Waffe, 1–4 wählen direkt. Getroffen wird
+  über einen Strahl in Schritten von 0,5 m bis zur ersten Wand oder Person —
+  billiger als echte Geschosse und bei diesen Entfernungen nicht zu unterscheiden.
+  Gekauft wird in drei **Waffenläden** (grüner Punkt auf beiden Karten, davor
+  E drücken): Pistole 300, MP 1200, Schrotflinte 1900, Munition 150.
 - **Punkte** = Geld + 750 je erledigtem Auftrag. Mit Konto landet der Bestwert
   in Firestore (`bestenliste/{uid}`, öffentlich lesbar) und auf der Spielseite;
   ohne Konto nur im `localStorage`.
-- **Vollbild** über den Knopf oder `F`, Ton über `M`. Auf Touch-Geräten
-  erscheinen Stick und Knöpfe automatisch (`pointer: coarse`).
+- **Tasten:** `E` **oder `F`** ein- und aussteigen bzw. Waffenladen betreten,
+  `V` Vollbild (früher F), `M` Karte, `N` Ton, `H` Hupe, `Q`/Mausrad Waffe,
+  `1`–`4` Waffe direkt, Maustaste angreifen, `P` Pause. Auf Touch-Geräten
+  erscheinen Stick und vier Knöpfe automatisch (`pointer: coarse`).
 - Die aktive Figur bekommt einen pinken Ring, die zweite einen blauen — sonst
   findet man sich zwischen den Passanten nicht wieder.
 - **Stadt (20.09.2026 neu):** kein Schachbrett mehr. Wasserarm mit Brücken,
@@ -842,6 +863,18 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   Häuser haben Bauarten mit eigener Farbe und eigenen Dachaufbauten.
   **Wichtig beim Ändern:** Flächen nur über `baulandSetzen()` füllen — `rechteck()`
   überschreibt sonst fertige Straßen, dann verschwindet ein halbes Viertel.
+- **Straßen ohne Unsinn (21.09.2026):** Der Nutzer hatte Straßen gemeldet, die
+  mitten zwischen Häusern anfangen und aufhören. Ursache waren Nebenstraßen mit
+  zufälligem Anfang, Gassen, die im Gehweg endeten, und Brücken ohne Anschluss.
+  Jetzt laufen alle Nebenstraßen von Rand zu Rand, Gassen werden quer durch die
+  ganze Baufläche geschnitten, Brücken bauen hinter dem Wasser weiter, bis eine
+  Straße kommt — und zum Schluss räumt `strassenSaeubern()` auf:
+  1. 40 Runden Sackgassen abtragen (Kachel mit weniger als vier befahrbaren
+     Nachbarn fliegt raus, Stadtrand ausgenommen),
+  2. nur das größte zusammenhängende Netz behalten.
+  Dazu **Uferstraßen** an Fluss, Kanal und Hafenbecken, damit Querstraßen am
+  Wasser aufgefangen werden. Prüfen lässt sich das Ergebnis mit einem kurzen
+  Node-Skript über `felder.art`: es muss genau **ein** Netzteil herauskommen.
 - **Kein Bremsen mehr abseits der Fahrbahn** (Wunsch des Nutzers).
 - **Ampeln** sind ein Blender-Modell (`ampel_rot|gelb|gruen.png`) plus farbiger
   Schein; die Phase liegt in `karte.js` (`ampelPhase`), Verkehr und Zeichnung
@@ -849,11 +882,33 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Karte auf Taste M** (`minikarte.js: grosseKarteZeichnen`) mit Zielen,
   Wahrzeichen, Legende und Einstellungen; das Spiel pausiert solange.
   Ton liegt seither auf **N**, Hupe auf **H**.
-- **Minikarte im GTA-VI-Stil:** abgerundetes Rechteck, dreht sich mit der
-  Fahrtrichtung, pinke Route zum Ziel, Entfernung oben links, Pfeil unten Mitte.
+  Seit 21.09.2026 **scharf und bedienbar**: die ganze Stadt liegt einmal als
+  Puffer mit 2 Bildpunkten je Meter (`weltPuffer`), die Leinwand wird auf die
+  echte Bildschirmauflösung gebracht (`schaerfen()`), Beschriftungen stehen in
+  Bildschirmpunkten mit dunklem Saum. Mausrad zoomt auf den Zeiger, Ziehen
+  verschiebt, ein kurzer Klick setzt den **Wegpunkt** (noch einmal darauf
+  klicken löscht ihn, wie der Knopf daneben).
+- **Minikarte im GTA-VI-Stil:** abgerundetes Rechteck — **nach Norden
+  ausgerichtet**. Sie drehte sich früher mit der Fahrtrichtung; beim Fahren
+  wanderte dadurch die halbe Stadt und man fand keinen Wegpunkt. Jetzt dreht
+  sich nur der Pfeil in der Mitte. Mausrad zoomt (fünf Stufen, 60–340 m), ein
+  Klick setzt einen Wegpunkt. Der Ausschnitt wird doppelt so fein gepuffert wie
+  gebraucht und verkleinert gezeichnet, sonst franst jede Kachelkante aus.
+  Dafür braucht `.skarte` in `spiel.css` `pointer-events:auto` — die übrige
+  Anzeige ist durchlässig.
+- **Route folgt Straßen** (`wege.js`): A* über die befahrbaren Kacheln, Start
+  und Ziel werden auf die nächste Straße gezogen. Vorher lief eine gerade Linie
+  quer über Häuser und den Fluss. Eine ganze Suche kostet bis zu 20 ms, deshalb
+  rechnet `Route` nur bei Zielwechsel neu oder wenn man weiter als 28 m neben
+  der Strecke ist; sonst werden nur zurückgelegte Stücke abgeschnitten.
 - **Ton:** Browser halten Web Audio an, sobald die Seite in den Hintergrund geht —
   `ton.js` weckt es bei Tabwechsel, Klick und Taste wieder auf. Dazu Reifen,
-  Hupe, Türen, Schreck und leises Stadtrauschen.
+  Hupe, Türen, Schreck, Schuss und Faustschlag. Das leise Stadtrauschen ist
+  **wieder raus** — es klang nach defektem Lautsprecher (Rückmeldung des Nutzers).
+- **Schrottautos:** Ein Wagen über 115 Schaden wirft den Spieler **einmal**
+  hinaus und bekommt `schrott = true`. Vorher stand die Prüfung ohne Merker in
+  der Schleife: man wurde jeden Bildaufbau erneut hinausgeworfen, es sah aus,
+  als ginge `E` nicht mehr.
 - Rechtsklick öffnet auf der Spielbühne kein Browser-Menü mehr.
 - Neu erzeugen:
 

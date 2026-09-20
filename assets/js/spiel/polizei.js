@@ -1,18 +1,26 @@
 /* ═══════════════════════════════════════════════════════════
    Polizei und Fahndung
 
-   Fahndungsstufe 0–5. Sie steigt, wenn man Leute überfährt oder
-   Streifenwagen rammt, und fällt wieder, wenn eine Weile kein Polizist
-   den Spieler sieht.
+   Fahndungsstufe 0–5. Sie steigt bei echten Delikten — schießen,
+   jemanden umbringen, einen Streifenwagen rammen — und fällt wieder,
+   wenn eine Weile kein Polizist den Spieler sieht.
 
-   Streifenwagen fahren auf den Spieler zu und versuchen ihn zu rammen.
-   Ist der Spieler zu Fuß, steigen Polizisten aus und verhaften ihn bei
-   Berührung. Beides benutzt dieselbe Physik wie der Rest.
+   Wie hart sie vorgehen, hängt an der Stufe:
+
+     1–2   ein, zwei Wagen fahren hinterher und stellen sich quer,
+           gerammt wird nicht. Zu Fuß wird verhaftet, nicht geschossen.
+     3–5   sie rammen, steigen aus und schießen.
+
+   Vorher war schon ein angefahrener Fußgänger einen Stern wert und
+   gleich drei Wagen haben einen von der Straße geschoben. Das war kein
+   Spiel, das war eine Strafe.
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
 import { VerkehrsAuto } from "./verkehr.js";
 import { Figur } from "./wesen.js";
+import { sicht } from "./waffen.js";
+import * as Ton from "./ton.js";
 
 export const STUFEN = 5;
 const SICHT = 95;                     // so weit sieht die Polizei
@@ -58,12 +66,11 @@ export class Streife extends VerkehrsAuto {
     return true;
   }
 
-  jagen(dt, ziel, autos) {
+  jagen(dt, ziel, autos, hart) {
     this.blinken += dt;
     this.jagdZiel = ziel;
 
     if (this.freieSicht(ziel)) {
-      /* Direkt drauf zu — rammen ist erlaubt */
       const zx = ziel.x - this.x, zy = ziel.y - this.y;
       let ab = Math.atan2(zy, zx) - this.winkel;
       while (ab > Math.PI) ab -= Math.PI * 2;
@@ -71,6 +78,12 @@ export class Streife extends VerkehrsAuto {
       const entfernung = Math.hypot(zx, zy);
       let gas = 1;
       if (Math.abs(ab) > 1.9 && entfernung < 12) gas = -0.7;       // vorbeigeschossen
+      /* Bis Stufe 2 wird nicht gerammt: die Streife bleibt ein paar
+         Meter hinter dem Spieler und geht vom Gas. */
+      if (!hart) {
+        if (entfernung < 9) gas = -0.5;
+        else if (entfernung < 16) gas = 0.15;
+      }
       this.fahren(gas, Math.max(-1, Math.min(1, ab * 2.2)), false, dt);
       this.ziel = null;
       return;
@@ -109,6 +122,8 @@ export class Polizist extends Figur {
   constructor(x, y, weiblich = false) {
     super(weiblich ? "polizistin" : "polizist", x, y);
     this.aus = 0;                     // Zeit seit dem Aussteigen
+    this.nachladen = 1.2;             // bis zum ersten Schuss
+    this.griff = 0;                   // wie lange er den Spieler schon hält
   }
 
   get daten() {
@@ -117,9 +132,15 @@ export class Polizist extends Figur {
 
   jagen(dt, ziel) {
     this.aus += dt;
+    this.nachladen -= dt;
     const dx = ziel.x - this.x, dy = ziel.y - this.y;
     const d = Math.hypot(dx, dy) || 1;
-    this.bewegen(dx / d, dy / d, true, dt);
+    if (this.tot) return d;
+    /* Auf Schussweite bleiben statt stumpf ins Ziel zu rennen */
+    const abstand = this.schiesst ? 7 : 0.8;
+    const schub = d > abstand ? 1 : -0.4;
+    this.bewegen((dx / d) * schub, (dy / d) * schub, d > 6, dt);
+    if (d < 40) this.winkel = Math.atan2(dy, dx);
     return d;
   }
 }
@@ -145,10 +166,15 @@ export class Fahndung {
     this.polizisten.length = 0;
   }
 
-  /* Wunschzahl an Streifenwagen für die aktuelle Stufe */
+  /* Wunschzahl an Streifenwagen für die aktuelle Stufe.
+     Bei einem Stern ist es genau einer — vorher waren es zwei bis drei,
+     und gegen die kam man zu Fuß nie an. */
   get sollWagen() {
-    return this.stufe === 0 ? 0 : Math.min(6, this.stufe + 1);
+    return [0, 1, 2, 3, 4, 6][this.stufe] || 0;
   }
+
+  /* Ab drei Sternen wird gerammt und geschossen */
+  get hart() { return this.stufe >= 3; }
 
   nachschub(zielX, zielY) {
     while (this.streifen.length < this.sollWagen) {
@@ -165,7 +191,7 @@ export class Fahndung {
     while (this.streifen.length > this.sollWagen) this.streifen.pop();
   }
 
-  rechnen(dt, spieler, autos) {
+  rechnen(dt, spieler, autos, zustand) {
     if (this.stufe === 0) {
       this.streifen.length = 0;
       this.polizisten.length = 0;
@@ -179,31 +205,68 @@ export class Fahndung {
     for (const s of this.streifen) {
       const d = Math.hypot(s.x - ziel.x, s.y - ziel.y);
       if (d < SICHT) gesehen = true;
-      s.jagen(dt, ziel, autos);
+      s.jagen(dt, ziel, autos, this.hart);
 
       /* Ist der Spieler zu Fuß und die Streife nah, steigt ein Polizist aus */
       if (!spieler.imAuto && d < 22 && this.polizisten.length < this.stufe + 1 && Math.abs(s.tempo) < 6) {
-        this.polizisten.push(new Polizist(s.x + 1.5, s.y + 1.5, Math.random() < 0.4));
+        const p = new Polizist(s.x + 1.5, s.y + 1.5, Math.random() < 0.4);
+        p.schiesst = this.hart;
+        this.polizisten.push(p);
       }
     }
 
-    for (const p of this.polizisten) {
+    for (let k = this.polizisten.length - 1; k >= 0; k--) {
+      const p = this.polizisten[k];
+      p.schiesst = this.hart;
+      if (p.tot) {
+        p.totZeit += dt;
+        if (p.totZeit > 20) this.polizisten.splice(k, 1);
+        continue;
+      }
       const d = p.jagen(dt, ziel);
       if (d < SICHT) gesehen = true;
+
+      /* Ab drei Sternen wird geschossen — vorher wird nur verhaftet */
+      if (this.hart && zustand && d < 22 && p.nachladen <= 0 && sicht(p, ziel, 24)) {
+        p.nachladen = 0.9 + Math.random() * 0.8;
+        const treffer = Math.random() < 0.55;
+        if (treffer) zustand.leben -= 7;
+        zustand.strahlen.push({
+          x1: p.x, y1: p.y,
+          x2: treffer ? ziel.x : ziel.x + (Math.random() - 0.5) * 4,
+          y2: treffer ? ziel.y : ziel.y + (Math.random() - 0.5) * 4,
+          t: 0.07
+        });
+        Ton.schuss(0.7);
+      }
+
+      /* Festnahme: erst wenn er einen Moment am Spieler dranbleibt */
+      if (!spieler.imAuto && d < 1.5 && p.aus > 1.2) p.griff += dt;
+      else p.griff = 0;
+    }
+
+    /* Schrottreife Streifenwagen verschwinden, dafür kommt Nachschub */
+    for (let k = this.streifen.length - 1; k >= 0; k--) {
+      if (this.streifen[k].schaden > 115) this.streifen.splice(k, 1);
     }
 
     /* Fahndung kühlt ab, wenn niemand den Spieler sieht */
     this.ruhe = gesehen ? 0 : this.ruhe + dt;
-    if (this.ruhe > 14) {
+    if (this.ruhe > 12) {
       this.stufe = Math.max(0, this.stufe - 1);
       this.ruhe = 0;
     }
   }
 
+  /* Alles, worauf geschossen werden kann */
+  ziele() {
+    return this.polizisten.filter(p => !p.tot);
+  }
+
   /* Wird der Spieler zu Fuß gefasst? */
   verhaftet(spieler) {
     if (spieler.imAuto) return false;
-    return this.polizisten.some(p => Math.hypot(p.x - spieler.x, p.y - spieler.y) < 1.3 && p.aus > 1.2);
+    return this.polizisten.some(p => !p.tot && p.griff > 0.8);
   }
 
   zeichnen(ctx, kamera, sichtbar) {

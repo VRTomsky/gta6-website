@@ -11,8 +11,12 @@
      Rumms      kurzes Rauschen beim Aufprall
      Tür        Klacken beim Ein- und Aussteigen
      Schreck    kurzer Ruf, wenn jemand angefahren wird
-     Stadt      leises Grundrauschen, damit es nie ganz still ist
+     Schuss     kurzer Knall mit Nachhall
+     Schlag     dumpfer Treffer mit der Faust
      Kasse      kleine Tonfolge, wenn eine Mission klappt
+
+   Ein Grundrauschen gab es auch einmal. Es sollte die Stadt lebendig
+   machen und klang nur wie ein defekter Lautsprecher — es ist raus.
 
    Wichtig: Browser halten den Ton an, sobald die Seite in den
    Hintergrund geht. Deshalb wird vor jedem Einsatz geprüft, ob der
@@ -27,7 +31,6 @@ let summe = null;          // Gesamtlautstärke
 let motor = null;
 let sirene = null;
 let reifen = null;
-let stadt = null;
 let an = true;
 
 export function bereit() {
@@ -41,7 +44,6 @@ export function bereit() {
   motorBauen();
   sireneBauen();
   reifenBauen();
-  stadtBauen();
   /* Nach jedem Tabwechsel oder Klick sicherstellen, dass der Ton läuft */
   document.addEventListener("visibilitychange", wecken);
   addEventListener("pointerdown", wecken);
@@ -96,27 +98,6 @@ function reifenBauen() {
   g.connect(summe);
   quelle.start();
   reifen = { g, filter };
-}
-
-function stadtBauen() {
-  /* Sehr leises, tiefes Rauschen als Stadtgeräusch */
-  const dauer = 3;
-  const puffer = ctx.createBuffer(1, ctx.sampleRate * dauer, ctx.sampleRate);
-  const daten = puffer.getChannelData(0);
-  let wert = 0;
-  for (let i = 0; i < daten.length; i++) {
-    wert = (wert + (Math.random() * 2 - 1) * 0.02) * 0.995;
-    daten[i] = wert;
-  }
-  const quelle = ctx.createBufferSource();
-  quelle.buffer = puffer;
-  quelle.loop = true;
-  const g = ctx.createGain();
-  g.gain.value = 0.25;
-  quelle.connect(g);
-  g.connect(summe);
-  quelle.start();
-  stadt = { g };
 }
 
 function sireneBauen() {
@@ -246,6 +227,65 @@ export function schreck() {
   g.connect(summe);
   o.start(t);
   o.stop(t + 0.36);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+
+/* Schuss: harter Knall aus Rauschen, darunter ein kurzer Tiefton */
+export function schuss(staerke = 1) {
+  if (!ctx) return;
+  wecken();
+  const t = ctx.currentTime;
+  const dauer = 0.22;
+  const puffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dauer), ctx.sampleRate);
+  const daten = puffer.getChannelData(0);
+  for (let i = 0; i < daten.length; i++) {
+    const ab = Math.pow(1 - i / daten.length, 4);
+    daten[i] = (Math.random() * 2 - 1) * ab;
+  }
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = "highpass";
+  filter.frequency.value = 400;
+  const g = ctx.createGain();
+  g.gain.value = 0.22 * staerke;
+  quelle.connect(filter);
+  filter.connect(g);
+  g.connect(summe);
+  quelle.onended = () => { g.disconnect(); filter.disconnect(); };
+  quelle.start(t);
+  quelle.stop(t + dauer);
+
+  const o = ctx.createOscillator();
+  const og = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(160, t);
+  o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
+  og.gain.setValueAtTime(0.18 * staerke, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  o.connect(og);
+  og.connect(summe);
+  o.start(t);
+  o.stop(t + 0.16);
+  o.onended = () => { o.disconnect(); og.disconnect(); };
+}
+
+/* Fausttreffer: dumpf und kurz */
+export function schlag(getroffen) {
+  if (!ctx) return;
+  wecken();
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(getroffen ? 220 : 340, t);
+  o.frequency.exponentialRampToValueAtTime(70, t + 0.1);
+  g.gain.setValueAtTime(getroffen ? 0.2 : 0.07, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+  o.connect(g);
+  g.connect(summe);
+  o.start(t);
+  o.stop(t + 0.15);
   o.onended = () => { o.disconnect(); g.disconnect(); };
 }
 

@@ -27,6 +27,10 @@ export class Figur {
     this.winkel = -Math.PI / 2;         // schaut nach oben
     this.strecke = 0;
     this.imAuto = null;
+    this.leben = 100;
+    this.tot = false;
+    this.totZeit = 0;
+    this.trefferRadius = 0.55;
     /* Jason und Lucia sind etwas größer gezeichnet als die Passanten —
        zusammen mit Ring und Namensschild erkennt man sie sofort. */
     this.faktor = art === "lucia" || art === "jason" ? 1.16 : 1;
@@ -34,8 +38,24 @@ export class Figur {
 
   get daten() { return FIGUREN[this.art] || FIGUREN.lucia; }
 
+  /* Schaden einstecken. `von` ist der Verursacher — die Polizei will
+     wissen, wer geschossen hat. */
+  treffer(schaden) {
+    if (this.tot) return false;
+    this.leben -= schaden;
+    if (this.leben <= 0) {
+      this.leben = 0;
+      this.tot = true;
+      this.totZeit = 0;
+      this.vx = this.vy = 0;
+      return true;
+    }
+    return false;
+  }
+
   /* dx/dy: gewünschte Richtung (−1…1), rennen: Schub */
   bewegen(dx, dy, rennen, dt) {
+    if (this.tot) return;
     const d = this.daten;
     this.entklemmen();
     const ziel = rennen ? d.rennen : d.tempo;
@@ -98,6 +118,23 @@ export class Figur {
 
   zeichnen(ctx, kamera) {
     if (this.imAuto) return;
+    if (this.tot) {
+      /* Liegend: dunkler Fleck und die Figur flach und blass darüber */
+      const px = (this.x - kamera.x) * kamera.zoom + kamera.breite / 2;
+      const py = (this.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+      ctx.save();
+      ctx.fillStyle = "rgba(90,12,24,.5)";
+      ctx.beginPath();
+      ctx.ellipse(px, py + kamera.zoom * 0.1, kamera.zoom * 0.62, kamera.zoom * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.75;
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = 0.8;
+      malen(ctx, `${this.art}_steht`, kamera, this.x, this.y, this.winkel, 0, this.faktor * 0.92);
+      ctx.restore();
+      return;
+    }
     schatten(ctx, kamera, this.x, this.y + 0.12, 0.42, 0.3);
     malen(ctx, this.bildname(), kamera, this.x, this.y, this.winkel, 0, this.faktor);
   }
@@ -138,6 +175,7 @@ export class Passant extends Figur {
   }
 
   denken(dt, autos) {
+    if (this.tot) { this.totZeit += dt; return; }
     /* Kommt ein Auto mit Schwung näher, nichts wie weg */
     if (this.flucht > 0) this.flucht -= dt;
     for (const a of autos) {
@@ -188,15 +226,35 @@ export function passantenVerteilen(anzahl, umX, umY, radius = 110) {
   return liste;
 }
 
+/* Alle in der Nähe erschrecken — nach einem Schuss oder einem Schlag */
+export function panik(liste, x, y, radius = 26) {
+  for (const p of liste) {
+    if (p.tot) continue;
+    const dx = p.x - x, dy = p.y - y;
+    if (Math.hypot(dx, dy) > radius) continue;
+    p.ziel = Math.atan2(dy, dx);
+    p.flucht = 3.5;
+  }
+}
+
 /* Wer zu weit weg ist, wird vor dem Spieler wieder aufgestellt —
-   so bleibt die Stadt belebt, ohne tausend Figuren zu rechnen. */
+   so bleibt die Stadt belebt, ohne tausend Figuren zu rechnen.
+   Erschossene bleiben eine Weile liegen und werden dann ersetzt. */
 export function passantenNachziehen(liste, x, y, weite = 150) {
   for (const p of liste) {
-    if (Math.hypot(p.x - x, p.y - y) < weite) continue;
+    const weg = Math.hypot(p.x - x, p.y - y) > weite;
+    const alt = p.tot && p.totZeit > 16;
+    if (!weg && !alt) continue;
+    if (p.tot && !alt && weg) { /* Leiche außer Sicht: darf neu starten */ }
     const ziel = Karte.freierPunkt(x + (Math.random() - 0.5) * 120,
                                    y + (Math.random() - 0.5) * 120, GEHBAR, 50);
     p.x = ziel.x;
     p.y = ziel.y;
     p.vx = p.vy = 0;
+    p.tot = false;
+    p.totZeit = 0;
+    p.leben = 100;
+    p.flucht = 0;
+    p.art = PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
   }
 }

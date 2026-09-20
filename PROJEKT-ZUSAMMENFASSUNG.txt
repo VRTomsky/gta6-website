@@ -241,6 +241,34 @@ WAS BISHER GEMACHT WURDE
      Hupe (H), Tueren, Schreck, Stadtrauschen. Ton liegt jetzt auf N.
    - Rechtsklick oeffnet im Spiel kein Browsermenue mehr.
 
+17. Spiel, fuenfter Schritt (21.09.2026):
+   - Keine sinnlosen Strassen mehr zwischen den Haeusern: jede
+     Nebenstrasse laeuft von Rand zu Rand, Gassen gehen quer durch
+     den ganzen Block, Bruecken bauen bis zur naechsten Strasse
+     weiter, und zum Schluss werden Sackgassen abgetragen. Dazu
+     Uferstrassen an Fluss, Kanal und Hafen.
+   - Grosse Karte (M) hochaufloesend: Beschriftungen lesbar, Mausrad
+     zoomt, Ziehen verschiebt, Klick setzt einen Wegpunkt.
+   - Minimap bleibt nach Norden ausgerichtet und dreht sich nicht
+     mehr mit. Mausrad zoomt, Klick setzt ebenfalls einen Wegpunkt.
+   - Die Route folgt jetzt den Strassen statt quer ueber die Karte
+     zu laufen; der Wegpunkt erscheint auch auf der grossen Karte.
+   - Kaempfen: Fauesten, Pistole, Maschinenpistole, Schrotflinte.
+     Zielen mit der Maus, Maustaste schlaegt und schiesst, Q oder
+     Mausrad wechselt die Waffe, 1-4 waehlen direkt. Gekauft wird in
+     drei Waffenlaeden (gruener Punkt, E davor druecken).
+   - Polizei entschaerft: ein angefahrener Fussgaenger ist kein
+     Stern mehr, bei einem Stern kommt ein Wagen, gerammt und
+     geschossen wird erst ab drei Sternen, und eine Festnahme
+     braucht einen Moment Kontakt.
+   - Schrottauto wirft nur noch einmal hinaus - vorher ging danach
+     das Einsteigen mit E scheinbar nicht mehr.
+   - Einsteigen jetzt mit E oder F, Vollbild liegt auf V.
+   - Anzeige im Stil der alten GTA-Teile: Geld gross und gelb,
+     Sterne, Leben mit Herz, Waffe mit Munition.
+   - Das nervige Hintergrundrauschen ist raus, dafuer gibt es
+     Schuss- und Schlaggeraeusche.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

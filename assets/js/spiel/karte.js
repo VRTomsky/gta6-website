@@ -33,6 +33,7 @@ export const fest = Plan.fest;
 export const bauArt = Plan.bauArt;
 export const hausNr = Plan.hausNr;
 export const bezirkVon = Plan.bezirkVon;
+export const hoeheVon = Plan.hoeheVon;
 export const befahrbar = Plan.befahrbar;
 
 /* Immer gleicher Zufall für denselben Ort (Deko, Verteilungen) */
@@ -605,5 +606,21 @@ export function freierPunkt(nahX, nahY, arten, radius = 40) {
     const x = nahX + Math.cos(w) * r, y = nahY + Math.sin(w) * r;
     if (arten.includes(art(inKachel(x), inKachel(y)))) return { x, y };
   }
-  return { x: nahX, y: nahY };
+  /* Nichts gefunden: von innen nach außen absuchen. Ohne das landet ein
+     Missionsziel im Zweifel in einer Hauswand und ist nie erreichbar. */
+  const t0x = inKachel(nahX), t0y = inKachel(nahY);
+  let ersatz = null;
+  for (let r = 1; r < 70; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const tx = t0x + dx, ty = t0y + dy;
+        const a = art(tx, ty);
+        const punkt = { x: inMeter(tx) + KACHEL / 2, y: inMeter(ty) + KACHEL / 2 };
+        if (arten.includes(a)) return punkt;
+        if (!ersatz && !fest(tx, ty) && a !== ART.WASSER) ersatz = punkt;
+      }
+    }
+  }
+  return ersatz || { x: nahX, y: nahY };
 }

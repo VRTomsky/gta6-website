@@ -179,26 +179,48 @@
   .svoll{ transition:none; }
 }
 
-/* ── Anzeige: Geld, Fahndungssterne, Leben ── */
+/* ── Anzeige: Geld, Fahndungssterne, Leben, Waffe ──
+   Angelehnt an die alten GTA-Teile: Geld groß und gelb oben rechts,
+   darunter die Sterne, dann Leben und Waffe. */
 .shud__geld{
-  font-weight:800; font-size:1rem; color:#9ff0b6;
-  font-variant-numeric:tabular-nums;
+  font-family:var(--f-display), var(--f-label); font-weight:800;
+  font-size:1.5rem; line-height:1; letter-spacing:.02em;
+  color:#ffd24a; font-variant-numeric:tabular-nums;
+  text-shadow:0 2px 0 rgba(0,0,0,.55), 0 0 18px rgba(255,190,60,.35);
 }
-.shud__sterne{ display:flex; gap:3px; min-height:14px; }
+.shud__sterne{ display:flex; gap:3px; min-height:16px; }
 .shud__sterne i{
-  width:14px; height:14px; display:block;
+  width:16px; height:16px; display:block;
   clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  background:rgba(255,255,255,.18);
+  background:rgba(255,255,255,.16);
 }
-.shud__sterne i.is-an{ background:#ffd24a; }
+.shud__sterne i.is-an{ background:#ffd24a; filter:drop-shadow(0 0 6px rgba(255,200,70,.6)); }
+.shud__lebenreihe{ display:flex; align-items:center; gap:6px; color:#ff6a86; }
+.shud__lebenreihe b{
+  font-weight:800; font-size:.92rem; color:var(--cream);
+  font-variant-numeric:tabular-nums; min-width:2.2ch; text-align:right;
+}
 .shud__leben{
-  width:96px; height:7px; border-radius:99px;
+  width:96px; height:8px; border-radius:99px;
   background:rgba(255,255,255,.14); overflow:hidden;
 }
 .shud__leben i{
   display:block; height:100%; width:100%;
   background:linear-gradient(90deg, #ff4f70, #ffd24a 60%, #3fdc7a);
   transition:width .2s var(--ease);
+}
+.shud__waffe{
+  display:flex; align-items:baseline; gap:8px;
+  padding:3px 8px; border-radius:8px;
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1);
+}
+.shud__waffe b{
+  font-weight:800; font-size:.76rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--cream);
+}
+.shud__waffe span{
+  font-weight:800; font-size:.9rem; color:#ffd24a;
+  font-variant-numeric:tabular-nums;
 }
 
 /* ── Verhaftet / Erledigt ── */
@@ -313,8 +335,8 @@
   .sbuehne{ aspect-ratio:3/4; max-height:74svh; }
   .skarte{
     left:auto; bottom:auto;
-    right:10px; top:104px;
-    width:84px; height:84px; border-width:1px;
+    right:10px; top:150px;
+    width:104px; border-width:1px;
   }
   .svoll{ right:auto; bottom:auto; left:10px; top:96px; width:34px; height:34px; border-radius:10px; }
   .ston{ right:auto; bottom:auto; left:52px; top:96px; width:34px; height:34px; border-radius:10px; }
@@ -328,7 +350,9 @@
   .shud__leben{ width:72px; }
 }
 
-/* ── Minikarte im GTA-VI-Stil: abgerundetes Rechteck ── */
+/* ── Minikarte im GTA-VI-Stil: abgerundetes Rechteck ──
+   Sie nimmt Mausrad und Klick selbst entgegen (zoomen, Wegpunkt), darf
+   also nicht wie der Rest der Anzeige durchlässig sein. */
 .skarte{
   position:absolute; left:clamp(10px, 1.6vw, 18px); bottom:clamp(10px, 1.6vw, 18px);
   width:clamp(168px, 20vw, 288px); height:auto; aspect-ratio:8/5;
@@ -336,7 +360,37 @@
   background:rgba(8,13,29,.55);
   box-shadow:0 16px 40px -18px rgba(0,0,0,.95);
   backdrop-filter:blur(2px);
+  pointer-events:auto; cursor:crosshair; touch-action:none;
 }
+
+/* ── Waffenladen ── */
+.sladen{
+  position:absolute; inset:0; z-index:6; display:grid; place-items:center;
+  padding:clamp(14px, 2.4vw, 30px);
+  background:radial-gradient(120% 90% at 50% 10%, rgba(24,18,52,.94), rgba(6,10,22,.97));
+}
+.sladen[hidden]{ display:none; }
+.sladen__karte{
+  width:min(460px, 100%);
+  background:rgba(10,15,32,.9); border:1px solid var(--line2);
+  border-radius:var(--r); padding:clamp(16px, 2.4vw, 26px);
+}
+.sladen__karte h2{ margin:.08em 0 .5em; font-size:clamp(1.5rem, 3.4vw, 2.2rem); }
+.sladen__geld{ margin:0 0 12px; color:var(--fg-mid); font-size:.88rem; }
+.sladen__geld b{ color:#ffd24a; font-family:var(--f-label); font-weight:800; }
+.sladen__liste{ list-style:none; margin:0 0 16px; padding:0; display:grid; gap:8px; }
+.sladen__liste button{
+  width:100%; display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:center;
+  padding:10px 14px; border-radius:12px; cursor:pointer;
+  background:rgba(255,255,255,.05); border:1px solid var(--line);
+  color:var(--cream); text-align:left;
+}
+.sladen__liste button:hover:not(:disabled){ border-color:var(--pink); background:rgba(255,120,168,.12); }
+.sladen__liste button:disabled{ opacity:.4; cursor:not-allowed; }
+.sladen__liste b{ font-weight:700; font-size:.94rem; }
+.sladen__liste span{ font-size:.8rem; color:var(--fg-dim); }
+.sladen__liste em{ font-style:normal; font-family:var(--f-label); font-weight:800; color:#9ff0b6; }
+.sladen__hinweis{ margin:10px 0 0; font-size:.78rem; color:var(--fg-dim); }
 
 /* ── Große Karte (M) ── */
 .sgross{
@@ -352,6 +406,7 @@
 #spielGrossKarte{
   width:100%; height:100%; min-height:0;
   border-radius:16px; border:1px solid var(--line2); background:#0b1124;
+  cursor:crosshair; touch-action:none;
 }
 .sgross__seite{ display:flex; flex-direction:column; gap:14px; justify-content:space-between; }
 .sgross__legende{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
@@ -361,7 +416,7 @@
 .sgross__hinweis{ margin:0; font-size:.78rem; color:var(--fg-dim); }
 
 @media (max-width:760px), (pointer: coarse){
-  .skarte{ left:auto; right:10px; top:104px; bottom:auto; width:132px; border-radius:14px; }
+  .skarte{ left:auto; right:10px; top:150px; bottom:auto; width:118px; border-radius:14px; }
   .sgross{ grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
   .sgross__legende{ flex-direction:row; flex-wrap:wrap; gap:10px 16px; }
   .sgross__knoepfe{ flex-direction:row; flex-wrap:wrap; }

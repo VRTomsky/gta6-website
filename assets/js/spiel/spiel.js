@@ -2,25 +2,32 @@
    Vice City — Browser-Spiel, Hauptschleife
 
    Aufbau:
-     karte.js      die Stadt (Kacheln, Kollision, Zeichnen)
+     stadtplan.js  die Stadt wird einmal gebaut (Felder)
+     karte.js      Abfragen und Zeichnen der Stadt
+     wege.js       Wegfindung über die Straßen (für die Route)
      bilder.js     Sprites laden und gedreht malen
      wesen.js      Figuren zu Fuß
      fahrzeug.js   Autos und Fahrmodell
+     waffen.js     Fäuste, Waffen, Waffenladen
+     minikarte.js  Minikarte und große Karte
      spiel.js      Eingabe, Kamera, Schleife, Anzeige  ← diese Datei
 
    Steuerung: WASD/Pfeile fahren und laufen, Umschalt rennen,
-   E ein- und aussteigen, Leertaste Handbremse, Alt halten für den
-   Figurenwechsel, M Karte und Optionen, N Ton, F Vollbild, P Pause.
+   E oder F ein- und aussteigen, Leertaste Handbremse, Maustaste
+   schlagen und schießen, Q oder Mausrad Waffe wechseln, Alt halten für
+   den Figurenwechsel, M Karte, N Ton, H Hupe, V Vollbild, P Pause.
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
 import * as Bilder from "./bilder.js";
 import * as Tex from "./texturen.js";
-import { Figur, passantenVerteilen, passantenNachziehen, PASSANT_ARTEN } from "./wesen.js";
+import { Figur, passantenVerteilen, passantenNachziehen, panik, PASSANT_ARTEN } from "./wesen.js";
 import { Fahrzeug, autosVerteilen, TYPEN } from "./fahrzeug.js";
 import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
 import { Missionen } from "./missionen.js";
+import { Arsenal, feuern, laedenSetzen, WAFFEN, WARE } from "./waffen.js";
+import { Route } from "./wege.js";
 import * as Minikarte from "./minikarte.js";
 import * as Ton from "./ton.js";
 import { zustand as konto } from "../konto/konto.js";
@@ -38,12 +45,18 @@ const hud = {
   geld: document.querySelector("[data-hud=geld]"),
   sterne: document.querySelector("[data-hud=sterne]"),
   leben: document.querySelector("[data-hud=leben]"),
+  lebenZahl: document.querySelector("[data-hud=lebenZahl]"),
+  waffe: document.querySelector("[data-hud=waffe]"),
+  schuss: document.querySelector("[data-hud=schuss]"),
   endeText: document.querySelector("[data-hud=endeText]"),
   auftrag: document.querySelector("[data-hud=auftrag]")
 };
 const radar = document.getElementById("spielKarte");
 const grossFeld = document.getElementById("spielGross");
 const grossKarte = document.getElementById("spielGrossKarte");
+const ladenFeld = document.getElementById("spielLaden");
+const ladenListe = document.getElementById("spielLadenListe");
+const ladenGeld = document.getElementById("spielLadenGeld");
 const besteListe = document.getElementById("spielBeste");
 const eigenText = document.getElementById("spielEigen");
 const tonKnopf = document.getElementById("spielTon");
@@ -81,6 +94,13 @@ const zustand = {
   geld: 0,
   fahndung: new Fahndung(),
   missionen: new Missionen(Karte.START.x, Karte.START.y),
+  arsenal: new Arsenal(),
+  laeden: [],
+  strahlen: [],               // kurze Schusslinien zum Zeichnen
+  wegpunkt: null,             // selbst gesetztes Ziel auf der Karte
+  route: new Route(),
+  schonung: 0,                // kurz nach einem Neustart keine Festnahme
+  angefahren: [],             // Zeitpunkte umgefahrener Passanten
   bestwert: 0,
   ende: 0,              // Restzeit der Einblendung „Busted"/„Erledigt"
   /* Wechsel-Anzeige und -Fahrt der Kamera */
@@ -101,6 +121,9 @@ const TASTE = {
 };
 const gedrueckt = liste => liste.some(t => tasten.has(t));
 
+/* Mausposition auf der Bühne — zu Fuß wird damit gezielt */
+const maus = { x: 0, y: 0, imBild: false, feuer: false };
+
 addEventListener("keydown", e => {
   if (!zustand.laeuft) return;
   /* Pfeiltasten, Leertaste und Alt sollen die Seite nicht bedienen */
@@ -108,16 +131,25 @@ addEventListener("keydown", e => {
   if (e.repeat) return;
   tasten.add(e.code);
   if (zustand.fahrt) return;                       // während der Kamerafahrt nichts
+  if (!ladenFeld.hidden) {                         // Laden offen
+    if (e.code === "Escape" || e.code === "KeyE" || e.code === "KeyF") ladenSchliessen();
+    const nr = "Digit1 Digit2 Digit3 Digit4".split(" ").indexOf(e.code);
+    if (nr >= 0) kaufen(nr);
+    return;
+  }
   if (e.code === "AltLeft" || e.code === "AltRight") { wechselOeffnen(); return; }
   if (zustand.wahl) {                              // Auswahl im Wechselmenü
     if (gedrueckt(TASTE.links)) wechselWaehlen("jason");
     if (gedrueckt(TASTE.rechts)) wechselWaehlen("lucia");
     return;
   }
-  if (e.code === "KeyE") einUndAussteigen();
-  if (e.code === "KeyF") vollbildUmschalten();
+  if (e.code === "KeyE" || e.code === "KeyF") einsteigenOderLaden();
+  if (e.code === "KeyV") vollbildUmschalten();
   if (e.code === "KeyM") karteUmschalten();
   if (e.code === "KeyN") tonUmschalten();
+  if (e.code === "KeyQ") waffeWechseln(1);
+  const nummer = "Digit1 Digit2 Digit3 Digit4".split(" ").indexOf(e.code);
+  if (nummer >= 0) waffeWaehlen(nummer);
   if (e.code === "KeyH" && spieler().imAuto) Ton.hupe();
   if ((e.code === "KeyP" || e.code === "Escape") && grossFeld.hidden) pauseUmschalten();
   if (e.code === "Escape" && !grossFeld.hidden) karteUmschalten(false);
@@ -126,10 +158,32 @@ addEventListener("keyup", e => {
   tasten.delete(e.code);
   if (e.code === "AltLeft" || e.code === "AltRight") wechselSchliessen(true);
 });
-addEventListener("blur", () => tasten.clear());
+addEventListener("blur", () => { tasten.clear(); maus.feuer = false; });
+
+/* Zielen und Schießen mit der Maus */
+leinwand.addEventListener("mousemove", e => {
+  const k = leinwand.getBoundingClientRect();
+  maus.x = e.clientX - k.left;
+  maus.y = e.clientY - k.top;
+  maus.imBild = true;
+});
+leinwand.addEventListener("mouseleave", () => { maus.imBild = false; maus.feuer = false; });
+leinwand.addEventListener("mousedown", e => {
+  if (e.button !== 0 || !zustand.laeuft) return;
+  leinwand.focus();
+  maus.feuer = true;
+});
+addEventListener("mouseup", e => { if (e.button === 0) maus.feuer = false; });
+
+/* Mausrad über dem Spielfeld wechselt die Waffe */
+leinwand.addEventListener("wheel", e => {
+  if (!zustand.laeuft) return;
+  e.preventDefault();
+  waffeWechseln(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
 
 /* ── Steuerung mit dem Finger ──
-   Links ein Kreuz, das wie ein Stick funktioniert, rechts drei Knöpfe.
+   Links ein Kreuz, das wie ein Stick funktioniert, rechts vier Knöpfe.
    Erscheint nur, wenn das Gerät Touch kann. */
 const finger = { x: 0, y: 0, aktiv: false, bremse: false };
 const istTouch = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
@@ -167,15 +221,22 @@ function touchEinrichten() {
     const art = b.dataset.touch;
     b.addEventListener("pointerdown", e => {
       e.preventDefault();
-      if (art === "e") einUndAussteigen();
+      if (art === "e") einsteigenOderLaden();
       if (art === "bremse") finger.bremse = true;
+      if (art === "feuer") maus.feuer = true;
       if (art === "wechsel") {
         if (zustand.wahl) wechselSchliessen(true);
         else { wechselOeffnen(); wechselWaehlen(zustand.aktiv === "lucia" ? "jason" : "lucia"); }
       }
     });
-    b.addEventListener("pointerup", () => { if (art === "bremse") finger.bremse = false; });
-    b.addEventListener("pointercancel", () => { if (art === "bremse") finger.bremse = false; });
+    b.addEventListener("pointerup", () => {
+      if (art === "bremse") finger.bremse = false;
+      if (art === "feuer") maus.feuer = false;
+    });
+    b.addEventListener("pointercancel", () => {
+      if (art === "bremse") finger.bremse = false;
+      if (art === "feuer") maus.feuer = false;
+    });
   });
 }
 
@@ -184,6 +245,7 @@ function weltBauen() {
   zustand.autos = autosVerteilen(45, Karte.START.x, Karte.START.y, 130);
   zustand.passanten = passantenVerteilen(75, Karte.START.x, Karte.START.y);
   zustand.verkehr = verkehrAufbauen(65, Karte.START.x, Karte.START.y);
+  zustand.laeden = laedenSetzen(Karte.START.x, Karte.START.y);
   /* Ein Wagen steht auf der Straße neben dem Start: die nächste
      Straßenkachel im Umkreis, mindestens 3,5 m entfernt. */
   let beste = null;
@@ -205,35 +267,136 @@ function weltBauen() {
   }
 }
 
-/* ── Ein- und Aussteigen ─────────────────────────────────── */
+/* ── Ein- und Aussteigen, Laden betreten ─────────────────── */
+function einsteigenOderLaden() {
+  const f = spieler();
+  if (!f.imAuto) {
+    const laden = zustand.laeden.find(l => Math.hypot(l.x - f.x, l.y - f.y) < 4);
+    if (laden) { ladenOeffnen(); return; }
+  }
+  einUndAussteigen();
+}
+
 function einUndAussteigen() {
   const f = spieler();
   if (f.imAuto) {
-    const auto = f.imAuto;
-    const seite = { x: -Math.sin(auto.winkel), y: Math.cos(auto.winkel) };
-    const px = auto.x + seite.x * (auto.daten.breit / 2 + 0.6);
-    const py = auto.y + seite.y * (auto.daten.breit / 2 + 0.6);
-    f.x = px; f.y = py;
-    f.vx = auto.vx * 0.2; f.vy = auto.vy * 0.2;
-    f.imAuto = null;
-    auto.fahrer = null;
-    Ton.tuer();
+    aussteigen();
     hinweis(L("Ausgestiegen", "Out of the car"));
     return;
   }
   let naechstes = null, beste = 4.2;
+  let schrott = false;
   for (const a of zustand.autos.concat(zustand.verkehr)) {
     if (a.fahrer) continue;
     const d = Math.hypot(a.x - f.x, a.y - f.y);
-    if (d < beste) { beste = d; naechstes = a; }
+    if (d >= beste) continue;
+    if (a.schrott) { schrott = true; continue; }     // ausgebrannt, da steigt keiner ein
+    beste = d;
+    naechstes = a;
   }
   if (naechstes) {
     f.imAuto = naechstes;
     naechstes.fahrer = f;
     Ton.tuer();
     hinweis(naechstes.daten.name);
+  } else if (schrott) {
+    hinweis(L("Der Wagen ist Schrott", "That car is wrecked"));
   } else {
     hinweis(L("Kein Auto in der Nähe", "No car nearby"));
+  }
+}
+
+function aussteigen() {
+  const f = spieler();
+  const auto = f.imAuto;
+  if (!auto) return;
+  const seite = { x: -Math.sin(auto.winkel), y: Math.cos(auto.winkel) };
+  f.x = auto.x + seite.x * (auto.daten.breit / 2 + 0.6);
+  f.y = auto.y + seite.y * (auto.daten.breit / 2 + 0.6);
+  f.vx = auto.vx * 0.2;
+  f.vy = auto.vy * 0.2;
+  f.imAuto = null;
+  auto.fahrer = null;
+  f.entklemmen();
+  Ton.tuer();
+}
+
+/* ── Waffen ──────────────────────────────────────────────── */
+function waffeWechseln(richtung) {
+  if (spieler().imAuto) return;
+  zustand.arsenal.wechseln(richtung);
+  waffeZeigen();
+}
+
+function waffeWaehlen(nummer) {
+  if (spieler().imAuto) return;
+  zustand.arsenal.waehlen(nummer);
+  waffeZeigen();
+}
+
+function waffeZeigen() {
+  const a = zustand.arsenal;
+  hud.waffe.textContent = a.waffe.name;
+  hud.schuss.textContent = a.schuss === Infinity ? "∞" : a.schuss;
+}
+
+/* Richtung, in die der Spieler zielt: zur Maus, sonst nach vorn */
+function zielRichtung(f) {
+  if (!maus.imBild) return f.winkel;
+  const zx = kamera.x + (maus.x - kamera.breite / 2) / kamera.zoom;
+  const zy = kamera.y + (maus.y - kamera.hoehe / 2) / kamera.zoom;
+  return Math.atan2(zy - f.y, zx - f.x);
+}
+
+/* Mindestens so viele Sterne — Delikte heben die Stufe nur an */
+function mindestens(n) {
+  const fa = zustand.fahndung;
+  if (fa.stufe < n) fa.melden(n - fa.stufe);
+  else fa.ruhe = 0;
+}
+
+function angreifen() {
+  const f = spieler();
+  const a = zustand.arsenal;
+  if (f.imAuto || f.tot || a.abklingen > 0) return;
+  if (a.waffe.art !== "nah" && a.schuss <= 0) {
+    hinweis(L("Keine Munition", "Out of ammo"));
+    a.pruefen();
+    waffeZeigen();
+    return;
+  }
+
+  const richtung = zielRichtung(f);
+  f.winkel = richtung;
+  const ziele = zustand.passanten.concat(zustand.fahndung.ziele());
+  const nah = a.waffe.art === "nah";
+  const ergebnis = feuern(a, f, richtung, ziele);
+  if (!ergebnis) return;
+  waffeZeigen();
+
+  if (nah) {
+    Ton.schlag(ergebnis.treffer.length > 0);
+  } else {
+    Ton.schuss(a.waffe.laut);
+    for (const s of ergebnis.strahlen) zustand.strahlen.push({ ...s, t: 0.07 });
+    /* Mündungsfeuer */
+    zustand.blitz = 0.06;
+  }
+  panik(zustand.passanten, f.x, f.y, nah ? 16 : 34);
+
+  /* Sieht das jemand? Dann ruft er die Polizei. */
+  const zeugen = zustand.passanten.some(p => !p.tot && Math.hypot(p.x - f.x, p.y - f.y) < 30);
+  if (!nah && (zeugen || zustand.fahndung.stufe > 0)) mindestens(1);
+
+  for (const z of ergebnis.treffer) {
+    if (!z.tot) continue;
+    if (zustand.fahndung.polizisten.includes(z)) {
+      mindestens(zustand.fahndung.stufe + 1);
+      hinweis(L("Polizist ausgeschaltet", "Officer down"));
+    } else {
+      mindestens(2);
+      zustand.geld += 25;                            // Kleingeld aus der Tasche
+    }
   }
 }
 
@@ -340,7 +503,9 @@ function hudFahndung() {
     hud.sterne.innerHTML = Array.from({ length: STUFEN }, () => "<i></i>").join("");
   }
   [...hud.sterne.children].forEach((st, i) => st.classList.toggle("is-an", i < stufe));
-  hud.leben.style.width = Math.max(0, Math.min(100, zustand.leben)) + "%";
+  const leben = Math.max(0, Math.min(100, zustand.leben));
+  hud.leben.style.width = leben + "%";
+  hud.lebenZahl.textContent = Math.round(leben);
   hud.geld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
 }
 
@@ -361,19 +526,28 @@ function zusammenstoesse(dt, f, alleAutos) {
 
   if (auto) {
     const tempo = Math.hypot(auto.vx, auto.vy);
-    /* Fußgänger anfahren */
+    /* Fußgänger anfahren. Ein einzelner Rempler kostet keinen Stern —
+       wer aber mehrere umfährt oder jemanden totfährt, wird gesucht. */
     for (const p of zustand.passanten) {
+      if (p.tot) continue;
       if (Math.hypot(p.x - auto.x, p.y - auto.y) > 2.2) continue;
-      if (tempo > 3) {
-        p.x += (p.x - auto.x) * 0.6 + auto.vx * 0.12;
-        p.y += (p.y - auto.y) * 0.6 + auto.vy * 0.12;
-        p.flucht = 3;
-        if (rammPause <= 0) {
-          zustand.fahndung.melden(1);
-          Ton.schreck();
-          hinweis(L("Fußgänger angefahren", "You hit a pedestrian"));
-          rammPause = 2.5;
-        }
+      if (tempo <= 3) continue;
+      p.x += (p.x - auto.x) * 0.6 + auto.vx * 0.12;
+      p.y += (p.y - auto.y) * 0.6 + auto.vy * 0.12;
+      p.flucht = 3;
+      const tot = p.treffer(tempo * 7);
+      if (rammPause > 0) continue;
+      rammPause = 1.2;
+      Ton.schreck();
+      panik(zustand.passanten, p.x, p.y, 22);
+      if (tot) {
+        mindestens(1);
+        hinweis(L("Du hast jemanden überfahren", "You ran someone over"));
+      } else {
+        zustand.angefahren.push(zustand.zeit);
+        zustand.angefahren = zustand.angefahren.filter(t => zustand.zeit - t < 20);
+        hinweis(L("Fußgänger angefahren", "You hit a pedestrian"));
+        if (zustand.angefahren.length >= 3) mindestens(1);
       }
     }
     /* Andere Autos und Streifenwagen rammen */
@@ -387,19 +561,24 @@ function zusammenstoesse(dt, f, alleAutos) {
       a.vy += ny * wucht * 0.8;
       auto.vx -= nx * wucht * 0.5;
       auto.vy -= ny * wucht * 0.5;
-      auto.schaden = Math.min(120, auto.schaden + wucht * 1.2);
-      zustand.leben -= wucht * 0.35;
+      auto.schaden = Math.min(130, auto.schaden + wucht * 0.75);
+      a.schaden = Math.min(130, (a.schaden || 0) + wucht * 0.9);
+      zustand.leben -= wucht * 0.22;
       if (wucht > 3) Ton.rumms(Math.min(1, wucht / 14));
-      if (zustand.fahndung.streifen.includes(a) && rammPause <= 0 && wucht > 4) {
-        zustand.fahndung.melden(1);
+      if (zustand.fahndung.streifen.includes(a) && rammPause <= 0 && wucht > 5) {
+        mindestens(2);
         hinweis(L("Streifenwagen gerammt", "You rammed a cop car"));
         rammPause = 2.5;
       }
     }
-    if (auto.schaden > 110) {                     // Wagen ist Schrott
+    /* Wagen ist hin — einmal aussteigen, danach bleibt er liegen.
+       Vorher hat ihn das jeden Bildaufbau erneut hinausgeworfen; es sah
+       aus, als ginge E nicht mehr. */
+    if (auto.schaden > 115 && !auto.schrott) {
+      auto.schrott = true;
       hinweis(L("Der Wagen ist hin", "The car is wrecked"));
-      zustand.leben -= 10;
-      einUndAussteigen();
+      zustand.leben -= 8;
+      aussteigen();
     }
   } else {
     /* Zu Fuß: von einem Auto erwischt zu werden tut weh */
@@ -422,8 +601,12 @@ function neustartAn(x, y) {
   const p = Karte.freierPunkt(x, y, [Karte.ART.GEHWEG, Karte.ART.PARKPLATZ], 40);
   f.x = p.x; f.y = p.y;
   f.vx = f.vy = 0;
+  f.tot = false;
+  f.leben = 100;
   kamera.x = p.x; kamera.y = p.y;
   zustand.leben = 100;
+  zustand.schonung = 4;
+  zustand.angefahren.length = 0;
   zustand.fahndung.loeschen();
 }
 
@@ -481,7 +664,7 @@ function kameraFolgen(dt) {
 /* ── Ortsnamen für die Anzeige ──────────────────────────── */
 function ortsname(x, y) {
   const tx = Karte.inKachel(x), ty = Karte.inKachel(y);
-  if (tx >= 186) return L("Ocean Drive", "Ocean Drive");
+  if (tx >= 204) return L("Ocean Drive", "Ocean Drive");
   if (tx < 26 && ty > Karte.HOEHE - 30) return L("Hafen", "Docks");
   if (ty < 45) return L("Nord-Vice City", "North Vice City");
   if (ty > 140) return L("Süd-Vice City", "South Vice City");
@@ -533,6 +716,15 @@ function rechnen(dt) {
     f.bewegen(quer, -vor, tasten.has("ShiftLeft") || tasten.has("ShiftRight"), dt);
   }
 
+  /* Schlagen und schießen */
+  zustand.arsenal.rechnen(dt);
+  if (maus.feuer) angreifen();
+  if (zustand.blitz) zustand.blitz = Math.max(0, zustand.blitz - dt);
+  for (let k = zustand.strahlen.length - 1; k >= 0; k--) {
+    zustand.strahlen[k].t -= dt;
+    if (zustand.strahlen[k].t <= 0) zustand.strahlen.splice(k, 1);
+  }
+
   /* Die zweite Figur bleibt stehen, rollt aber im Auto aus */
   for (const name of Object.keys(zustand.figuren)) {
     if (name === zustand.aktiv) continue;
@@ -574,10 +766,15 @@ function rechnen(dt) {
   hud.auftrag.classList.toggle("is-an", !!auftrag);
 
   /* ── Polizei ── */
-  zustand.fahndung.rechnen(dt, f, alleAutos.concat(zustand.fahndung.streifen));
-  if (zustand.fahndung.verhaftet(f)) verhaftet();
+  zustand.schonung = Math.max(0, zustand.schonung - dt);
+  zustand.fahndung.rechnen(dt, f, alleAutos.concat(zustand.fahndung.streifen), zustand);
+  if (zustand.schonung <= 0 && zustand.fahndung.verhaftet(f)) verhaftet();
   if (zustand.leben <= 0) erledigt();
   hudFahndung();
+
+  /* ── Route zum Ziel ── */
+  const pos = f.imAuto || f;
+  zustand.route.aktualisieren(pos.x, pos.y, routenZiel(), dt);
 
   /* ── Ton ── */
   const auto = f.imAuto;
@@ -603,6 +800,14 @@ function rechnen(dt) {
   hud.ort.textContent = ortsname(f.x, f.y);
 }
 
+/* Wohin die Route führt: eigener Wegpunkt zuerst, sonst das Auftragsziel */
+function routenZiel() {
+  if (zustand.wegpunkt) return zustand.wegpunkt;
+  const marken = zustand.missionen.marken();
+  if (!zustand.missionen.laeuft) return null;       // freie Marken: keine Route
+  return marken[0] || null;
+}
+
 function zeichnen() {
   Minikarte.zeichnen(radar, zustand, spieler());
   ctx.fillStyle = "#0b1124";
@@ -613,6 +818,22 @@ function zeichnen() {
   const rand = 8;
   const sichtbar = o => Math.abs(o.x - kamera.x) < kamera.breite / kamera.zoom / 2 + rand &&
                         Math.abs(o.y - kamera.y) < kamera.hoehe / kamera.zoom / 2 + rand;
+  const aufBild = (x, y) => [(x - kamera.x) * kamera.zoom + kamera.breite / 2,
+                             (y - kamera.y) * kamera.zoom + kamera.hoehe / 2];
+
+  /* Waffenläden als leuchtender Punkt */
+  for (const laden of zustand.laeden) {
+    if (!sichtbar(laden)) continue;
+    const [px, py] = aufBild(laden.x, laden.y);
+    const r = kamera.zoom * 1.1;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, "rgba(110,231,160,.75)");
+    g.addColorStop(1, "rgba(110,231,160,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   /* Markierung unter den beiden Hauptfiguren: sonst verliert man sich
      zwischen den Passanten. Die aktive Figur bekommt den vollen Ring. */
@@ -620,8 +841,7 @@ function zeichnen() {
     const f = zustand.figuren[name];
     if (f.imAuto || !sichtbar(f)) continue;
     const aktiv = name === zustand.aktiv;
-    const px = (f.x - kamera.x) * kamera.zoom + kamera.breite / 2;
-    const py = (f.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+    const [px, py] = aufBild(f.x, f.y);
     ctx.save();
     ctx.translate(px, py + 0.1 * kamera.zoom);
     ctx.scale(1, 0.55);
@@ -663,14 +883,50 @@ function zeichnen() {
     if (sichtbar(f)) f.zeichnen(ctx, kamera);
   }
 
-  /* Hinweisring um Autos, in die man einsteigen kann */
+  /* Schüsse: kurze helle Linien */
+  if (zustand.strahlen.length) {
+    ctx.save();
+    ctx.lineCap = "round";
+    for (const s of zustand.strahlen) {
+      const [x1, y1] = aufBild(s.x1, s.y1);
+      const [x2, y2] = aufBild(s.x2, s.y2);
+      ctx.strokeStyle = `rgba(255,226,150,${Math.min(1, s.t * 12)})`;
+      ctx.lineWidth = Math.max(1.2, kamera.zoom * 0.06);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* Zielkreuz, solange man zu Fuß unterwegs ist */
   const f = spieler();
+  if (!f.imAuto && maus.imBild) {
+    const dpr = 1;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,138,180,.85)";
+    ctx.lineWidth = 1.6 * dpr;
+    ctx.beginPath();
+    ctx.arc(maus.x, maus.y, 9, 0, Math.PI * 2);
+    ctx.moveTo(maus.x - 14, maus.y);
+    ctx.lineTo(maus.x - 4, maus.y);
+    ctx.moveTo(maus.x + 4, maus.y);
+    ctx.lineTo(maus.x + 14, maus.y);
+    ctx.moveTo(maus.x, maus.y - 14);
+    ctx.lineTo(maus.x, maus.y - 4);
+    ctx.moveTo(maus.x, maus.y + 4);
+    ctx.lineTo(maus.x, maus.y + 14);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* Hinweisring um Autos, in die man einsteigen kann */
   if (!f.imAuto) {
     for (const a of zustand.autos.concat(zustand.verkehr)) {
-      if (a.fahrer) continue;
+      if (a.fahrer || a.schrott) continue;
       if (Math.hypot(a.x - f.x, a.y - f.y) > 3.4) continue;
-      const px = (a.x - kamera.x) * kamera.zoom + kamera.breite / 2;
-      const py = (a.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+      const [px, py] = aufBild(a.x, a.y);
       ctx.strokeStyle = "rgba(255,138,180,.85)";
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 6]);
@@ -747,28 +1003,158 @@ async function bestenlisteZeigen() {
     </li>`).join("");
 }
 
+/* ── Waffenladen ────────────────────────────────────────── */
+function ladenOeffnen() {
+  if (!ladenFeld.hidden) return;
+  ladenFeld.hidden = false;
+  zustand.pause = true;
+  ladenZeichnen();
+}
+
+function ladenSchliessen() {
+  ladenFeld.hidden = true;
+  zustand.pause = false;
+  letzte = performance.now();
+  leinwand.focus();
+}
+
+function ladenZeichnen() {
+  ladenGeld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
+  ladenListe.innerHTML = WARE.map((w, k) => {
+    const name = w.waffe === "munition"
+      ? L("Munition für alles", "Ammo for everything")
+      : WAFFEN[w.waffe].name;
+    const hat = w.waffe !== "munition" && zustand.arsenal.besitzt(w.waffe);
+    const reicht = zustand.geld >= w.preis;
+    return `<li>
+      <button type="button" data-kauf="${k}" ${reicht ? "" : "disabled"}>
+        <b>${k + 1} · ${name}</b>
+        <span>${hat ? L("+", "+") : ""}${w.munition} ${L("Schuss", "rounds")}</span>
+        <em>$${w.preis}</em>
+      </button>
+    </li>`;
+  }).join("");
+}
+
+function kaufen(nr) {
+  const w = WARE[nr];
+  if (!w) return;
+  if (zustand.geld < w.preis) {
+    hinweis(L("Zu wenig Geld", "Not enough money"));
+    return;
+  }
+  zustand.geld -= w.preis;
+  if (w.waffe === "munition") zustand.arsenal.nachladen(w.munition);
+  else zustand.arsenal.geben(w.waffe, w.munition);
+  Ton.kasse();
+  waffeZeigen();
+  ladenZeichnen();
+  hudFahndung();
+}
+
+ladenFeld.addEventListener("click", e => {
+  const k = e.target.closest("[data-kauf]");
+  if (k) { kaufen(parseInt(k.dataset.kauf, 10)); return; }
+  if (e.target.closest("[data-ladenzu]")) ladenSchliessen();
+});
+
 /* ── Große Karte (Taste M) ──
-   Sie hält das Spiel an, zeigt die ganze Stadt mit Zielen und bietet
-   die wichtigsten Einstellungen. */
+   Sie hält das Spiel an, zeigt die ganze Stadt mit Zielen und lässt
+   einen Wegpunkt setzen. Zoomen mit dem Mausrad, schieben mit
+   gedrückter Maustaste. */
+let ansicht = null;
+let karteBild = 0;
+
 function karteUmschalten(an) {
   const auf = an === undefined ? grossFeld.hidden : an;
   grossFeld.hidden = !auf;
-  zustand.pause = auf ? true : false;
+  zustand.pause = auf;
   pauseFeld.hidden = true;
   if (auf) {
-    grossKarteZeichnen();
+    karteFrisch(true);
+    karteSchleife();
   } else {
+    cancelAnimationFrame(karteBild);
     letzte = performance.now();
     leinwand.focus();
   }
 }
 
-function grossKarteZeichnen() {
+function karteFrisch(neu) {
+  const dpr = Math.min(2.5, devicePixelRatio || 1);
   const kasten = grossKarte.getBoundingClientRect();
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  grossKarte.width = Math.max(320, Math.round(kasten.width * dpr));
-  grossKarte.height = Math.max(240, Math.round(kasten.height * dpr));
-  Minikarte.grosseKarteZeichnen(grossKarte, zustand, spieler());
+  const b = Math.max(320, Math.round(kasten.width * dpr));
+  const h = Math.max(240, Math.round(kasten.height * dpr));
+  if (grossKarte.width !== b || grossKarte.height !== h) {
+    grossKarte.width = b;
+    grossKarte.height = h;
+    neu = true;
+  }
+  if (neu || !ansicht) {
+    const standard = Minikarte.ansichtStandard(grossKarte);
+    if (!ansicht) ansicht = standard;
+    else ansicht.grund = standard.grund;
+  }
+  Minikarte.ansichtBegrenzen(grossKarte, ansicht);
+}
+
+function karteSchleife() {
+  if (grossFeld.hidden) return;
+  karteFrisch(false);
+  Minikarte.grosseKarteZeichnen(grossKarte, zustand, spieler(), ansicht);
+  karteBild = requestAnimationFrame(karteSchleife);
+}
+
+grossKarte.addEventListener("wheel", e => {
+  e.preventDefault();
+  if (!ansicht) return;
+  const vorher = Minikarte.ortAusKlick(grossKarte, ansicht, e.clientX, e.clientY);
+  ansicht.pxProM *= e.deltaY > 0 ? 0.85 : 1.18;
+  Minikarte.ansichtBegrenzen(grossKarte, ansicht);
+  const nachher = Minikarte.ortAusKlick(grossKarte, ansicht, e.clientX, e.clientY);
+  ansicht.x += vorher.x - nachher.x;
+  ansicht.y += vorher.y - nachher.y;
+  Minikarte.ansichtBegrenzen(grossKarte, ansicht);
+}, { passive: false });
+
+let schieben = null;
+grossKarte.addEventListener("pointerdown", e => {
+  grossKarte.setPointerCapture(e.pointerId);
+  schieben = { x: e.clientX, y: e.clientY, weg: 0, ax: ansicht.x, ay: ansicht.y };
+});
+grossKarte.addEventListener("pointermove", e => {
+  if (!schieben) return;
+  const kasten = grossKarte.getBoundingClientRect();
+  const massstab = (grossKarte.width / kasten.width) / ansicht.pxProM;
+  const dx = (e.clientX - schieben.x) * massstab;
+  const dy = (e.clientY - schieben.y) * massstab;
+  schieben.weg = Math.max(schieben.weg, Math.hypot(e.clientX - schieben.x, e.clientY - schieben.y));
+  ansicht.x = schieben.ax - dx;
+  ansicht.y = schieben.ay - dy;
+  Minikarte.ansichtBegrenzen(grossKarte, ansicht);
+});
+grossKarte.addEventListener("pointerup", e => {
+  if (!schieben) return;
+  const kurz = schieben.weg < 5;
+  schieben = null;
+  if (kurz) wegpunktSetzen(Minikarte.ortAusKlick(grossKarte, ansicht, e.clientX, e.clientY));
+});
+grossKarte.addEventListener("pointercancel", () => { schieben = null; });
+
+function wegpunktSetzen(ort) {
+  if (!ort) return;
+  const alt = zustand.wegpunkt;
+  if (alt && Math.hypot(alt.x - ort.x, alt.y - ort.y) < 25) {
+    zustand.wegpunkt = null;
+    zustand.route.leeren();
+    hinweis(L("Wegpunkt gelöscht", "Waypoint cleared"));
+    return;
+  }
+  zustand.wegpunkt = { x: ort.x, y: ort.y };
+  zustand.route.leeren();
+  const pos = spieler().imAuto || spieler();
+  zustand.route.aktualisieren(pos.x, pos.y, zustand.wegpunkt, 9);
+  hinweis(L("Wegpunkt gesetzt", "Waypoint set"));
 }
 
 grossFeld.addEventListener("click", e => {
@@ -776,7 +1162,22 @@ grossFeld.addEventListener("click", e => {
   if (!k) return;
   if (k.dataset.gross === "ton") tonUmschalten();
   if (k.dataset.gross === "vollbild") vollbildUmschalten();
+  if (k.dataset.gross === "wegpunkt") {
+    zustand.wegpunkt = null;
+    zustand.route.leeren();
+  }
   if (k.dataset.gross === "zu") karteUmschalten(false);
+});
+
+/* ── Minikarte: zoomen und Wegpunkt setzen ──────────────── */
+radar.addEventListener("wheel", e => {
+  e.preventDefault();
+  Minikarte.zoomen(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
+
+radar.addEventListener("click", e => {
+  const ort = Minikarte.ortAusMinikarte(radar, spieler(), e.clientX, e.clientY);
+  wegpunktSetzen(ort);
 });
 
 /* ── Ton an und aus ─────────────────────────────────────── */
@@ -830,11 +1231,12 @@ async function starten() {
   leinwand.focus();
   zustand.laeuft = true;
   hud.figur.textContent = spieler().daten.name;
+  waffeZeigen();
   bestwertLaden();
   bestenlisteZeigen();
   addEventListener("pagehide", bestwertSichern);
-  hinweis(L("E drücken, um einzusteigen · Alt halten zum Wechseln",
-            "Press E to get in a car · hold Alt to switch"));
+  hinweis(L("E einsteigen · Maustaste schlagen · M Karte",
+            "E to get in · mouse button to fight · M for the map"));
   letzte = performance.now();
   requestAnimationFrame(schleife);
 }

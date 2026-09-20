@@ -133,6 +133,22 @@ function wasserBauen() {
 
   /* Seeufer-Park im Nordwesten */
   kreis(38, 34, 15, ART.PARK);
+
+  /* Merken, wo Wasser war: Straßen, die später darüber gemalt werden,
+     sind in Wahrheit Brücken. */
+  wasserKopie = felder.art.slice();
+}
+
+let wasserKopie = null;
+
+/* Straße über altem Wasser ist in Wahrheit eine Brücke */
+function brueckenNachtragen() {
+  if (!wasserKopie) return;
+  for (let q = 0; q < N; q++) {
+    if (wasserKopie[q] !== ART.WASSER) continue;
+    const a = felder.art[q];
+    if (a === ART.STRASSE || a === ART.AUTOBAHN) felder.art[q] = ART.BRUECKE;
+  }
 }
 
 /* ═══ 2 · Autobahn ═══════════════════════════════════════ */
@@ -181,27 +197,50 @@ function hauptstrassenBauen() {
   }
 }
 
-/* ═══ 4 · Nebenstraßen: Blöcke unterschiedlich groß ═══════ */
-function nebenstrassenBauen() {
-  /* Jede Nebenstraße bekommt eigene Werte: Breite, Schwung, Länge. Manche
-     enden als Sackgasse. Dadurch sieht es nicht nach Millimeterpapier aus. */
-  const strasseSetzen = (tx, ty) => {
-    if (drin(tx, ty) && felder.art[i(tx, ty)] === ART.GEBAEUDE) felder.art[i(tx, ty)] = ART.STRASSE;
-  };
+/* ═══ 3b · Uferstraßen ═══════════════════════════════════
+   Ohne sie hört jede Querstraße am Wasser einfach auf und steht als
+   Stummel zwischen den Häusern. Die Promenade fängt sie auf. */
+function uferstrassenBauen() {
+  /* Beide Ufer des Flusses */
+  for (let tx = 2; tx < 200; tx++) {
+    const y = Math.round(126 + Math.sin(tx * 0.035) * 12 + Math.sin(tx * 0.011) * 8);
+    for (let b = 0; b < 2; b++) {
+      strasseSetzen(tx, y - 6 - b);
+      strasseSetzen(tx, y + 6 + b);
+    }
+  }
+  /* Westufer des Kanals */
+  for (let ty = 2; ty < HOEHE - 2; ty++) {
+    const wellig = Math.round(Math.sin(ty * 0.05) * 4);
+    for (let b = 0; b < 2; b++) strasseSetzen(196 + wellig - 3 - b, ty);
+  }
+  /* Rund um das Hafenbecken */
+  for (let tx = 2; tx <= 33; tx++) for (let b = 0; b < 2; b++) strasseSetzen(tx, HOEHE - 37 - b);
+  for (let ty = HOEHE - 37; ty < HOEHE - 3; ty++) for (let b = 0; b < 2; b++) strasseSetzen(32 + b, ty);
+}
 
+/* ═══ 4 · Nebenstraßen: Blöcke unterschiedlich groß ═══════ */
+/* Straßen nur auf Bauland ziehen — Wasser und Hauptstraßen bleiben */
+function strasseSetzen(tx, ty) {
+  if (drin(tx, ty) && felder.art[i(tx, ty)] === ART.GEBAEUDE) felder.art[i(tx, ty)] = ART.STRASSE;
+}
+
+function nebenstrassenBauen() {
+  /* Jede Nebenstraße bekommt eigene Werte: Breite und Schwung. Anfang und
+     Ende liegen immer am Stadtrand — eine Straße, die mitten im Block
+     aufhört, ergibt keinen Sinn. Wo Wasser dazwischenliegt, räumt der
+     spätere Durchgang „strassenSaeubern" den Rest weg. */
   let x = 12;
   while (x < BREITE - 28) {
     const breit = zufall() < 0.25 ? 3 : 2;
     const schwung = zufall() < 0.45 ? zwischen(1.5, 4.5) : zwischen(0, 1.2);
     const takt = zwischen(0.012, 0.045);
     const phase = zufall() * 6.3;
-    const vonY = zufall() < 0.22 ? ganz(30, 90) : 4;
-    const bisY = zufall() < 0.22 ? ganz(HOEHE - 90, HOEHE - 30) : HOEHE - 4;
-    for (let ty = vonY; ty < bisY; ty++) {
+    for (let ty = 0; ty < HOEHE; ty++) {
       const v = Math.round(Math.sin(ty * takt + phase) * schwung);
       for (let b = 0; b < breit; b++) strasseSetzen(x + b + v, ty);
     }
-    x += ganz(9, 18);
+    x += ganz(15, 27);
   }
 
   let y = 12;
@@ -210,26 +249,134 @@ function nebenstrassenBauen() {
     const schwung = zufall() < 0.45 ? zwischen(1.5, 4.0) : zwischen(0, 1.2);
     const takt = zwischen(0.012, 0.04);
     const phase = zufall() * 6.3;
-    const vonX = zufall() < 0.22 ? ganz(30, 90) : 4;
-    const bisX = zufall() < 0.25 ? ganz(120, 190) : BREITE - 18;
-    for (let tx = vonX; tx < bisX; tx++) {
+    for (let tx = 0; tx < BREITE; tx++) {
       const v = Math.round(Math.sin(tx * takt + phase) * schwung);
       for (let b = 0; b < breit; b++) strasseSetzen(tx, y + b + v);
     }
-    y += ganz(9, 17);
+    y += ganz(14, 25);
   }
 
-  /* Ein paar geschwungene Wohnstraßen im Nordwesten */
-  for (let k = 0; k < 5; k++) {
-    const x0 = ganz(14, 70), y0 = ganz(14, 60);
-    const laenge = ganz(40, 90);
-    let px = x0, py = y0;
+  /* Geschwungene Wohnstraßen quer durch die Stadt. Sie brechen das
+     Raster auf und werden breiter gemalt als die Rasterstraßen, sonst
+     zerfallen sie beim Aufräumen. */
+  for (let k = 0; k < 8; k++) {
+    let px = ganz(12, 190), py = ganz(12, 200);
+    const laenge = ganz(70, 150);
     let richtung = zufall() * Math.PI * 2;
     for (let s = 0; s < laenge; s++) {
-      richtung += zwischen(-0.22, 0.22);
+      richtung += zwischen(-0.085, 0.085);
       px += Math.cos(richtung);
       py += Math.sin(richtung);
-      for (let b = 0; b < 2; b++) strasseSetzen(Math.round(px) + b, Math.round(py));
+      const mx = Math.round(px), my = Math.round(py);
+      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]]) {
+        strasseSetzen(mx + dx, my + dy);
+      }
+    }
+  }
+}
+
+/* ═══ 4b · Straßennetz aufräumen ═════════════════════════
+   Zwei Regeln, die den New-York-Eindruck und die sinnlosen Stummel
+   zwischen den Häusern gleichermaßen austreiben:
+
+     1. Sackgassen abtragen — eine Kachel am Ende einer Straße hat kaum
+        Nachbarn. Runde für Runde wandert das Ende zurück bis zur
+        nächsten Kreuzung. Der Stadtrand bleibt verschont, dort verlässt
+        die Straße einfach die Stadt.
+     2. Nur das größte zusammenhängende Netz behalten — was man nicht
+        erreichen kann, gehört nicht auf die Karte.                      */
+const ACHT = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+const fahrbarArt = a =>
+  a === ART.STRASSE || a === ART.AUTOBAHN || a === ART.BRUECKE || a === ART.KREUZUNG;
+
+function strassenSaeubern() {
+  for (let runde = 0; runde < 40; runde++) {
+    const weg = [];
+    for (let ty = 2; ty < HOEHE - 2; ty++) {
+      for (let tx = 2; tx < BREITE - 2; tx++) {
+        if (felder.art[i(tx, ty)] !== ART.STRASSE) continue;
+        let n = 0;
+        for (const [dx, dy] of ACHT) if (fahrbarArt(felder.art[i(tx + dx, ty + dy)])) n++;
+        if (n < 4) weg.push(i(tx, ty));
+      }
+    }
+    if (!weg.length) break;
+    for (const q of weg) felder.art[q] = ART.GEBAEUDE;
+  }
+
+  const gesehen = new Uint8Array(N);
+  let groesstes = null;
+  for (let ty = 0; ty < HOEHE; ty++) {
+    for (let tx = 0; tx < BREITE; tx++) {
+      const p = i(tx, ty);
+      if (gesehen[p] || !fahrbarArt(felder.art[p])) continue;
+      const teil = [];
+      const stapel = [p];
+      gesehen[p] = 1;
+      while (stapel.length) {
+        const q = stapel.pop();
+        teil.push(q);
+        const qx = q % BREITE, qy = (q / BREITE) | 0;
+        for (const [dx, dy] of ACHT) {
+          const nx = qx + dx, ny = qy + dy;
+          if (!drin(nx, ny)) continue;
+          const nq = i(nx, ny);
+          if (gesehen[nq] || !fahrbarArt(felder.art[nq])) continue;
+          gesehen[nq] = 1;
+          stapel.push(nq);
+        }
+      }
+      if (!groesstes || teil.length > groesstes.length) groesstes = teil;
+    }
+  }
+  if (!groesstes) return;
+  const imNetz = new Uint8Array(N);
+  for (const q of groesstes) imNetz[q] = 1;
+  for (let q = 0; q < N; q++) {
+    if (!imNetz[q] && felder.art[q] === ART.STRASSE) felder.art[q] = ART.GEBAEUDE;
+  }
+}
+
+/* ═══ 4c · Zu große Bauflächen aufbrechen ════════════════
+   Gassen werden quer durch die ganze Fläche geschnitten, nicht nur ein
+   Stück weit — so treffen sie an beiden Enden auf eine Straße. */
+function grosseFlaechenAufbrechen() {
+  const gesehen = new Uint8Array(N);
+  for (let ty = 1; ty < HOEHE - 1; ty++) {
+    for (let tx = 1; tx < BREITE - 1; tx++) {
+      const p = i(tx, ty);
+      if (gesehen[p] || felder.art[p] !== ART.GEBAEUDE) continue;
+      let x0 = tx, x1 = tx, y0 = ty, y1 = ty, groesse = 0;
+      const stapel = [p];
+      gesehen[p] = 1;
+      while (stapel.length) {
+        const q = stapel.pop();
+        groesse++;
+        const qx = q % BREITE, qy = (q / BREITE) | 0;
+        if (qx < x0) x0 = qx;
+        if (qx > x1) x1 = qx;
+        if (qy < y0) y0 = qy;
+        if (qy > y1) y1 = qy;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = qx + dx, ny = qy + dy;
+          if (!drin(nx, ny)) continue;
+          const nq = i(nx, ny);
+          if (gesehen[nq] || felder.art[nq] !== ART.GEBAEUDE) continue;
+          gesehen[nq] = 1;
+          stapel.push(nq);
+        }
+      }
+      if (groesse < 360) continue;
+      if (x1 - x0 > 24) {
+        for (let x = x0 + ganz(9, 14); x < x1 - 7; x += ganz(11, 17)) {
+          for (let y = y0 - 1; y <= y1 + 1; y++) { strasseSetzen(x, y); strasseSetzen(x + 1, y); }
+        }
+      }
+      if (y1 - y0 > 24) {
+        for (let y = y0 + ganz(9, 14); y < y1 - 7; y += ganz(11, 17)) {
+          for (let x = x0 - 1; x <= x1 + 1; x++) { strasseSetzen(x, y); strasseSetzen(x, y + 1); }
+        }
+      }
     }
   }
 }
@@ -254,16 +401,35 @@ function brueckenBauen() {
     if (gebaut.some(([gx, gy]) => Math.hypot(gx - tx, gy - ty) < 26)) continue;
     let laenge = 0;
     while (laenge < 40 && drin(tx + dx * laenge, ty + dy * laenge) &&
-           felder.art[i(tx + dx * laenge, ty + dy * laenge)] !== ART.GEBAEUDE) {
+           felder.art[i(tx + dx * laenge, ty + dy * laenge)] === ART.WASSER) {
       laenge++;
     }
     if (laenge < 3 || laenge >= 40) continue;
+
+    /* Hinter der Brücke weiterbauen, bis wieder eine Straße kommt.
+       Eine Brücke, die im Baugebiet endet, wäre so sinnlos wie eine
+       Straße mitten zwischen zwei Häusern. */
+    let anschluss = 0;
+    while (anschluss < 16) {
+      const nx = tx + dx * (laenge + anschluss), ny = ty + dy * (laenge + anschluss);
+      if (!drin(nx, ny)) break;
+      const b = felder.art[i(nx, ny)];
+      if (fahrbarArt(b)) break;
+      if (b !== ART.GEBAEUDE) { anschluss = 99; break; }     // Park, Strand … reicht nicht
+      anschluss++;
+    }
+    if (anschluss >= 16) continue;
+
     const breite = a === ART.AUTOBAHN ? 5 : 3;
-    for (let s = 0; s < laenge; s++) {
-      for (let b = -Math.floor(breite / 2); b <= Math.floor(breite / 2); b++) {
+    const halb = Math.floor(breite / 2);
+    for (let s = 0; s < laenge + anschluss; s++) {
+      for (let b = -halb; b <= halb; b++) {
         const bx = tx + dx * s + (dx ? 0 : b);
         const by = ty + dy * s + (dy ? 0 : b);
-        if (drin(bx, by) && felder.art[i(bx, by)] === ART.WASSER) felder.art[i(bx, by)] = ART.BRUECKE;
+        if (!drin(bx, by)) continue;
+        const art = felder.art[i(bx, by)];
+        if (art === ART.WASSER) felder.art[i(bx, by)] = ART.BRUECKE;
+        else if (art === ART.GEBAEUDE) felder.art[i(bx, by)] = ART.STRASSE;
       }
     }
     gebaut.push([tx, ty]);
@@ -400,28 +566,6 @@ function hausHoehe(bez, bauArt) {
 }
 
 /* Blöcke finden: zusammenhängende Bauflächen zwischen den Straßen */
-/* Gassen in einen übergroßen Block schneiden */
-function gassenSchneiden(x0, y0, x1, y1) {
-  for (let x = x0 + ganz(8, 13); x < x1 - 4; x += ganz(9, 15)) {
-    for (let ty = y0; ty <= y1; ty++) {
-      for (let b = 0; b < 2; b++) {
-        const tx = x + b;
-        if (drin(tx, ty) && felder.art[i(tx, ty)] === ART.GEBAEUDE) felder.art[i(tx, ty)] = ART.STRASSE;
-      }
-    }
-  }
-  for (let y = y0 + ganz(8, 13); y < y1 - 4; y += ganz(9, 15)) {
-    for (let tx = x0; tx <= x1; tx++) {
-      for (let b = 0; b < 2; b++) {
-        const ty = y + b;
-        if (drin(tx, ty) && felder.art[i(tx, ty)] === ART.GEBAEUDE) felder.art[i(tx, ty)] = ART.STRASSE;
-      }
-    }
-  }
-}
-
-const nachtrag = [];
-
 function bloeckeFuellen() {
   const gesehen = new Uint8Array(N);
   for (let ty = 1; ty < HOEHE - 1; ty++) {
@@ -453,13 +597,6 @@ function bloeckeFuellen() {
       }
       if (felderImBlock.length < 4) {
         for (const q of felderImBlock) felder.art[q] = ART.GEHWEG;
-        continue;
-      }
-      /* Zu großer Block? Dann Gassen hineinschneiden und später erneut
-         aufteilen — sonst entstehen Flächen von der Größe eines Viertels. */
-      if (x1 - x0 > 24 || y1 - y0 > 24) {
-        gassenSchneiden(x0, y0, x1, y1);
-        nachtrag.push([x0, y0, x1, y1]);
         continue;
       }
       blockFuellen(x0, y0, x1, y1);
@@ -555,17 +692,15 @@ export function bauen() {
   wasserBauen();
   autobahnBauen();
   hauptstrassenBauen();
+  uferstrassenBauen();
   nebenstrassenBauen();
+  grosseFlaechenAufbrechen();
   brueckenBauen();
+  brueckenNachtragen();
+  strassenSaeubern();
   bezirkeSetzen();
   gehwegeBauen();
   bloeckeFuellen();
-  /* Zweiter Durchlauf für die Flächen, in die Gassen geschnitten wurden */
-  if (nachtrag.length) {
-    nachtrag.length = 0;
-    gehwegeBauen();
-    bloeckeFuellen();
-  }
   wahrzeichenSetzen();
   kreuzungenSetzen();
 }
