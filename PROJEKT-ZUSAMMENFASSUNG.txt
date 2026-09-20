@@ -269,6 +269,23 @@ WAS BISHER GEMACHT WURDE
    - Das nervige Hintergrundrauschen ist raus, dafuer gibt es
      Schuss- und Schlaggeraeusche.
 
+18. Spiel, sechster Schritt (21.09.2026):
+   - Keine Autostapel mehr beim Start: parkende Wagen stehen nur
+     am Fahrbahnrand oder auf Parkplaetzen, mit Abstand zueinander.
+     22 parkende, 70 fahrende Autos.
+   - Nach einem Crash steigt man nicht mehr aus. Der Wagen raucht
+     und faehrt langsamer, mehr passiert nicht.
+   - Ammu-Vice: drei richtige Waffenlaeden als eigene Gebaeude mit
+     Bildern im Regal. Vier Waffen mit eigenen Modellen: Pistole,
+     Micro-MP, Pumpgun und AK-47. Man traegt sie sichtbar.
+   - Polizisten steigen jetzt aus und schiessen zurueck; sie rammen
+     erst ab vier Sternen.
+   - Springen mit der Leertaste (im Auto bleibt sie die Handbremse).
+   - Schlagen hat eine sichtbare Bewegung, und Getroffene gehen zu
+     Boden.
+   - Das Fadenkreuz an der Maus ist weg.
+   - Waffe wechseln mit dem Mausrad oder Q, direkt mit 1-5.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

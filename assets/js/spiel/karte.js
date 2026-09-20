@@ -154,7 +154,8 @@ const DACH = {
   [Plan.BAU.SCHULE]: ["#c08a55"],
   [Plan.BAU.TANKSTELLE]: ["#d9d3c2"],
   [Plan.BAU.KAUFHAUS]: ["#8f6fa8", "#7a7fb5"],
-  [Plan.BAU.WERK]: ["#6a6f62", "#77705d"]
+  [Plan.BAU.WERK]: ["#6a6f62", "#77705d"],
+  [Plan.BAU.WAFFEN]: ["#3f5c46"]
 };
 
 function dachFarbe(tx, ty) {
@@ -378,6 +379,20 @@ function gebaeudeMalen(ctx, tx, ty, px, py, g) {
     case Plan.BAU.SCHULE:
       ctx.fillStyle = "rgba(255,255,255,.15)";
       for (let k = 0; k < 3; k++) ctx.fillRect(px + g * (0.16 + k * 0.26), py + g * 0.3, g * 0.16, g * 0.4);
+      break;
+    case Plan.BAU.WAFFEN:
+      /* Ammu-Vice: grünes Dach mit Leuchtschrift und Zielscheibe */
+      ctx.fillStyle = "rgba(255,240,190,.5)";
+      ctx.fillRect(px + g * 0.14, py + g * 0.12, g * 0.72, g * 0.18);
+      ctx.strokeStyle = "rgba(255,90,110,.75)";
+      ctx.lineWidth = Math.max(1, g * 0.05);
+      ctx.beginPath();
+      ctx.arc(px + g * 0.5, py + g * 0.58, g * 0.22, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,90,110,.75)";
+      ctx.beginPath();
+      ctx.arc(px + g * 0.5, py + g * 0.58, g * 0.07, 0, Math.PI * 2);
+      ctx.fill();
       break;
     case Plan.BAU.TANKSTELLE:
       ctx.fillStyle = "#e8e2d2";

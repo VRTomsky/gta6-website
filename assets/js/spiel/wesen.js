@@ -16,6 +16,8 @@ export const FIGUREN = {
 
 const RADIUS = 0.32;                    // Kollisionskreis in Metern
 const BILDER_LAUF = 8;
+const SPRUNG = 0.5;                     // Dauer eines Sprungs in Sekunden
+const SCHLAG = 0.28;                    // Dauer der Schlaganimation
 
 export class Figur {
   constructor(art, x, y) {
@@ -31,6 +33,11 @@ export class Figur {
     this.tot = false;
     this.totZeit = 0;
     this.trefferRadius = 0.55;
+    this.sprung = 0;                    // Restzeit des Sprungs
+    this.ko = 0;                        // liegt gerade am Boden
+    this.schlag = 0;                    // Restzeit der Schlaganimation
+    this.waffenBild = null;             // Sprite der getragenen Waffe
+    this.waffenBreite = 0.5;
     /* Jason und Lucia sind etwas größer gezeichnet als die Passanten —
        zusammen mit Ring und Namensschild erkennt man sie sofort. */
     this.faktor = art === "lucia" || art === "jason" ? 1.16 : 1;
@@ -53,12 +60,43 @@ export class Figur {
     return false;
   }
 
+  /* Sprung — in jedem GTA drin, hier ein kurzer Hüpfer nach vorn */
+  springen() {
+    if (this.sprung > 0 || this.ko > 0 || this.tot || this.imAuto) return false;
+    this.sprung = SPRUNG;
+    return true;
+  }
+
+  /* Höhe über dem Boden in Metern (nur fürs Zeichnen) */
+  get hoch() {
+    return this.sprung > 0 ? Math.sin((1 - this.sprung / SPRUNG) * Math.PI) * 0.9 : 0;
+  }
+
+  /* Von einem Schlag umgerissen: liegt ein paar Sekunden */
+  umwerfen(dauer = 3) {
+    if (this.tot) return;
+    this.ko = Math.max(this.ko, dauer);
+    this.vx = this.vy = 0;
+  }
+
+  /* Schlagbewegung auslösen (die Sprites haben kein eigenes Bild dafür,
+     die Figur holt stattdessen sichtbar aus) */
+  ausholen() { this.schlag = SCHLAG; }
+
   /* dx/dy: gewünschte Richtung (−1…1), rennen: Schub */
   bewegen(dx, dy, rennen, dt) {
     if (this.tot) return;
+    if (this.sprung > 0) this.sprung = Math.max(0, this.sprung - dt);
+    if (this.schlag > 0) this.schlag = Math.max(0, this.schlag - dt);
+    if (this.ko > 0) {
+      this.ko -= dt;
+      this.vx -= this.vx * Math.min(1, dt * 8);
+      this.vy -= this.vy * Math.min(1, dt * 8);
+      return;
+    }
     const d = this.daten;
     this.entklemmen();
-    const ziel = rennen ? d.rennen : d.tempo;
+    const ziel = (rennen ? d.rennen : d.tempo) * (this.sprung > 0 ? 1.35 : 1);
     const laenge = Math.hypot(dx, dy);
 
     if (laenge > 0.01) {
@@ -118,25 +156,63 @@ export class Figur {
 
   zeichnen(ctx, kamera) {
     if (this.imAuto) return;
-    if (this.tot) {
-      /* Liegend: dunkler Fleck und die Figur flach und blass darüber */
-      const px = (this.x - kamera.x) * kamera.zoom + kamera.breite / 2;
-      const py = (this.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+    const px = (this.x - kamera.x) * kamera.zoom + kamera.breite / 2;
+    const py = (this.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+
+    if (this.tot || this.ko > 0) {
+      /* Liegend: flach und blass, bei Toten dazu ein dunkler Fleck */
       ctx.save();
-      ctx.fillStyle = "rgba(90,12,24,.5)";
-      ctx.beginPath();
-      ctx.ellipse(px, py + kamera.zoom * 0.1, kamera.zoom * 0.62, kamera.zoom * 0.3, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 0.75;
-      ctx.restore();
-      ctx.save();
-      ctx.globalAlpha = 0.8;
-      malen(ctx, `${this.art}_steht`, kamera, this.x, this.y, this.winkel, 0, this.faktor * 0.92);
+      if (this.tot) {
+        ctx.fillStyle = "rgba(90,12,24,.5)";
+        ctx.beginPath();
+        ctx.ellipse(px, py + kamera.zoom * 0.1, kamera.zoom * 0.62, kamera.zoom * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = this.tot ? 0.8 : 0.9;
+      malen(ctx, `${this.art}_steht`, kamera, this.x, this.y, this.winkel + Math.PI / 2,
+            0, this.faktor * 0.9);
       ctx.restore();
       return;
     }
-    schatten(ctx, kamera, this.x, this.y + 0.12, 0.42, 0.3);
-    malen(ctx, this.bildname(), kamera, this.x, this.y, this.winkel, 0, this.faktor);
+
+    const h = this.hoch;
+    schatten(ctx, kamera, this.x, this.y + 0.12, 0.42 * (1 - h * 0.3), 0.3 * (1 - h * 0.3));
+
+    /* Beim Schlagen holt die Figur sichtbar aus: kurz nach vorn versetzt */
+    const schwung = this.schlag > 0 ? Math.sin((1 - this.schlag / SCHLAG) * Math.PI) : 0;
+    const vx = Math.cos(this.winkel), vy = Math.sin(this.winkel);
+    const zx = this.x + vx * schwung * 0.22;
+    const zy = this.y + vy * schwung * 0.22 - h;
+
+    malen(ctx, this.bildname(), kamera, zx, zy, this.winkel, 0, this.faktor * (1 + h * 0.14));
+
+    /* Waffe in der Hand — seitlich neben der Figur, in Blickrichtung */
+    if (this.waffenBild) {
+      const qx = -vy, qy = vx;
+      /* Etwas größer als in Wirklichkeit — sonst sind sechs Bildpunkte
+         auf dunklem Asphalt nicht zu erkennen. */
+      malen(ctx, this.waffenBild, kamera,
+            zx + vx * 0.3 + qx * 0.22, zy + vy * 0.3 + qy * 0.22,
+            this.winkel, this.waffenBreite * 1.7);
+    }
+
+    /* Faust: ein kleiner heller Bogen vor der Figur */
+    if (schwung > 0.05) {
+      const fx = (zx + vx * (0.5 + schwung * 0.35) - kamera.x) * kamera.zoom + kamera.breite / 2;
+      const fy = (zy + vy * (0.5 + schwung * 0.35) - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,236,210,${0.75 * schwung})`;
+      ctx.lineWidth = Math.max(1.5, kamera.zoom * 0.09);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(fx, fy, kamera.zoom * 0.34, this.winkel - 1.1, this.winkel + 1.1);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(247,214,182,${0.9 * schwung})`;
+      ctx.beginPath();
+      ctx.arc(fx, fy, kamera.zoom * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 }
 
@@ -176,6 +252,7 @@ export class Passant extends Figur {
 
   denken(dt, autos) {
     if (this.tot) { this.totZeit += dt; return; }
+    if (this.ko > 0) { this.bewegen(0, 0, false, dt); return; }   // liegt noch
     /* Kommt ein Auto mit Schwung näher, nichts wie weg */
     if (this.flucht > 0) this.flucht -= dt;
     for (const a of autos) {
@@ -229,7 +306,7 @@ export function passantenVerteilen(anzahl, umX, umY, radius = 110) {
 /* Alle in der Nähe erschrecken — nach einem Schuss oder einem Schlag */
 export function panik(liste, x, y, radius = 26) {
   for (const p of liste) {
-    if (p.tot) continue;
+    if (p.tot || p.ko > 0) continue;
     const dx = p.x - x, dy = p.y - y;
     if (Math.hypot(dx, dy) > radius) continue;
     p.ziel = Math.atan2(dy, dx);
@@ -254,6 +331,7 @@ export function passantenNachziehen(liste, x, y, weite = 150) {
     p.tot = false;
     p.totZeit = 0;
     p.leben = 100;
+    p.ko = 0;
     p.flucht = 0;
     p.art = PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
   }

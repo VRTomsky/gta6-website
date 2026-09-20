@@ -289,6 +289,26 @@ export function schlag(getroffen) {
   o.onended = () => { o.disconnect(); g.disconnect(); };
 }
 
+/* Kurzer Absprung: ein Ton, der schnell nach oben geht */
+export function sprung() {
+  if (!ctx) return;
+  wecken();
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(220, t);
+  o.frequency.exponentialRampToValueAtTime(430, t + 0.12);
+  g.gain.setValueAtTime(0.001, t);
+  g.gain.linearRampToValueAtTime(0.07, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+  o.connect(g);
+  g.connect(summe);
+  o.start(t);
+  o.stop(t + 0.18);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+
 /* Kleine Tonfolge, wenn etwas gelingt */
 export function kasse() {
   if (!ctx) return;

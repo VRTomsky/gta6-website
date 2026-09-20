@@ -785,7 +785,9 @@ spiel/fahrzeug.js   Fahrmodell und Fahrzeugdaten
 spiel/verkehr.js    Verkehr: Spuren, Abbiegen, Ampeln, Auffahren vermeiden
 spiel/polizei.js    Streifen, Polizisten, Fahndungsstufe 0–5
 spiel/missionen.js  vier Aufträge als Schrittfolgen mit Fristen
-spiel/waffen.js     Fäuste, Pistole, MP, Schrotflinte, Waffenläden
+spiel/waffen.js     Fäuste, Pistole, Micro-MP, Pumpgun, AK, Waffenläden
+spiel/waffenbilder.js  Waffen als Leinwand gezeichnet: von oben für die
+                    Hand, von der Seite für Laden und Anzeige
 spiel/wege.js       Wegfindung über die Straßen (A*) für die Route
 spiel/minikarte.js  Minikarte unten links und große Karte (beide gepuffert)
 spiel/ton.js        Motor, Sirene, Rumms, Schuss, Kasse — per Web Audio erzeugt
@@ -841,11 +843,23 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   Im Code läuft alles über `mindestens(n)` in `spiel.js` — Delikte heben die
   Stufe nur an, sie summieren sich nicht mehr.
 - **Kämpfen** (`waffen.js`): Maustaste schlägt oder schießt, gezielt wird zur
-  Maus, Q oder das Mausrad wechselt die Waffe, 1–4 wählen direkt. Getroffen wird
+  Maus, das Mausrad oder Q wechselt die Waffe, 1–5 wählen direkt. Getroffen wird
   über einen Strahl in Schritten von 0,5 m bis zur ersten Wand oder Person —
   billiger als echte Geschosse und bei diesen Entfernungen nicht zu unterscheiden.
-  Gekauft wird in drei **Waffenläden** (grüner Punkt auf beiden Karten, davor
-  E drücken): Pistole 300, MP 1200, Schrotflinte 1900, Munition 150.
+  Ein Faustschlag wirft Passanten um (`Figur.umwerfen`), sie liegen ein paar
+  Sekunden. Die Figur holt dabei sichtbar aus (`ausholen()`), obwohl die Sprites
+  kein eigenes Schlagbild haben: kurzer Versatz nach vorn plus ein heller Bogen.
+- **Waffenbilder** (`waffenbilder.js`) entstehen im Browser auf einer Leinwand,
+  nicht als Datei: von oben (Mündung nach oben, 256 px/m) für die Hand, von der
+  Seite für Laden und Anzeige. In der Hand werden sie 1,7-fach gezeichnet —
+  maßstabsgetreu wären es sechs Bildpunkte auf dunklem Asphalt.
+- **Ammu-Vice:** drei eigene Gebäude (`BAU.WAFFEN`, grün mit Zielscheibe auf dem
+  Dach, als Wahrzeichen auf der Karte). Der Eingang liegt auf dem Gehweg davor,
+  dort öffnet E den Laden: Pistole 300, Micro-MP 1200, Pumpgun 1900, AK 3200,
+  Munition 150.
+- **Springen** mit der Leertaste (zu Fuß; im Auto bleibt sie die Handbremse).
+  Der Sprung ist nur Zeichnung: `Figur.hoch` hebt das Sprite an, der Schatten
+  schrumpft, das Tempo steigt kurz um ein Drittel.
 - **Punkte** = Geld + 750 je erledigtem Auftrag. Mit Konto landet der Bestwert
   in Firestore (`bestenliste/{uid}`, öffentlich lesbar) und auf der Spielseite;
   ohne Konto nur im `localStorage`.
@@ -905,10 +919,14 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   `ton.js` weckt es bei Tabwechsel, Klick und Taste wieder auf. Dazu Reifen,
   Hupe, Türen, Schreck, Schuss und Faustschlag. Das leise Stadtrauschen ist
   **wieder raus** — es klang nach defektem Lautsprecher (Rückmeldung des Nutzers).
-- **Schrottautos:** Ein Wagen über 115 Schaden wirft den Spieler **einmal**
-  hinaus und bekommt `schrott = true`. Vorher stand die Prüfung ohne Merker in
-  der Schleife: man wurde jeden Bildaufbau erneut hinausgeworfen, es sah aus,
-  als ginge `E` nicht mehr.
+- **Schrottautos:** Ein Wagen über 115 Schaden bekommt `schrott = true`, raucht
+  aus der Motorhaube und fährt nur noch mit halber Kraft — **hinausgeworfen wird
+  niemand mehr**. Das Aussteigen nach einem Crash war die größte Beschwerde:
+  erst flog man jeden Bildaufbau erneut raus, dann einmal — jetzt gar nicht.
+- **Parkende Autos** (`autosVerteilen`): Parkplätze zuerst, auf der Straße nur am
+  Fahrbahnrand (`bandGrenzen`), längs zur Straße, mindestens 6,5 m Abstand
+  zueinander und 9 m zum fahrenden Verkehr. Vorher standen am Start zehn Wagen
+  ineinander. Es sind 22 parkende und 70 fahrende.
 - Rechtsklick öffnet auf der Spielbühne kein Browser-Menü mehr.
 - Neu erzeugen:
 

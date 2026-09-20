@@ -13,9 +13,10 @@
      spiel.js      Eingabe, Kamera, Schleife, Anzeige  ← diese Datei
 
    Steuerung: WASD/Pfeile fahren und laufen, Umschalt rennen,
-   E oder F ein- und aussteigen, Leertaste Handbremse, Maustaste
-   schlagen und schießen, Q oder Mausrad Waffe wechseln, Alt halten für
-   den Figurenwechsel, M Karte, N Ton, H Hupe, V Vollbild, P Pause.
+   E oder F ein- und aussteigen, Leertaste springen (im Auto Handbremse),
+   Maustaste schlagen und schießen, Mausrad oder Q Waffe wechseln,
+   Alt halten für den Figurenwechsel, M Karte, N Ton, H Hupe, V Vollbild,
+   P Pause.
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
@@ -27,6 +28,7 @@ import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
 import { Missionen } from "./missionen.js";
 import { Arsenal, feuern, laedenSetzen, WAFFEN, WARE } from "./waffen.js";
+import * as Waffenbilder from "./waffenbilder.js";
 import { Route } from "./wege.js";
 import * as Minikarte from "./minikarte.js";
 import * as Ton from "./ton.js";
@@ -47,6 +49,7 @@ const hud = {
   leben: document.querySelector("[data-hud=leben]"),
   lebenZahl: document.querySelector("[data-hud=lebenZahl]"),
   waffe: document.querySelector("[data-hud=waffe]"),
+  waffenBild: document.querySelector("[data-hud=waffenbild]"),
   schuss: document.querySelector("[data-hud=schuss]"),
   endeText: document.querySelector("[data-hud=endeText]"),
   auftrag: document.querySelector("[data-hud=auftrag]")
@@ -133,7 +136,7 @@ addEventListener("keydown", e => {
   if (zustand.fahrt) return;                       // während der Kamerafahrt nichts
   if (!ladenFeld.hidden) {                         // Laden offen
     if (e.code === "Escape" || e.code === "KeyE" || e.code === "KeyF") ladenSchliessen();
-    const nr = "Digit1 Digit2 Digit3 Digit4".split(" ").indexOf(e.code);
+    const nr = "Digit1 Digit2 Digit3 Digit4 Digit5".split(" ").indexOf(e.code);
     if (nr >= 0) kaufen(nr);
     return;
   }
@@ -144,11 +147,12 @@ addEventListener("keydown", e => {
     return;
   }
   if (e.code === "KeyE" || e.code === "KeyF") einsteigenOderLaden();
+  if (e.code === "Space" && !spieler().imAuto && spieler().springen()) Ton.sprung();
   if (e.code === "KeyV") vollbildUmschalten();
   if (e.code === "KeyM") karteUmschalten();
   if (e.code === "KeyN") tonUmschalten();
   if (e.code === "KeyQ") waffeWechseln(1);
-  const nummer = "Digit1 Digit2 Digit3 Digit4".split(" ").indexOf(e.code);
+  const nummer = "Digit1 Digit2 Digit3 Digit4 Digit5".split(" ").indexOf(e.code);
   if (nummer >= 0) waffeWaehlen(nummer);
   if (e.code === "KeyH" && spieler().imAuto) Ton.hupe();
   if ((e.code === "KeyP" || e.code === "Escape") && grossFeld.hidden) pauseUmschalten();
@@ -242,9 +246,11 @@ function touchEinrichten() {
 
 /* ── Spielwelt aufbauen ──────────────────────────────────── */
 function weltBauen() {
-  zustand.autos = autosVerteilen(45, Karte.START.x, Karte.START.y, 130);
+  zustand.verkehr = verkehrAufbauen(70, Karte.START.x, Karte.START.y);
+  /* Parkende Autos zum Schluss und mit Abstand zum fahrenden Verkehr —
+     sonst stehen am Start zehn Wagen ineinander. */
+  zustand.autos = autosVerteilen(22, Karte.START.x, Karte.START.y, 150, zustand.verkehr);
   zustand.passanten = passantenVerteilen(75, Karte.START.x, Karte.START.y);
-  zustand.verkehr = verkehrAufbauen(65, Karte.START.x, Karte.START.y);
   zustand.laeden = laedenSetzen(Karte.START.x, Karte.START.y);
   /* Ein Wagen steht auf der Straße neben dem Start: die nächste
      Straßenkachel im Umkreis, mindestens 3,5 m entfernt. */
@@ -262,8 +268,12 @@ function weltBauen() {
     }
   }
   if (beste) {
-    const senkrecht = Karte.istStrasse(beste.tx, beste.ty + 2) && Karte.istStrasse(beste.tx, beste.ty - 2);
-    zustand.autos.push(new Fahrzeug("cabrio", beste.x, beste.y, senkrecht ? -Math.PI / 2 : 0));
+    const belegt = zustand.autos.concat(zustand.verkehr)
+      .some(a => Math.hypot(a.x - beste.x, a.y - beste.y) < 6);
+    if (!belegt) {
+      const senkrecht = Karte.istStrasse(beste.tx, beste.ty + 2) && Karte.istStrasse(beste.tx, beste.ty - 2);
+      zustand.autos.push(new Fahrzeug("cabrio", beste.x, beste.y, senkrecht ? -Math.PI / 2 : 0));
+    }
   }
 }
 
@@ -285,12 +295,10 @@ function einUndAussteigen() {
     return;
   }
   let naechstes = null, beste = 4.2;
-  let schrott = false;
   for (const a of zustand.autos.concat(zustand.verkehr)) {
     if (a.fahrer) continue;
     const d = Math.hypot(a.x - f.x, a.y - f.y);
     if (d >= beste) continue;
-    if (a.schrott) { schrott = true; continue; }     // ausgebrannt, da steigt keiner ein
     beste = d;
     naechstes = a;
   }
@@ -298,9 +306,7 @@ function einUndAussteigen() {
     f.imAuto = naechstes;
     naechstes.fahrer = f;
     Ton.tuer();
-    hinweis(naechstes.daten.name);
-  } else if (schrott) {
-    hinweis(L("Der Wagen ist Schrott", "That car is wrecked"));
+    hinweis(naechstes.daten.name + (naechstes.schrott ? L(" (raucht)", " (smoking)") : ""));
   } else {
     hinweis(L("Kein Auto in der Nähe", "No car nearby"));
   }
@@ -334,10 +340,23 @@ function waffeWaehlen(nummer) {
   waffeZeigen();
 }
 
+let letzteWaffe = "faust";
 function waffeZeigen() {
   const a = zustand.arsenal;
+  letzteWaffe = a.name;
   hud.waffe.textContent = a.waffe.name;
   hud.schuss.textContent = a.schuss === Infinity ? "∞" : a.schuss;
+  if (hud.waffenBild) {
+    const bild = a.waffe.bild ? Waffenbilder.datenUrl(a.name) : "";
+    hud.waffenBild.hidden = !bild;
+    if (bild) hud.waffenBild.src = bild;
+  }
+  /* Beide Figuren tragen, was gerade gewählt ist */
+  for (const name of Object.keys(zustand.figuren)) {
+    const f = zustand.figuren[name];
+    f.waffenBild = a.waffe.bild || null;
+    f.waffenBreite = a.waffe.breit || 0.5;
+  }
 }
 
 /* Richtung, in die der Spieler zielt: zur Maus, sonst nach vorn */
@@ -370,6 +389,7 @@ function angreifen() {
   f.winkel = richtung;
   const ziele = zustand.passanten.concat(zustand.fahndung.ziele());
   const nah = a.waffe.art === "nah";
+  if (nah) f.ausholen();
   const ergebnis = feuern(a, f, richtung, ziele);
   if (!ergebnis) return;
   waffeZeigen();
@@ -571,14 +591,13 @@ function zusammenstoesse(dt, f, alleAutos) {
         rammPause = 2.5;
       }
     }
-    /* Wagen ist hin — einmal aussteigen, danach bleibt er liegen.
-       Vorher hat ihn das jeden Bildaufbau erneut hinausgeworfen; es sah
-       aus, als ginge E nicht mehr. */
+    /* Der Wagen nimmt Schaden, wirft aber niemanden hinaus. Genau das
+       hat beim Fahren am meisten gestört: einmal irgendwo angeeckt und
+       man stand plötzlich auf der Straße. */
     if (auto.schaden > 115 && !auto.schrott) {
       auto.schrott = true;
-      hinweis(L("Der Wagen ist hin", "The car is wrecked"));
-      zustand.leben -= 8;
-      aussteigen();
+      hinweis(L("Der Wagen raucht — er fährt nur noch langsam",
+                "The car is smoking — it barely runs"));
     }
   } else {
     /* Zu Fuß: von einem Auto erwischt zu werden tut weh */
@@ -716,8 +735,17 @@ function rechnen(dt) {
     f.bewegen(quer, -vor, tasten.has("ShiftLeft") || tasten.has("ShiftRight"), dt);
   }
 
-  /* Schlagen und schießen */
+  /* Schlagen und schießen. Die getragene Waffe wird jedes Bild
+     abgeglichen — dann stimmt sie auch, wenn eine Mission oder der
+     Laden das Arsenal ändert. */
   zustand.arsenal.rechnen(dt);
+  const gewaehlt = zustand.arsenal.waffe;
+  f.waffenBild = gewaehlt.bild || null;
+  f.waffenBreite = gewaehlt.breit || 0.5;
+  if (letzteWaffe !== zustand.arsenal.name) {
+    letzteWaffe = zustand.arsenal.name;
+    waffeZeigen();
+  }
   if (maus.feuer) angreifen();
   if (zustand.blitz) zustand.blitz = Math.max(0, zustand.blitz - dt);
   for (let k = zustand.strahlen.length - 1; k >= 0; k--) {
@@ -900,31 +928,11 @@ function zeichnen() {
     ctx.restore();
   }
 
-  /* Zielkreuz, solange man zu Fuß unterwegs ist */
-  const f = spieler();
-  if (!f.imAuto && maus.imBild) {
-    const dpr = 1;
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,138,180,.85)";
-    ctx.lineWidth = 1.6 * dpr;
-    ctx.beginPath();
-    ctx.arc(maus.x, maus.y, 9, 0, Math.PI * 2);
-    ctx.moveTo(maus.x - 14, maus.y);
-    ctx.lineTo(maus.x - 4, maus.y);
-    ctx.moveTo(maus.x + 4, maus.y);
-    ctx.lineTo(maus.x + 14, maus.y);
-    ctx.moveTo(maus.x, maus.y - 14);
-    ctx.lineTo(maus.x, maus.y - 4);
-    ctx.moveTo(maus.x, maus.y + 4);
-    ctx.lineTo(maus.x, maus.y + 14);
-    ctx.stroke();
-    ctx.restore();
-  }
-
   /* Hinweisring um Autos, in die man einsteigen kann */
+  const f = spieler();
   if (!f.imAuto) {
     for (const a of zustand.autos.concat(zustand.verkehr)) {
-      if (a.fahrer || a.schrott) continue;
+      if (a.fahrer) continue;
       if (Math.hypot(a.x - f.x, a.y - f.y) > 3.4) continue;
       const [px, py] = aufBild(a.x, a.y);
       ctx.strokeStyle = "rgba(255,138,180,.85)";
@@ -1021,15 +1029,23 @@ function ladenSchliessen() {
 function ladenZeichnen() {
   ladenGeld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
   ladenListe.innerHTML = WARE.map((w, k) => {
-    const name = w.waffe === "munition"
-      ? L("Munition für alles", "Ammo for everything")
-      : WAFFEN[w.waffe].name;
-    const hat = w.waffe !== "munition" && zustand.arsenal.besitzt(w.waffe);
+    const munition = w.waffe === "munition";
+    const waffe = munition ? null : WAFFEN[w.waffe];
+    const name = munition ? L("Munition für alles", "Ammo for everything") : waffe.name;
+    const hat = !munition && zustand.arsenal.besitzt(w.waffe);
     const reicht = zustand.geld >= w.preis;
+    const bild = munition ? "" : Waffenbilder.datenUrl(w.waffe);
+    const wucht = munition
+      ? L("füllt jede Waffe auf", "tops up every weapon")
+      : L(`Schaden ${waffe.schaden} · Reichweite ${Math.round(waffe.reichweite)} m`,
+          `Damage ${waffe.schaden} · range ${Math.round(waffe.reichweite)} m`);
     return `<li>
       <button type="button" data-kauf="${k}" ${reicht ? "" : "disabled"}>
-        <b>${k + 1} · ${name}</b>
-        <span>${hat ? L("+", "+") : ""}${w.munition} ${L("Schuss", "rounds")}</span>
+        <i class="sladen__bild">${bild ? `<img src="${bild}" alt="" width="84" height="26">` : "+"}</i>
+        <span class="sladen__text">
+          <b>${k + 1} · ${name}${hat ? " ✓" : ""}</b>
+          <small>${wucht} · ${w.munition} ${L("Schuss", "rounds")}</small>
+        </span>
         <em>$${w.preis}</em>
       </button>
     </li>`;
@@ -1221,6 +1237,7 @@ async function starten() {
     for (let i = 0; i < 8; i++) figuren.push(`${art}_lauf${i}`);
   }
   Tex.bauen();
+  Waffenbilder.bauen();
   await Bilder.laden([...autos, ...ampeln, ...figuren]);
 
   Ton.bereit();
@@ -1235,8 +1252,8 @@ async function starten() {
   bestwertLaden();
   bestenlisteZeigen();
   addEventListener("pagehide", bestwertSichern);
-  hinweis(L("E einsteigen · Maustaste schlagen · M Karte",
-            "E to get in · mouse button to fight · M for the map"));
+  hinweis(L("E einsteigen · Maustaste schlagen · Leertaste springen · M Karte",
+            "E to get in · mouse to fight · space to jump · M for the map"));
   letzte = performance.now();
   requestAnimationFrame(schleife);
 }

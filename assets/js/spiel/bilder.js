@@ -22,6 +22,10 @@ export function laden(namen) {
 
 export const bild = name => bilder.get(name) || null;
 
+/* Selbst gezeichnete Sprites (Waffen) anmelden — sie kommen aus einer
+   Leinwand statt aus einer Datei, malen() behandelt beides gleich. */
+export const setzen = (name, leinwand) => bilder.set(name, leinwand);
+
 /* Sprite an Weltposition zeichnen. winkel in Radiant, 0 = nach rechts —
    die Bilder zeigen nach oben, deshalb kommt eine Vierteldrehung dazu. */
 export function malen(ctx, name, kamera, x, y, winkel, breiteM = 0, faktor = 1) {

@@ -47,7 +47,8 @@ const BAU_FARBE = {
   [Karte.BAU.TANKSTELLE]: "#c98a35",
   [Karte.BAU.KIRCHE]: "#8892a8",
   [Karte.BAU.SCHULE]: "#4f87a8",
-  [Karte.BAU.HOCHHAUS]: "#39415a"
+  [Karte.BAU.HOCHHAUS]: "#39415a",
+  [Karte.BAU.WAFFEN]: "#4bd07f"
 };
 
 /* Sichtweite der Minikarte (Höhe des Ausschnitts in Metern) */

@@ -52,7 +52,13 @@ export class Fahrzeug {
 
   /* gas −1…1, lenken −1…1 */
   fahren(gas, lenken, handbremse, dt) {
-    const d = this.daten;
+    const d0 = this.daten;
+    /* Ein zerbeulter Wagen zieht schlechter und läuft nicht mehr voll —
+       hinausgeworfen wird aber niemand mehr, das war das Nervigste am
+       Fahren. */
+    const d = this.schrott
+      ? { ...d0, kraft: d0.kraft * 0.55, spitze: d0.spitze * 0.6 }
+      : d0;
     this.entklemmen();
     const vor = { x: Math.cos(this.winkel), y: Math.sin(this.winkel) };
     const quer = { x: -vor.y, y: vor.x };
@@ -142,25 +148,79 @@ export class Fahrzeug {
     const d = this.daten;
     schatten(ctx, kamera, this.x, this.y + 0.25, d.lang * 0.42, d.breit * 0.4);
     malen(ctx, "auto_" + this.typ, kamera, this.x, this.y, this.winkel, d.breit * 1.34);
+    if (this.schrott) this.rauchMalen(ctx, kamera);
+  }
+
+  /* Qualm aus der Motorhaube — das Zeichen dafür, dass der Wagen hinüber
+     ist. Drei Wolken, die aufsteigen und verblassen. */
+  rauchMalen(ctx, kamera) {
+    const z = kamera.zeit || (performance.now() / 1000);
+    const vorn = { x: Math.cos(this.winkel), y: Math.sin(this.winkel) };
+    const px = (this.x + vorn.x * this.daten.lang * 0.38 - kamera.x) * kamera.zoom + kamera.breite / 2;
+    const py = (this.y + vorn.y * this.daten.lang * 0.38 - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+    ctx.save();
+    for (let k = 0; k < 3; k++) {
+      const t = ((z * 0.9 + k / 3) % 1);
+      const r = kamera.zoom * (0.25 + t * 0.55);
+      ctx.fillStyle = `rgba(120,124,134,${0.34 * (1 - t)})`;
+      ctx.beginPath();
+      ctx.arc(px, py - t * kamera.zoom * 0.9, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 }
 
-/* Autos in der Nähe von Straßen und Parkplätzen verteilen */
-export function autosVerteilen(anzahl, umX, umY, radius) {
-  const arten = [Karte.ART.PARKPLATZ, Karte.ART.STRASSE];
+/* ── Parkende Autos ──
+   Sie standen früher irgendwo auf der Fahrbahn und oft zu mehreren
+   ineinander — beim Start sah es aus wie ein Schrottplatz. Jetzt gilt:
+   Parkplätze zuerst, auf der Straße nur am Fahrbahnrand, immer längs zur
+   Straße und nie näher als eine Wagenlänge am nächsten Auto. */
+export function autosVerteilen(anzahl, umX, umY, radius, meiden = []) {
   const typen = Object.keys(TYPEN).filter(t => t !== "streife");
   const liste = [];
-  for (let i = 0; i < anzahl; i++) {
-    const p = Karte.freierPunkt(umX, umY, arten, radius);
-    const tx = Karte.inKachel(p.x), ty = Karte.inKachel(p.y);
-    const aufStrasse = Karte.art(tx, ty) === Karte.ART.STRASSE;
-    const senkrecht = Karte.istStrasse(tx, ty + 2) && Karte.istStrasse(tx, ty - 2);
-    const typ = typen[Math.floor(Karte.streu(i, 3, 41) * typen.length)];
-    const winkel = aufStrasse
-      ? (senkrecht ? (Karte.streu(i, 5, 43) > 0.5 ? Math.PI / 2 : -Math.PI / 2)
-                   : (Karte.streu(i, 5, 43) > 0.5 ? 0 : Math.PI))
-      : Karte.streu(i, 7, 47) * Math.PI * 2;
-    liste.push(new Fahrzeug(typ, p.x, p.y, winkel));
+
+  const frei = (x, y) => {
+    for (const a of liste) if (Math.hypot(a.x - x, a.y - y) < 6.5) return false;
+    for (const a of meiden) if (Math.hypot(a.x - x, a.y - y) < 9) return false;
+    return true;
+  };
+
+  for (let versuch = 0; versuch < anzahl * 40 && liste.length < anzahl; versuch++) {
+    const w = Karte.streu(versuch, 1, 31) * Math.PI * 2;
+    const r = 12 + Karte.streu(versuch, 2, 37) * radius;
+    const px = umX + Math.cos(w) * r, py = umY + Math.sin(w) * r;
+    const tx = Karte.inKachel(px), ty = Karte.inKachel(py);
+    const a = Karte.art(tx, ty);
+    if (a !== Karte.ART.PARKPLATZ && a !== Karte.ART.STRASSE) continue;
+
+    let x, y, winkel;
+    if (a === Karte.ART.PARKPLATZ) {
+      x = Karte.inMeter(tx) + Karte.KACHEL / 2;
+      y = Karte.inMeter(ty) + Karte.KACHEL / 2;
+      winkel = Math.round(Karte.streu(versuch, 5, 43) * 3) * (Math.PI / 2);
+    } else {
+      /* Am Rand der Fahrbahn parken, nicht mitten in der Spur */
+      const senkrecht = Karte.istStrasse(tx, ty + 2) && Karte.istStrasse(tx, ty - 2);
+      const band = Karte.bandGrenzen(tx, ty, senkrecht);
+      if (band.breite < 3) continue;                 // schmale Gasse bleibt frei
+      const rand = Karte.streu(versuch, 6, 51) < 0.5 ? band.von : band.bis;
+      if (senkrecht) {
+        x = Karte.inMeter(rand) + Karte.KACHEL / 2;
+        y = Karte.inMeter(ty) + Karte.KACHEL / 2;
+        winkel = rand === band.von ? Math.PI / 2 : -Math.PI / 2;
+      } else {
+        x = Karte.inMeter(tx) + Karte.KACHEL / 2;
+        y = Karte.inMeter(rand) + Karte.KACHEL / 2;
+        winkel = rand === band.von ? 0 : Math.PI;
+      }
+    }
+
+    if (!frei(x, y)) continue;
+    const typ = typen[Math.floor(Karte.streu(versuch, 3, 41) * typen.length)];
+    const auto = new Fahrzeug(typ, x, y, winkel);
+    if (!auto.frei(x, y)) continue;                  // steckt in einer Wand
+    liste.push(auto);
   }
   return liste;
 }

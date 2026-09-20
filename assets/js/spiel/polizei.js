@@ -7,9 +7,9 @@
 
    Wie hart sie vorgehen, hängt an der Stufe:
 
-     1–2   ein, zwei Wagen fahren hinterher und stellen sich quer,
-           gerammt wird nicht. Zu Fuß wird verhaftet, nicht geschossen.
-     3–5   sie rammen, steigen aus und schießen.
+     1     ein Wagen fährt hinterher, Festnahme zu Fuß
+     2–3   mehrere Wagen, die Beamten steigen aus und schießen zurück
+     4–5   dazu wird gerammt
 
    Vorher war schon ein angefahrener Fußgänger einen Stern wert und
    gleich drei Wagen haben einen von der Straße geschoben. Das war kein
@@ -130,6 +130,14 @@ export class Polizist extends Figur {
     return { name: "VCPD", tempo: 4.4, rennen: 6.6, breite: 0.7 };
   }
 
+  /* Wer schießt, trägt die Dienstwaffe auch sichtbar in der Hand */
+  set schiesst(wert) {
+    this._schiesst = wert;
+    this.waffenBild = wert ? "waffe_pistole" : null;
+    this.waffenBreite = 0.15;
+  }
+  get schiesst() { return this._schiesst; }
+
   jagen(dt, ziel) {
     this.aus += dt;
     this.nachladen -= dt;
@@ -173,8 +181,9 @@ export class Fahndung {
     return [0, 1, 2, 3, 4, 6][this.stufe] || 0;
   }
 
-  /* Ab drei Sternen wird gerammt und geschossen */
-  get hart() { return this.stufe >= 3; }
+  /* Ab vier Sternen wird gerammt, ab zwei geschossen */
+  get hart() { return this.stufe >= 4; }
+  get bewaffnet() { return this.stufe >= 2; }
 
   nachschub(zielX, zielY) {
     while (this.streifen.length < this.sollWagen) {
@@ -207,17 +216,21 @@ export class Fahndung {
       if (d < SICHT) gesehen = true;
       s.jagen(dt, ziel, autos, this.hart);
 
-      /* Ist der Spieler zu Fuß und die Streife nah, steigt ein Polizist aus */
-      if (!spieler.imAuto && d < 22 && this.polizisten.length < this.stufe + 1 && Math.abs(s.tempo) < 6) {
-        const p = new Polizist(s.x + 1.5, s.y + 1.5, Math.random() < 0.4);
-        p.schiesst = this.hart;
+      /* Aussteigen: wenn der Spieler zu Fuß ist, aber auch, wenn sein
+         Wagen steht — sonst fahren sie nur ewig im Kreis. */
+      const zielSteht = spieler.imAuto && Math.hypot(ziel.vx || 0, ziel.vy || 0) < 3.5;
+      const raus = (!spieler.imAuto && d < 24) || (zielSteht && d < 18);
+      if (raus && this.polizisten.length < this.stufe + 1 && Math.abs(s.tempo) < 7) {
+        const seite = { x: -Math.sin(s.winkel), y: Math.cos(s.winkel) };
+        const p = new Polizist(s.x + seite.x * 1.6, s.y + seite.y * 1.6, Math.random() < 0.4);
+        p.schiesst = this.bewaffnet;
         this.polizisten.push(p);
       }
     }
 
     for (let k = this.polizisten.length - 1; k >= 0; k--) {
       const p = this.polizisten[k];
-      p.schiesst = this.hart;
+      p.schiesst = this.bewaffnet;
       if (p.tot) {
         p.totZeit += dt;
         if (p.totZeit > 20) this.polizisten.splice(k, 1);
@@ -226,11 +239,11 @@ export class Fahndung {
       const d = p.jagen(dt, ziel);
       if (d < SICHT) gesehen = true;
 
-      /* Ab drei Sternen wird geschossen — vorher wird nur verhaftet */
-      if (this.hart && zustand && d < 22 && p.nachladen <= 0 && sicht(p, ziel, 24)) {
-        p.nachladen = 0.9 + Math.random() * 0.8;
-        const treffer = Math.random() < 0.55;
-        if (treffer) zustand.leben -= 7;
+      /* Ab zwei Sternen wird geschossen — auch auf einen Spieler im Auto */
+      if (this.bewaffnet && zustand && d < 24 && p.nachladen <= 0 && sicht(p, ziel, 26)) {
+        p.nachladen = 1.2 + Math.random() * 1.1;
+        const treffer = Math.random() < 0.42;
+        if (treffer) zustand.leben -= 5;
         zustand.strahlen.push({
           x1: p.x, y1: p.y,
           x2: treffer ? ziel.x : ziel.x + (Math.random() - 0.5) * 4,
@@ -245,9 +258,17 @@ export class Fahndung {
       else p.griff = 0;
     }
 
-    /* Schrottreife Streifenwagen verschwinden, dafür kommt Nachschub */
+    /* Aus einem zerstörten Streifenwagen steigen die Beamten aus und
+       machen zu Fuß weiter, statt einfach zu verschwinden. */
     for (let k = this.streifen.length - 1; k >= 0; k--) {
-      if (this.streifen[k].schaden > 115) this.streifen.splice(k, 1);
+      const s = this.streifen[k];
+      if (s.schaden <= 118) continue;
+      if (this.polizisten.length < this.stufe + 1) {
+        const p = new Polizist(s.x + 1.4, s.y + 1.4, Math.random() < 0.4);
+        p.schiesst = this.bewaffnet;
+        this.polizisten.push(p);
+      }
+      this.streifen.splice(k, 1);
     }
 
     /* Fahndung kühlt ab, wenn niemand den Spieler sieht */

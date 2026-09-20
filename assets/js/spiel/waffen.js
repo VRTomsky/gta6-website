@@ -1,50 +1,61 @@
 /* ═══════════════════════════════════════════════════════════
    Fäuste und Waffen
 
-   Bisher konnte man nur weglaufen. Jetzt gibt es vier Möglichkeiten,
-   sich zu wehren:
+   Fünf Möglichkeiten, sich zu wehren:
 
-     Fäuste          immer dabei, kurze Reichweite
-     Pistole         genau, langsam
-     Maschinenpistole schnell, streut
-     Schrotflinte    sechs Kugeln auf einmal, nur aus der Nähe
+     Fäuste     immer dabei, kurze Reichweite, wirft Leute um
+     Pistole    genau, langsam
+     Micro-MP   schnell, streut
+     Pumpgun    sechs Schrotkugeln, nur aus der Nähe
+     AK-47      weit, hart, viel Munition
 
    Getroffen wird per Strahl: vom Schützen aus in Schritten nach vorn,
    bis eine Wand oder jemand im Weg ist. Das ist billiger als echte
    Geschosse und fühlt sich bei diesen Entfernungen gleich an.
 
-   Gekauft wird im Waffenladen (grüner Punkt auf der Karte) — dafür ist
-   das Geld aus den Aufträgen da.
+   Die Waffen sind sichtbar: jede hat ein eigenes Bild (waffenbilder.js),
+   das in der Hand mitgeführt und im Laden gezeigt wird. Gekauft wird bei
+   Ammu-Vice — drei eigene Gebäude in der Stadt.
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
+import { MASSE } from "./waffenbilder.js";
 
 const L = (de, en) => ((window.LANG || document.documentElement.lang || "de").startsWith("en") ? en : de);
 
 export const WAFFEN = {
   faust: {
     name: L("Fäuste", "Fists"), art: "nah",
-    schaden: 16, reichweite: 2.0, takt: 0.32
+    schaden: 26, reichweite: 2.1, takt: 0.34
   },
   pistole: {
     name: L("Pistole", "Pistol"), art: "schuss",
-    schaden: 28, reichweite: 38, takt: 0.30, streuung: 0.03, kugeln: 1, laut: 1
+    schaden: 30, reichweite: 38, takt: 0.30, streuung: 0.03, kugeln: 1, laut: 1,
+    bild: "waffe_pistole", breit: MASSE.pistole.breit
   },
   mp: {
-    name: L("Maschinenpistole", "SMG"), art: "schuss",
-    schaden: 16, reichweite: 32, takt: 0.085, streuung: 0.085, kugeln: 1, laut: 0.7
+    name: L("Micro-MP", "Micro SMG"), art: "schuss",
+    schaden: 17, reichweite: 32, takt: 0.085, streuung: 0.085, kugeln: 1, laut: 0.7,
+    bild: "waffe_mp", breit: MASSE.mp.breit
   },
-  schrot: {
-    name: L("Schrotflinte", "Shotgun"), art: "schuss",
-    schaden: 13, reichweite: 17, takt: 0.9, streuung: 0.2, kugeln: 7, laut: 1.3
+  pumpgun: {
+    name: L("Pumpgun", "Pump shotgun"), art: "schuss",
+    schaden: 15, reichweite: 18, takt: 0.85, streuung: 0.19, kugeln: 7, laut: 1.3,
+    bild: "waffe_pumpgun", breit: MASSE.pumpgun.breit
+  },
+  ak: {
+    name: L("AK-47", "AK-47"), art: "schuss",
+    schaden: 26, reichweite: 44, takt: 0.12, streuung: 0.055, kugeln: 1, laut: 1.15,
+    bild: "waffe_ak", breit: MASSE.ak.breit
   }
 };
 
-/* Was im Laden steht: Waffe, Preis, Schuss je Kauf */
+/* Was bei Ammu-Vice im Regal liegt */
 export const WARE = [
   { waffe: "pistole", preis: 300, munition: 60 },
   { waffe: "mp", preis: 1200, munition: 150 },
-  { waffe: "schrot", preis: 1900, munition: 40 },
+  { waffe: "pumpgun", preis: 1900, munition: 40 },
+  { waffe: "ak", preis: 3200, munition: 120 },
   { waffe: "munition", preis: 150, munition: 60 }      // Nachschub für alles
 ];
 
@@ -71,6 +82,7 @@ export class Arsenal {
     if (!WAFFEN[name]) return;
     if (!this.besitzt(name)) this.reihe.push(name);
     this.munition[name] = (this.munition[name] || 0) + schuss;
+    this.aktiv = this.reihe.indexOf(name);          // neue Waffe gleich in die Hand
   }
 
   /* Nachschub auf alles, was man schon hat */
@@ -98,9 +110,9 @@ export class Arsenal {
   }
 }
 
-/* ── Treffer suchen ──
-   welt: { ziele: [...] } — alles mit x, y und treffer(schaden, von)
-   Gibt { strahlen, treffer } zurück. */
+/* ── Angreifen ──
+   ziele: alles mit x, y, treffer(schaden) und umwerfen(). Gibt
+   { strahlen, treffer, art } zurück oder null, wenn nichts passiert. */
 export function feuern(arsenal, schuetze, richtung, ziele) {
   if (arsenal.abklingen > 0) return null;
   const w = arsenal.waffe;
@@ -118,8 +130,15 @@ export function feuern(arsenal, schuetze, richtung, ziele) {
       let ab = Math.atan2(dy, dx) - richtung;
       while (ab > Math.PI) ab -= Math.PI * 2;
       while (ab < -Math.PI) ab += Math.PI * 2;
-      if (Math.abs(ab) > 1.0) continue;
-      z.treffer(w.schaden, schuetze);
+      if (Math.abs(ab) > 1.1) continue;
+      const tot = z.treffer(w.schaden, schuetze);
+      /* Wer den Schlag überlebt, geht erst mal zu Boden und wird
+         zusätzlich weggestoßen — sonst merkt man gar nichts davon. */
+      if (!tot && z.umwerfen) {
+        z.umwerfen(2.2 + Math.random());
+        z.x += (dx / (d || 1)) * 0.6;
+        z.y += (dy / (d || 1)) * 0.6;
+      }
       ergebnis.treffer.push(z);
     }
     return ergebnis;
@@ -173,15 +192,16 @@ export function sicht(von, nach, weite = 40) {
   return true;
 }
 
-/* ── Waffenläden in der Stadt verteilen ── */
+/* ── Ammu-Vice: die Läden stehen als eigene Gebäude in der Stadt ──
+   Der Eingang liegt auf dem Gehweg davor, dort wird E gedrückt. */
 export function laedenSetzen(startX, startY) {
-  const stellen = [
-    { x: startX + 70, y: startY - 50 },
-    { x: startX - 110, y: startY + 90 },
-    { x: Karte.inMeter(Karte.BREITE) * 0.86, y: Karte.inMeter(Karte.HOEHE) * 0.42 }
-  ];
+  const haeuser = Karte.wahrzeichen.filter(w => w.bau === Karte.BAU.WAFFEN);
+  const stellen = haeuser.length
+    ? haeuser
+    : [{ x: startX + 70, y: startY - 50 }, { x: startX - 110, y: startY + 90 }];
+
   return stellen.map(s => {
-    const p = Karte.freierPunkt(s.x, s.y, [Karte.ART.GEHWEG, Karte.ART.PARKPLATZ], 40);
-    return { x: p.x, y: p.y, name: L("Waffenladen", "Gun shop") };
+    const p = Karte.freierPunkt(s.x, s.y, [Karte.ART.GEHWEG], 26);
+    return { x: p.x, y: p.y, haus: { x: s.x, y: s.y }, name: "Ammu-Vice" };
   });
 }

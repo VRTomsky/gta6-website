@@ -126,6 +126,7 @@
           <b data-hud="lebenZahl">100</b>
         </span>
         <span class="shud__waffe">
+          <img data-hud="waffenbild" alt="" width="84" height="26" hidden>
           <b data-hud="waffe">Fäuste</b>
           <span data-hud="schuss">∞</span>
         </span>
@@ -180,7 +181,7 @@
         <ul class="sgross__legende">
           <li><i style="background:#ffd24a"></i><span data-en="Job available">Auftrag frei</span></li>
           <li><i style="background:#7dfba7"></i><span data-en="Current target">Aktuelles Ziel</span></li>
-          <li><i style="background:#6ee7a0"></i><span data-en="Gun shop">Waffenladen</span></li>
+          <li><i style="background:#6ee7a0"></i><span data-en="Ammu-Vice (gun shop)">Ammu-Vice (Waffen)</span></li>
           <li><i style="background:#ff4aa0"></i><span data-en="Your waypoint">Dein Wegpunkt</span></li>
           <li><i style="background:#ff8ab4"></i><span data-en="You">Du</span></li>
           <li><i style="background:#7ab8ff"></i><span data-en="Second character">Zweite Figur</span></li>
@@ -199,12 +200,12 @@
     <!-- Waffenladen: E davor drücken -->
     <div class="sladen" id="spielLaden" hidden>
       <div class="sladen__karte">
-        <p class="kicker" data-en="Gun shop">Waffenladen</p>
-        <h2 class="h-display" data-en="Ammu-Vice">Vice Waffen</h2>
+        <p class="kicker" data-en="Gun shop · press E in front of the store">Waffenladen · E vor dem Laden</p>
+        <h2 class="h-display">Ammu-Vice</h2>
         <p class="sladen__geld"><span data-en="Your money:">Dein Geld:</span> <b id="spielLadenGeld">$0</b></p>
         <ul class="sladen__liste" id="spielLadenListe"></ul>
         <button type="button" class="btn btn--pink" data-ladenzu data-en="Leave the shop">Laden verlassen</button>
-        <p class="sladen__hinweis" data-en="Press 1–4 to buy, E or Esc to leave. Q or the mouse wheel switches weapons.">Mit 1–4 kaufen, mit E oder Esc wieder raus. Waffe wechseln mit Q oder dem Mausrad.</p>
+        <p class="sladen__hinweis" data-en="Press 1–5 to buy, E or Esc to leave. The mouse wheel or Q switches weapons.">Mit 1–5 kaufen, mit E oder Esc wieder raus. Waffe wechseln mit dem Mausrad oder Q.</p>
       </div>
     </div>
 
@@ -227,8 +228,8 @@
       <li><kbd data-en="Shift">Umschalt</kbd><span data-en="run">rennen</span></li>
       <li><kbd>E</kbd><kbd>F</kbd><span data-en="get in / out of a car, enter the gun shop">ein- und aussteigen, Waffenladen betreten</span></li>
       <li><kbd data-en="Mouse">Maustaste</kbd><span data-en="punch or shoot — aim with the mouse">schlagen oder schießen — gezielt wird mit der Maus</span></li>
-      <li><kbd>Q</kbd><kbd data-en="Wheel">Mausrad</kbd><span data-en="switch weapon (1–4 picks one directly)">Waffe wechseln (mit 1–4 direkt)</span></li>
-      <li><kbd data-en="Space">Leertaste</kbd><span data-en="handbrake">Handbremse</span></li>
+      <li><kbd data-en="Wheel">Mausrad</kbd><kbd>Q</kbd><span data-en="switch weapon (1–5 picks one directly)">Waffe wechseln (mit 1–5 direkt)</span></li>
+      <li><kbd data-en="Space">Leertaste</kbd><span data-en="jump — handbrake when driving">springen — im Auto die Handbremse</span></li>
       <li><kbd>Alt</kbd><span data-en="hold: switch between Jason and Lucia">halten: zwischen Jason und Lucia wechseln</span></li>
       <li><kbd>P</kbd><span data-en="pause">Pause</span></li>
       <li><kbd>V</kbd><span data-en="fullscreen">Vollbild</span></li>

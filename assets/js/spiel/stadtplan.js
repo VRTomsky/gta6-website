@@ -30,7 +30,8 @@ export const ART = {
 export const BAU = {
   WOHNHAUS: 0, HOCHHAUS: 1, HOTEL: 2, LAGER: 3, LADEN: 4,
   BANK: 5, POLIZEI: 6, FEUERWEHR: 7, KRANKENHAUS: 8, STADION: 9,
-  KIRCHE: 10, SCHULE: 11, TANKSTELLE: 12, KAUFHAUS: 13, WERK: 14
+  KIRCHE: 10, SCHULE: 11, TANKSTELLE: 12, KAUFHAUS: 13, WERK: 14,
+  WAFFEN: 15
 };
 
 export const BEZIRK = {
@@ -618,14 +619,20 @@ function wahrzeichenSetzen() {
     { bau: BAU.TANKSTELLE, name: "Tankstelle", nah: [88, 150] },
     { bau: BAU.TANKSTELLE, name: "Tankstelle", nah: [170, 70] },
     { bau: BAU.KIRCHE, name: "Kirche", nah: [60, 96] },
-    { bau: BAU.SCHULE, name: "Schule", nah: [150, 170] }
+    { bau: BAU.SCHULE, name: "Schule", nah: [150, 170] },
+    /* Ammu-Vice: drei Waffenläden, verteilt über die Stadt */
+    { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [126, 66] },
+    { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [72, 140] },
+    { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [186, 108] }
   ];
 
   for (const w of wunsch) {
     const treffer = hausSuchen(w.nah[0], w.nah[1], w.bau === BAU.STADION ? 40 : 22);
     if (!treffer) continue;
     const { nr, x0, y0, x1, y1 } = treffer;
-    const h = w.bau === BAU.STADION ? 100 : w.bau === BAU.TANKSTELLE ? 30 : 70;
+    const h = w.bau === BAU.STADION ? 100
+            : w.bau === BAU.TANKSTELLE ? 30
+            : w.bau === BAU.WAFFEN ? 55 : 70;
     for (let ty = y0; ty <= y1; ty++) {
       for (let tx = x0; tx <= x1; tx++) {
         if (felder.haus[i(tx, ty)] !== nr) continue;
