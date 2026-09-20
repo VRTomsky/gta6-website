@@ -327,3 +327,42 @@
   .shud__auftrag{ top:auto; bottom:170px; font-size:.72rem; }
   .shud__leben{ width:72px; }
 }
+
+/* ── Minikarte im GTA-VI-Stil: abgerundetes Rechteck ── */
+.skarte{
+  position:absolute; left:clamp(10px, 1.6vw, 18px); bottom:clamp(10px, 1.6vw, 18px);
+  width:clamp(168px, 20vw, 288px); height:auto; aspect-ratio:8/5;
+  border-radius:18px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(8,13,29,.55);
+  box-shadow:0 16px 40px -18px rgba(0,0,0,.95);
+  backdrop-filter:blur(2px);
+}
+
+/* ── Große Karte (M) ── */
+.sgross{
+  position:absolute; inset:0; z-index:5;
+  display:grid; grid-template-columns:1fr minmax(200px, 300px);
+  grid-template-rows:auto 1fr; gap:14px;
+  padding:clamp(14px, 2.4vw, 30px);
+  background:radial-gradient(120% 90% at 50% 10%, rgba(24,18,52,.94), rgba(6,10,22,.97));
+}
+.sgross[hidden]{ display:none; }
+.sgross__kopf{ grid-column:1 / -1; }
+.sgross__kopf h2{ margin:.08em 0 0; font-size:clamp(1.8rem, 4vw, 3rem); }
+#spielGrossKarte{
+  width:100%; height:100%; min-height:0;
+  border-radius:16px; border:1px solid var(--line2); background:#0b1124;
+}
+.sgross__seite{ display:flex; flex-direction:column; gap:14px; justify-content:space-between; }
+.sgross__legende{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.sgross__legende li{ display:flex; align-items:center; gap:10px; color:var(--fg-mid); font-size:.86rem; }
+.sgross__legende i{ width:12px; height:12px; border-radius:50%; display:block; }
+.sgross__knoepfe{ display:flex; flex-direction:column; gap:8px; }
+.sgross__hinweis{ margin:0; font-size:.78rem; color:var(--fg-dim); }
+
+@media (max-width:760px), (pointer: coarse){
+  .skarte{ left:auto; right:10px; top:104px; bottom:auto; width:132px; border-radius:14px; }
+  .sgross{ grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
+  .sgross__legende{ flex-direction:row; flex-wrap:wrap; gap:10px 16px; }
+  .sgross__knoepfe{ flex-direction:row; flex-wrap:wrap; }
+}

@@ -113,8 +113,9 @@ export class Figur {
    ═══════════════════════════════════════════════════════════ */
 
 export const PASSANT_ARTEN = [
-  "mann_hemd", "mann_tank", "mann_anzug", "frau_kleid",
-  "frau_top", "frau_sport", "tourist", "rentner"
+  "mann_hemd", "mann_tank", "mann_anzug", "mann_jacke", "mann_arbeiter", "mann_jung",
+  "frau_kleid", "frau_top", "frau_sport", "frau_business", "frau_lang", "frau_sommer",
+  "tourist", "tourist2", "rentner", "rentnerin"
 ];
 
 const GEHBAR = [Karte.ART.GEHWEG, Karte.ART.PARK, Karte.ART.STRAND, Karte.ART.PARKPLATZ];

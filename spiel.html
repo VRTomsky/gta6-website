@@ -92,7 +92,7 @@
     </div>
 
     <button type="button" class="ston" id="spielTon" aria-label="Ton an/aus"
-            data-en-aria-label="Sound on/off" title="Ton (M)" data-en-title="Sound (M)">
+            data-en-aria-label="Sound on/off" title="Ton (N)" data-en-title="Sound (N)">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
         <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none"
@@ -122,7 +122,7 @@
       </div>
       <p class="shud__hinweis" data-hud="hinweis"></p>
       <p class="shud__auftrag" data-hud="auftrag"></p>
-      <canvas class="skarte" id="spielKarte" width="168" height="168"></canvas>
+      <canvas class="skarte" id="spielKarte" width="288" height="180"></canvas>
     </div>
 
     <div class="sstart" id="spielStart">
@@ -158,6 +158,30 @@
       <p class="sende__t" data-hud="endeText">BUSTED</p>
     </div>
 
+    <!-- Große Karte mit Zielen und Einstellungen (Taste M) -->
+    <div class="sgross" id="spielGross" hidden>
+      <div class="sgross__kopf">
+        <p class="kicker" data-en="Map &amp; options">Karte &amp; Optionen</p>
+        <h2 class="h-display" data-en="Vice City">Vice City</h2>
+      </div>
+      <canvas id="spielGrossKarte" width="900" height="760"></canvas>
+      <div class="sgross__seite">
+        <ul class="sgross__legende">
+          <li><i style="background:#ffd24a"></i><span data-en="Job available">Auftrag frei</span></li>
+          <li><i style="background:#7dfba7"></i><span data-en="Current target">Aktuelles Ziel</span></li>
+          <li><i style="background:#ff8ab4"></i><span data-en="You">Du</span></li>
+          <li><i style="background:#7ab8ff"></i><span data-en="Second character">Zweite Figur</span></li>
+          <li><i style="background:#ff5566"></i><span data-en="Police">Polizei</span></li>
+        </ul>
+        <div class="sgross__knoepfe">
+          <button type="button" class="btn btn--ghost" data-gross="ton" data-en="Sound on/off">Ton an/aus</button>
+          <button type="button" class="btn btn--ghost" data-gross="vollbild" data-en="Fullscreen">Vollbild</button>
+          <button type="button" class="btn btn--pink" data-gross="zu" data-en="Back to the game">Zurück ins Spiel</button>
+        </div>
+        <p class="sgross__hinweis" data-en="M closes the map again.">Mit M schließt du die Karte wieder.</p>
+      </div>
+    </div>
+
     <div class="spause" id="spielPause" hidden>
       <p data-en="Paused — click to continue">Pause — zum Weiterspielen klicken</p>
     </div>
@@ -180,7 +204,9 @@
       <li><kbd>Alt</kbd><span data-en="hold: switch between Jason and Lucia">halten: zwischen Jason und Lucia wechseln</span></li>
       <li><kbd>P</kbd><span data-en="pause">Pause</span></li>
       <li><kbd>F</kbd><span data-en="fullscreen">Vollbild</span></li>
-      <li><kbd>M</kbd><span data-en="sound on/off">Ton an/aus</span></li>
+      <li><kbd>M</kbd><span data-en="map &amp; options">Karte &amp; Optionen</span></li>
+      <li><kbd>N</kbd><span data-en="sound on/off">Ton an/aus</span></li>
+      <li><kbd>H</kbd><span data-en="horn">Hupe</span></li>
     </ul>
     <p class="stasten__hinweis" data-en="On a phone you get a thumbstick on the left and buttons on the right: ⇄ switch character, B handbrake, E get in or out.">Auf dem Handy erscheinen links ein Steuerkreuz und rechts drei Knöpfe: ⇄ Figur wechseln, B Handbremse, E ein- und aussteigen.</p>
   </section>

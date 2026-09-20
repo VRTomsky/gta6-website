@@ -19,7 +19,13 @@ export const TYPEN = {
   sport:   { name: "Sunset GT",     lang: 4.30, breit: 1.92, kraft: 19.0, spitze: 50, griff: 0.88 },
   pickup:  { name: "Keys Pickup",   lang: 5.10, breit: 2.05, kraft: 12.0, spitze: 33, griff: 0.94 },
   taxi:    { name: "Vice Taxi",     lang: 4.75, breit: 1.95, kraft: 13.5, spitze: 35, griff: 0.92 },
-  streife: { name: "VCPD Cruiser",  lang: 4.90, breit: 2.00, kraft: 17.0, spitze: 45, griff: 0.93 }
+  streife: { name: "VCPD Cruiser",  lang: 4.90, breit: 2.00, kraft: 17.0, spitze: 45, griff: 0.93 },
+  kombi:   { name: "Gellhorn Kombi", lang: 4.95, breit: 1.98, kraft: 12.5, spitze: 34, griff: 0.93 },
+  transporter: { name: "Leonida Van", lang: 5.40, breit: 2.10, kraft: 11.0, spitze: 30, griff: 0.95 },
+  bus:     { name: "Vice Transit",  lang: 9.20, breit: 2.45, kraft: 8.5,  spitze: 26, griff: 0.97 },
+  oldtimer:{ name: "Ocean Classic", lang: 5.20, breit: 2.05, kraft: 11.5, spitze: 32, griff: 0.90 },
+  krankenwagen: { name: "VC Rettung", lang: 5.60, breit: 2.20, kraft: 13.0, spitze: 34, griff: 0.94 },
+  feuerwehr: { name: "VCFD Löschzug", lang: 7.80, breit: 2.50, kraft: 10.0, spitze: 28, griff: 0.96 }
 };
 
 export class Fahrzeug {
@@ -146,8 +152,9 @@ export function autosVerteilen(anzahl, umX, umY, radius) {
   const liste = [];
   for (let i = 0; i < anzahl; i++) {
     const p = Karte.freierPunkt(umX, umY, arten, radius);
-    const aufStrasse = Karte.art(Karte.inKachel(p.x), Karte.inKachel(p.y)) === Karte.ART.STRASSE;
-    const senkrecht = ((Karte.inKachel(p.x) % 12) + 12) % 12 < 2;
+    const tx = Karte.inKachel(p.x), ty = Karte.inKachel(p.y);
+    const aufStrasse = Karte.art(tx, ty) === Karte.ART.STRASSE;
+    const senkrecht = Karte.istStrasse(tx, ty + 2) && Karte.istStrasse(tx, ty - 2);
     const typ = typen[Math.floor(Karte.streu(i, 3, 41) * typen.length)];
     const winkel = aufStrasse
       ? (senkrecht ? (Karte.streu(i, 5, 43) > 0.5 ? Math.PI / 2 : -Math.PI / 2)

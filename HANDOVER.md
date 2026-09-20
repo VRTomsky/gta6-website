@@ -771,7 +771,11 @@ Fahndungsstufen, vier Aufträge, Minikarte, Ton, Handy-Steuerung, Vollbild
 und Bestenliste im Konto.
 
 ```
-spiel/karte.js      Stadt als Kachelraster (4 m je Kachel), Kollision, Zeichnen
+spiel/stadtplan.js  baut die Stadt beim Start: Wasser, Autobahnring, Haupt- und
+                    Nebenstraßen (geschwungen, ungleiche Blöcke), Brücken,
+                    Gehwege, Blöcke mit Häusern, Wahrzeichen
+spiel/karte.js      zeichnet den Plan und beantwortet Fragen (Spuren, Kreuzungen,
+                    Ampeln, Kollision)
 spiel/texturen.js   Asphalt, Gehweg, Sand, Gras, Kiesdach, Bäume, Palmen —
                     alles beim Start im Browser gezeichnet, keine Bilddateien
 spiel/bilder.js     Sprites laden, gedreht malen, Schatten
@@ -830,6 +834,27 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   erscheinen Stick und Knöpfe automatisch (`pointer: coarse`).
 - Die aktive Figur bekommt einen pinken Ring, die zweite einen blauen — sonst
   findet man sich zwischen den Passanten nicht wieder.
+- **Stadt (20.09.2026 neu):** kein Schachbrett mehr. Wasserarm mit Brücken,
+  Kanal zur Strandinsel, Autobahnring ohne Ampeln, zwei Diagonalen, zwei
+  Kreisverkehre, geschwungene Nebenstraßen mit ungleichen Abständen, Sackgassen,
+  Bezirke (Innenstadt, Strand, Hafen, Industrie, Wohnen) und zehn Wahrzeichen
+  (VCPD, Feuerwache, Klinik, Bank, Stadion, Kaufhaus, Tankstellen, Kirche, Schule).
+  Häuser haben Bauarten mit eigener Farbe und eigenen Dachaufbauten.
+  **Wichtig beim Ändern:** Flächen nur über `baulandSetzen()` füllen — `rechteck()`
+  überschreibt sonst fertige Straßen, dann verschwindet ein halbes Viertel.
+- **Kein Bremsen mehr abseits der Fahrbahn** (Wunsch des Nutzers).
+- **Ampeln** sind ein Blender-Modell (`ampel_rot|gelb|gruen.png`) plus farbiger
+  Schein; die Phase liegt in `karte.js` (`ampelPhase`), Verkehr und Zeichnung
+  fragen dieselbe Funktion. Wer schon auf der Kreuzung steht, räumt sie.
+- **Karte auf Taste M** (`minikarte.js: grosseKarteZeichnen`) mit Zielen,
+  Wahrzeichen, Legende und Einstellungen; das Spiel pausiert solange.
+  Ton liegt seither auf **N**, Hupe auf **H**.
+- **Minikarte im GTA-VI-Stil:** abgerundetes Rechteck, dreht sich mit der
+  Fahrtrichtung, pinke Route zum Ziel, Entfernung oben links, Pfeil unten Mitte.
+- **Ton:** Browser halten Web Audio an, sobald die Seite in den Hintergrund geht —
+  `ton.js` weckt es bei Tabwechsel, Klick und Taste wieder auf. Dazu Reifen,
+  Hupe, Türen, Schreck und leises Stadtrauschen.
+- Rechtsklick öffnet auf der Spielbühne kein Browser-Menü mehr.
 - Neu erzeugen:
 
 ```bash

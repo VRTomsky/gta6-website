@@ -4,10 +4,19 @@
    Alle Geräusche entstehen im Browser (Web Audio), es wird keine Datei
    geladen — das hält die Seite klein und es gibt keine Rechtefragen.
 
-     Motor     zwei Oszillatoren, deren Höhe am Tempo hängt
-     Sirene    zwei Töne im Wechsel, solange die Fahndung läuft
-     Rumms     kurzes Rauschen beim Aufprall
-     Kasse     kleine Tonfolge, wenn eine Mission klappt
+     Motor      zwei Oszillatoren, deren Höhe am Tempo hängt
+     Reifen     Quietschen beim Driften und harten Bremsen
+     Sirene     zwei Töne im Wechsel, solange die Fahndung läuft
+     Hupe       kurzer Doppelton (Taste H)
+     Rumms      kurzes Rauschen beim Aufprall
+     Tür        Klacken beim Ein- und Aussteigen
+     Schreck    kurzer Ruf, wenn jemand angefahren wird
+     Stadt      leises Grundrauschen, damit es nie ganz still ist
+     Kasse      kleine Tonfolge, wenn eine Mission klappt
+
+   Wichtig: Browser halten den Ton an, sobald die Seite in den
+   Hintergrund geht. Deshalb wird vor jedem Einsatz geprüft, ob der
+   Ton noch läuft, und notfalls wieder gestartet.
 
    Der Ton startet erst beim ersten Klick — Browser erlauben es nicht
    früher. Mit M lässt sich alles stummschalten.
@@ -17,6 +26,8 @@ let ctx = null;
 let summe = null;          // Gesamtlautstärke
 let motor = null;
 let sirene = null;
+let reifen = null;
+let stadt = null;
 let an = true;
 
 export function bereit() {
@@ -29,7 +40,19 @@ export function bereit() {
   summe.connect(ctx.destination);
   motorBauen();
   sireneBauen();
+  reifenBauen();
+  stadtBauen();
+  /* Nach jedem Tabwechsel oder Klick sicherstellen, dass der Ton läuft */
+  document.addEventListener("visibilitychange", wecken);
+  addEventListener("pointerdown", wecken);
+  addEventListener("keydown", wecken);
   return ctx;
+}
+
+/* Der Browser hält den Ton an, wenn die Seite in den Hintergrund geht.
+   Ohne dieses Aufwecken bleibt danach alles stumm. */
+export function wecken() {
+  if (ctx && ctx.state !== "running") ctx.resume().catch(() => {});
 }
 
 function motorBauen() {
@@ -53,6 +76,49 @@ function motorBauen() {
   motor = { o1, o2, g, filter };
 }
 
+function reifenBauen() {
+  /* Gefiltertes Rauschen — klingt nach Gummi auf Asphalt */
+  const dauer = 2;
+  const puffer = ctx.createBuffer(1, ctx.sampleRate * dauer, ctx.sampleRate);
+  const daten = puffer.getChannelData(0);
+  for (let i = 0; i < daten.length; i++) daten[i] = Math.random() * 2 - 1;
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+  quelle.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 2600;
+  filter.Q.value = 3;
+  const g = ctx.createGain();
+  g.gain.value = 0;
+  quelle.connect(filter);
+  filter.connect(g);
+  g.connect(summe);
+  quelle.start();
+  reifen = { g, filter };
+}
+
+function stadtBauen() {
+  /* Sehr leises, tiefes Rauschen als Stadtgeräusch */
+  const dauer = 3;
+  const puffer = ctx.createBuffer(1, ctx.sampleRate * dauer, ctx.sampleRate);
+  const daten = puffer.getChannelData(0);
+  let wert = 0;
+  for (let i = 0; i < daten.length; i++) {
+    wert = (wert + (Math.random() * 2 - 1) * 0.02) * 0.995;
+    daten[i] = wert;
+  }
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+  quelle.loop = true;
+  const g = ctx.createGain();
+  g.gain.value = 0.25;
+  quelle.connect(g);
+  g.connect(summe);
+  quelle.start();
+  stadt = { g };
+}
+
 function sireneBauen() {
   const o = ctx.createOscillator();
   const g = ctx.createGain();
@@ -65,9 +131,10 @@ function sireneBauen() {
   sirene = { o, g, zeit: 0 };
 }
 
-/* Jeden Bildaufbau aufrufen: Tempo in m/s, Fahndungsstufe, dt */
-export function laufen(tempo, fahndung, dt) {
-  if (!ctx || ctx.state === "suspended") return;
+/* Jeden Bildaufbau aufrufen: Tempo in m/s, Fahndungsstufe, dt, Rutschen */
+export function laufen(tempo, fahndung, dt, rutschen = 0) {
+  if (!ctx) return;
+  if (ctx.state !== "running") { wecken(); return; }
 
   if (motor) {
     const ziel = tempo > 0.2 ? Math.min(0.16, 0.03 + tempo * 0.006) : 0;
@@ -76,6 +143,12 @@ export function laufen(tempo, fahndung, dt) {
     motor.o1.frequency.setTargetAtTime(hoehe, ctx.currentTime, 0.1);
     motor.o2.frequency.setTargetAtTime(hoehe * 1.5, ctx.currentTime, 0.1);
     motor.filter.frequency.setTargetAtTime(500 + tempo * 40, ctx.currentTime, 0.2);
+  }
+
+  if (reifen) {
+    const ziel = Math.min(0.09, rutschen * 0.05);
+    reifen.g.gain.setTargetAtTime(ziel, ctx.currentTime, 0.08);
+    reifen.filter.frequency.setTargetAtTime(1800 + Math.min(2200, tempo * 80), ctx.currentTime, 0.2);
   }
 
   if (sirene) {
@@ -109,7 +182,71 @@ export function rumms(staerke = 1) {
   quelle.connect(filter);
   filter.connect(g);
   g.connect(summe);
+  quelle.onended = () => { g.disconnect(); filter.disconnect(); };
   quelle.start();
+  quelle.stop(ctx.currentTime + dauer + 0.05);
+}
+
+/* Hupe: zwei Töne übereinander, kurz angerissen */
+export function hupe() {
+  if (!ctx) return;
+  wecken();
+  const t = ctx.currentTime;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.16, t + 0.02);
+  g.gain.setValueAtTime(0.16, t + 0.32);
+  g.gain.linearRampToValueAtTime(0, t + 0.4);
+  g.connect(summe);
+  for (const f of [420, 530]) {
+    const o = ctx.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.value = f;
+    o.connect(g);
+    o.start(t);
+    o.stop(t + 0.42);
+    o.onended = () => o.disconnect();
+  }
+  setTimeout(() => g.disconnect(), 600);
+}
+
+/* Autotür */
+export function tuer() {
+  if (!ctx) return;
+  wecken();
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "square";
+  o.frequency.setValueAtTime(180, t);
+  o.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+  g.gain.setValueAtTime(0.14, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+  o.connect(g);
+  g.connect(summe);
+  o.start(t);
+  o.stop(t + 0.18);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+
+/* Kurzer Schreck, wenn jemand angefahren wird */
+export function schreck() {
+  if (!ctx) return;
+  wecken();
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(680 + Math.random() * 260, t);
+  o.frequency.exponentialRampToValueAtTime(240, t + 0.3);
+  g.gain.setValueAtTime(0.001, t);
+  g.gain.linearRampToValueAtTime(0.1, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+  o.connect(g);
+  g.connect(summe);
+  o.start(t);
+  o.stop(t + 0.36);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
 }
 
 /* Kleine Tonfolge, wenn etwas gelingt */
@@ -134,7 +271,10 @@ export function kasse() {
 
 export function stumm(schalten) {
   an = schalten === undefined ? !an : schalten;
-  if (summe) summe.gain.setTargetAtTime(an ? 0.5 : 0, ctx.currentTime, 0.05);
+  if (summe) {
+    wecken();
+    summe.gain.setTargetAtTime(an ? 0.5 : 0, ctx.currentTime, 0.05);
+  }
   return an;
 }
 

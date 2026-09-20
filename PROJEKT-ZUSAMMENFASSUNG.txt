@@ -222,6 +222,25 @@ WAS BISHER GEMACHT WURDE
    - Bestenliste: Bestwert kommt ins Konto und steht unter dem Spiel.
      ACHTUNG: firestore.rules dafuer erneut veroeffentlichen.
 
+16. Spiel, vierter Schritt (20.09.2026):
+   - Stadt komplett neu gebaut: kein Schachbrett mehr, sondern
+     Fluss mit Bruecken, Kanal zur Strandinsel, Autobahnring,
+     Diagonalen, Kreisverkehre, geschwungene Strassen und
+     unterschiedlich grosse Bloecke.
+   - Gebaeude haben jetzt Arten und Farben: Hochhaeuser, Hotels,
+     Laeden, Lagerhallen - dazu zehn Wahrzeichen wie Polizeiwache,
+     Feuerwache, Klinik, Bank, Stadion, Kirche, Schule, Tankstellen.
+   - Sechs neue Fahrzeuge (Kombi, Transporter, Bus, Oldtimer,
+     Krankenwagen, Feuerwehr) und deutlich mehr Verkehr.
+   - Richtige Ampeln als Modell; Autos halten bei Rot und fahren
+     bei Gruen los.
+   - Acht weitere Passanten-Modelle.
+   - Karte auf Taste M mit Zielen, Wahrzeichen und Einstellungen.
+   - Minimap im GTA-VI-Look: dreht sich mit, pinke Route, Entfernung.
+   - Ton repariert (war nach einiger Zeit weg) und erweitert: Reifen,
+     Hupe (H), Tueren, Schreck, Stadtrauschen. Ton liegt jetzt auf N.
+   - Rechtsklick oeffnet im Spiel kein Browsermenue mehr.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

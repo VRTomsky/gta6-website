@@ -266,6 +266,15 @@ AUTOS = {
     "pickup":  dict(lang=5.10, breit=2.05, lack=(0.30, 0.55, 0.42), offen=False, pritsche=True),
     "taxi":    dict(lang=4.75, breit=1.95, lack=(0.98, 0.72, 0.12), offen=False, taxi=True),
     "streife": dict(lang=4.90, breit=2.00, lack=(0.92, 0.93, 0.96), offen=False, polizei=True),
+    # ── später dazugekommen ──
+    "kombi":   dict(lang=4.95, breit=1.98, lack=(0.62, 0.20, 0.24), offen=False, kombi=True),
+    "transporter": dict(lang=5.40, breit=2.10, lack=(0.86, 0.87, 0.88), offen=False, kasten=True),
+    "bus":     dict(lang=9.20, breit=2.45, lack=(0.24, 0.52, 0.72), offen=False, kasten=True, bus=True),
+    "oldtimer": dict(lang=5.20, breit=2.05, lack=(0.30, 0.62, 0.55), offen=False, chrom_viel=True),
+    "krankenwagen": dict(lang=5.60, breit=2.20, lack=(0.95, 0.95, 0.96), offen=False,
+                         kasten=True, rettung=True),
+    "feuerwehr": dict(lang=7.80, breit=2.50, lack=(0.78, 0.13, 0.12), offen=False,
+                      kasten=True, feuer=True),
 }
 
 
@@ -311,7 +320,36 @@ def auto(name):
                      (sx * rad_x, sy * lang * 0.32, 0.33), chrom,
                      drehung=(0, math.radians(90), 0))
 
-    if d.get("pritsche"):
+    if d.get("kasten"):
+        # Kasten: hoher, langer Aufbau über der ganzen Länge
+        hoch = 1.05 if d.get("bus") else 0.86
+        wuerfel("aufbau", (breit * 0.96, lang * 0.80, hoch),
+                (0, -lang * 0.06, 0.62 + hoch / 2), lack, bevel=0.07)
+        wuerfel("dach", (breit * 0.86, lang * 0.72, 0.07),
+                (0, -lang * 0.06, 0.62 + hoch), lack_dunkel, bevel=0.03)
+        wuerfel("frontscheibe", (breit * 0.84, 0.10, 0.44),
+                (0, lang * 0.34, 0.62 + hoch * 0.72), glas,
+                drehung=(math.radians(-16), 0, 0), bevel=0.02)
+        for sx in (-1, 1):
+            anzahl = 4 if d.get("bus") else 2
+            for i in range(anzahl):
+                wuerfel(f"fenster{sx}{i}", (0.06, lang * (0.62 / anzahl) * 0.8, 0.30),
+                        (sx * breit * 0.48,
+                         -lang * 0.06 + lang * 0.62 * ((i + 0.5) / anzahl - 0.5),
+                         0.62 + hoch * 0.7), glas, bevel=0.02)
+        if d.get("rettung"):
+            rot = farbe("rettung_rot", (0.85, 0.12, 0.14), 0.4)
+            for sx in (-1, 1):
+                wuerfel(f"streifen{sx}", (0.05, lang * 0.7, 0.16),
+                        (sx * (breit / 2 + 0.005), -lang * 0.06, 0.95), rot, bevel=0.02)
+            blau = farbe("blaulicht", (0.20, 0.42, 1.0), 0.18, 0.0, 4.0)
+            wuerfel("balken_b", (breit * 0.5, 0.22, 0.14), (0, lang * 0.24, 0.66 + hoch), blau, bevel=0.03)
+        if d.get("feuer"):
+            silber = farbe("leiter", (0.72, 0.74, 0.78), 0.35, 0.8)
+            wuerfel("leiter", (0.42, lang * 0.78, 0.14), (0, -lang * 0.04, 0.70 + hoch), silber, bevel=0.03)
+            rotlicht = farbe("rotlicht", (1.0, 0.16, 0.22), 0.18, 0.0, 3.4)
+            wuerfel("balken_r", (breit * 0.55, 0.22, 0.14), (0, lang * 0.26, 0.66 + hoch), rotlicht, bevel=0.03)
+    elif d.get("pritsche"):
         wuerfel("kabine", (breit * 0.88, lang * 0.30, 0.50), (0, lang * 0.16, 1.02), lack, bevel=0.05)
         wuerfel("dach", (breit * 0.84, lang * 0.17, 0.07), (0, lang * 0.13, 1.27), lack, bevel=0.04)
         wuerfel("frontscheibe", (breit * 0.78, 0.10, 0.36), (0, lang * 0.31, 1.07), glas,
@@ -329,7 +367,7 @@ def auto(name):
             wuerfel(f"lehne{sx}", (0.40, 0.12, 0.42), (sx * breit * 0.21, -lang * 0.14, 1.06), schwarz, bevel=0.05)
         wuerfel("armatur", (breit * 0.74, 0.20, 0.16), (0, lang * 0.07, 0.94), grau, bevel=0.03)
     else:
-        kabine_l = lang * (0.44 if flach else 0.50)
+        kabine_l = lang * (0.44 if flach else (0.62 if d.get("kombi") else 0.50))
         wuerfel("kabine", (breit * 0.88, kabine_l, 0.46), (0, -lang * 0.03, 0.98), lack, bevel=0.07)
         # Dach etwas schmaler und dunkler als der Lack
         wuerfel("dach", (breit * 0.76, kabine_l * 0.52, 0.07), (0, -lang * 0.03, 1.22), lack, bevel=0.04)
@@ -375,6 +413,41 @@ def auto(name):
                     (sx * (breit / 2 + 0.008), -lang * 0.02, 0.62), streifen, bevel=0.02)
 
 
+def ampel(zustand):
+    """Ampelkopf auf kurzem Mast. Die Lampen zeigen zur Kamera (−Y),
+       sonst sieht man von oben nur den Mast."""
+    gehaeuse = farbe("ampel_gehaeuse", (0.11, 0.12, 0.14), 0.55)
+    mast = farbe("ampel_mast", (0.24, 0.25, 0.28), 0.5, 0.4)
+    aus = farbe("lampe_aus", (0.05, 0.05, 0.06), 0.4)
+    lampen = {
+        "rot": farbe("lampe_rot", (1.0, 0.16, 0.18), 0.25, 0.0, 7.0),
+        "gelb": farbe("lampe_gelb", (1.0, 0.74, 0.12), 0.25, 0.0, 7.0),
+        "gruen": farbe("lampe_gruen", (0.22, 0.95, 0.42), 0.25, 0.0, 7.0),
+    }
+
+    # kurzer Mast mit Fuß
+    zylinder("fuss", 0.22, 0.12, (0, 0, 0.06), mast)
+    zylinder("mast", 0.07, 1.5, (0, 0, 0.75), mast)
+
+    # Kopf: Kasten mit drei Lampen, Front nach −Y (zur Kamera)
+    wuerfel("kopf", (0.46, 0.26, 1.15), (0, 0, 2.0), gehaeuse, bevel=0.05)
+    for i, (name, hoehe) in enumerate((("rot", 2.36), ("gelb", 2.0), ("gruen", 1.64))):
+        zylinder(f"lampe{i}", 0.13, 0.1, (0, -0.16, hoehe),
+                 lampen[name] if zustand == name else aus,
+                 drehung=(math.radians(90), 0, 0))
+        wuerfel(f"blende{i}", (0.38, 0.16, 0.05), (0, -0.22, hoehe + 0.14), gehaeuse, bevel=0.02)
+
+
+def ampel_rendern(zustand, ziel, px=176):
+    szene_leeren()
+    licht_setzen()
+    breite_m = px / PX_PRO_METER
+    kamera_setzen(breite_m)
+    render_setzen(breite_m, px)
+    ampel(zustand)
+    rendern(os.path.join(ziel, f"ampel_{zustand}.png"))
+
+
 # ── Aufträge ───────────────────────────────────────────────
 def figur_rendern(art, dateiname, ziel, beinphase=0.0, armphase=0.0, px=160):
     szene_leeren()
@@ -401,6 +474,16 @@ def main():
     if nur == "autos":
         for a in AUTOS:
             auto_rendern(a, ziel)
+        return
+    if nur == "ampeln":
+        for z in ("rot", "gelb", "gruen"):
+            ampel_rendern(z, ziel)
+        return
+    if nur == "neu":
+        for a in ("kombi", "transporter", "bus", "oldtimer", "krankenwagen", "feuerwehr"):
+            auto_rendern(a, ziel)
+        for z in ("rot", "gelb", "gruen"):
+            ampel_rendern(z, ziel)
         return
     if nur == "muster":
         figur_rendern("lucia", "lucia_steht.png", ziel)

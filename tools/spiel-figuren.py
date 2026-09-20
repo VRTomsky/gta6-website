@@ -78,6 +78,40 @@ FIGUREN = {
         haar=(32, 26, 22), schulter=0.72, kopf=0.245, frisur="kappe",
         kappe=(28, 36, 66), weste=(22, 26, 44)
     ),
+    "mann_jacke": dict(
+        haut=(206, 152, 112), oben=(58, 74, 96), unten=(44, 46, 56),
+        haar=(30, 22, 18), schulter=0.70, kopf=0.242, frisur="kurz", bart=True
+    ),
+    "mann_arbeiter": dict(
+        haut=(180, 124, 86), oben=(240, 166, 48), unten=(56, 60, 72),
+        haar=(28, 22, 18), schulter=0.72, kopf=0.245, frisur="kappe",
+        kappe=(230, 160, 40), weste=(246, 190, 60)
+    ),
+    "mann_jung": dict(
+        haut=(226, 182, 146), oben=(70, 176, 148), unten=(70, 74, 86),
+        haar=(120, 84, 44), schulter=0.62, kopf=0.235, frisur="kurz"
+    ),
+    "frau_business": dict(
+        haut=(212, 160, 120), oben=(52, 54, 70), unten=(52, 54, 70),
+        haar=(64, 40, 26), schulter=0.56, kopf=0.228, frisur="duttchen", rock=True
+    ),
+    "frau_lang": dict(
+        haut=(150, 100, 68), oben=(226, 226, 232), unten=(46, 52, 74),
+        haar=(24, 18, 16), schulter=0.56, kopf=0.23, frisur="lang"
+    ),
+    "frau_sommer": dict(
+        haut=(238, 200, 162), oben=(250, 140, 170), unten=(250, 140, 170),
+        haar=(210, 170, 90), schulter=0.55, kopf=0.226, frisur="lang", rock=True
+    ),
+    "tourist2": dict(
+        haut=(220, 170, 130), oben=(120, 190, 235), unten=(230, 226, 212),
+        haar=(60, 44, 30), schulter=0.64, kopf=0.238, frisur="kappe",
+        kappe=(240, 90, 90), hemd_muster=(250, 210, 90)
+    ),
+    "rentnerin": dict(
+        haut=(228, 192, 158), oben=(196, 168, 200), unten=(86, 82, 78),
+        haar=(220, 218, 214), schulter=0.56, kopf=0.232, frisur="duttchen", rock=True
+    ),
     "polizistin": dict(
         haut=(188, 134, 98), oben=(40, 52, 92), unten=(30, 34, 54),
         haar=(26, 20, 18), schulter=0.60, kopf=0.232, frisur="zopf",

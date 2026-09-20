@@ -39,9 +39,10 @@ export class VerkehrsAuto extends Fahrzeug {
   zielSuchen() {
     const k = Karte.naechsteKreuzung(this.x, this.y, this.dx, this.dy);
     if (!k) { this.ziel = null; return; }
+    const tx = Karte.inKachel(this.x), ty = Karte.inKachel(this.y);
     const quer = this.senkrecht
-      ? Karte.spurMitte(Karte.inKachel(this.x), this.dy, true)
-      : Karte.spurMitte(Karte.inKachel(this.y), this.dx, false);
+      ? Karte.spurMitte(tx, ty, this.dy, true)
+      : Karte.spurMitte(tx, ty, this.dx, false);
     this.ziel = this.senkrecht ? { x: quer, y: k.y, tx: k.tx, ty: k.ty }
                                : { x: k.x, y: quer, tx: k.tx, ty: k.ty };
   }
@@ -97,16 +98,18 @@ export class VerkehrsAuto extends Fahrzeug {
     while (ab < -Math.PI) ab += Math.PI * 2;
     const lenken = Math.max(-1, Math.min(1, ab * 2.2));
 
-    /* Anhalten: rote Ampel kurz vor der Kreuzung oder Hindernis voraus */
-    const rot = entfernung < 11 &&
+    /* Anhalten: rote Ampel kurz vor der Kreuzung oder Hindernis voraus.
+       Wer schon auf der Kreuzung steht, räumt sie — sonst blockiert alles. */
+    const aufKreuzung = Karte.art(Karte.inKachel(this.x), Karte.inKachel(this.y)) === Karte.ART.KREUZUNG;
+    const rot = !aufKreuzung && entfernung < 9 && entfernung > 2.5 &&
       !Karte.ampelGruen(this.ziel.tx, this.ziel.ty, zeit, this.senkrecht);
     const frei = this.freiVoraus(autos, leute);
     let gas = 1;
     if (rot || !frei) {
-      gas = this.tempo > 1 ? -1 : 0;
+      gas = this.tempo > 1.2 ? -1 : 0;
       this.geduld += dt;
       /* Steht zu lange? Dann neu ausrichten, damit nichts verklemmt */
-      if (this.geduld > 9) { this.geduld = 0; this.abbiegen(); }
+      if (this.geduld > 7) { this.geduld = 0; this.abbiegen(); }
     } else {
       this.geduld = 0;
       if (this.tempo > this.wunschTempo) gas = 0;
@@ -119,16 +122,32 @@ export class VerkehrsAuto extends Fahrzeug {
 /* ── Verkehr rund um den Spieler ── */
 const TYPEN_LISTE = Object.keys(TYPEN).filter(t => t !== "streife");
 
+/* Manche Wagen sind seltener als andere */
+const HAEUFIG = {
+  limo: 3, kombi: 3, taxi: 2, cabrio: 2, sport: 1, pickup: 2,
+  transporter: 2, bus: 1, oldtimer: 1, krankenwagen: 1, feuerwehr: 1
+};
+function typWaehlen() {
+  const liste = [];
+  for (const t of TYPEN_LISTE) {
+    const n = HAEUFIG[t] || 1;
+    for (let k = 0; k < n; k++) liste.push(t);
+  }
+  return liste[Math.floor(Math.random() * liste.length)];
+}
+
 function startPunkt(umX, umY, weit) {
   for (let i = 0; i < 80; i++) {
     const w = Math.random() * Math.PI * 2;
     const r = weit * (0.55 + Math.random() * 0.45);
     const x = umX + Math.cos(w) * r, y = umY + Math.sin(w) * r;
     const tx = Karte.inKachel(x), ty = Karte.inKachel(y);
-    if (Karte.art(tx, ty) !== Karte.ART.STRASSE) continue;
+    const a = Karte.art(tx, ty);
+    if (a !== Karte.ART.STRASSE && a !== Karte.ART.AUTOBAHN && a !== Karte.ART.BRUECKE) continue;
     const senkrecht = Karte.istStrasse(tx, ty + 2) && Karte.istStrasse(tx, ty - 2);
     const richtung = Math.random() < 0.5 ? 1 : -1;
-    const quer = senkrecht ? Karte.spurMitte(tx, richtung, true) : Karte.spurMitte(ty, richtung, false);
+    const quer = senkrecht ? Karte.spurMitte(tx, ty, richtung, true)
+                           : Karte.spurMitte(tx, ty, richtung, false);
     return senkrecht
       ? { x: quer, y: Karte.inMeter(ty) + 2, dx: 0, dy: richtung }
       : { x: Karte.inMeter(tx) + 2, y: quer, dx: richtung, dy: 0 };
@@ -136,13 +155,17 @@ function startPunkt(umX, umY, weit) {
   return null;
 }
 
+/* Platz frei? Sonst stapeln sich die Wagen beim Einsetzen übereinander. */
+function platzFrei(liste, x, y, abstand = 9) {
+  return !liste.some(a => Math.hypot(a.x - x, a.y - y) < abstand);
+}
+
 export function verkehrAufbauen(anzahl, umX, umY) {
   const liste = [];
-  for (let i = 0; i < anzahl; i++) {
-    const p = startPunkt(umX, umY, 60 + Math.random() * 60);
-    if (!p) continue;
-    const typ = TYPEN_LISTE[Math.floor(Math.random() * TYPEN_LISTE.length)];
-    liste.push(new VerkehrsAuto(typ, p.x, p.y, p.dx, p.dy));
+  for (let i = 0; i < anzahl * 4 && liste.length < anzahl; i++) {
+    const p = startPunkt(umX, umY, 40 + Math.random() * 120);
+    if (!p || !platzFrei(liste, p.x, p.y)) continue;
+    liste.push(new VerkehrsAuto(typWaehlen(), p.x, p.y, p.dx, p.dy));
   }
   return liste;
 }
@@ -152,8 +175,8 @@ export function verkehrNachziehen(liste, x, y, weite = 190) {
   for (const a of liste) {
     if (a.fahrer) continue;                        // vom Spieler geklaut
     if (Math.hypot(a.x - x, a.y - y) < weite) continue;
-    const p = startPunkt(x, y, 90 + Math.random() * 60);
-    if (!p) continue;
+    const p = startPunkt(x, y, 80 + Math.random() * 90);
+    if (!p || !platzFrei(liste, p.x, p.y)) continue;
     a.x = p.x; a.y = p.y;
     a.dx = p.dx; a.dy = p.dy;
     a.winkel = winkelVon(p.dx, p.dy);

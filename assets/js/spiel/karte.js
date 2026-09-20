@@ -1,399 +1,469 @@
 /* ═══════════════════════════════════════════════════════════
-   Vice City — Stadtkarte
+   Vice City — Zeichnen und Abfragen der Stadt
 
-   Die Karte ist ein Raster aus Kacheln zu je 4 Metern. Sie liegt nicht
-   als Datei vor, sondern wird aus den Koordinaten berechnet: derselbe
-   Ort ergibt immer dieselbe Kachel. Das spart Speicher und die Stadt
-   lässt sich in einer Zeile verändern.
+   Der Plan selbst entsteht in stadtplan.js (Wasser, Autobahn, Straßen,
+   Blöcke, Wahrzeichen). Diese Datei malt ihn und beantwortet die Fragen,
+   die Spiel, Verkehr und Polizei stellen:
 
-   Vier Gegenden, damit nicht überall dasselbe steht:
-     innenstadt  Hochhäuser, Glasdächer, Hubschrauberplätze
-     strand      Hotels mit Dachpools, Palmen, Sonnenschirme
-     hafen       flache Lagerhallen, Container
-     wohnen      kleinere Häuser, Gärten, Pools
+     art(tx, ty)                Art einer Kachel
+     fest / festAnPunkt         blockiert sie?
+     spurMitte(tx, ty, …)       Mitte der richtigen Fahrspur
+     naechsteKreuzung(…)        nächste Kreuzung in Fahrtrichtung
+     ampelGruen(…)              darf ich über die Kreuzung?
+     zeichnen(ctx, kamera)      sichtbaren Ausschnitt malen
 
-   Jede vierte Straße ist eine vierspurige Avenue mit Mittelinsel, an den
-   Kreuzungen stehen Ampeln, die im Takt umschalten.
-
-     art(tx, ty)              Art einer Kachel
-     fest(tx, ty)             blockiert sie Figuren und Autos?
-     zeichnen(ctx, kamera)    sichtbaren Ausschnitt malen
+   Gezeichnet wird nur, was im Bild liegt. Untergründe kommen als Textur
+   (texturen.js), Häuser bekommen Farbe und Dachaufbauten nach Bauart.
    ═══════════════════════════════════════════════════════════ */
 
 import * as Tex from "./texturen.js";
+import * as Plan from "./stadtplan.js";
+import { bild as sprite } from "./bilder.js";
 
-export const KACHEL = 4;                  // Meter je Kachel
-export const BREITE = 210;                // Kacheln in x
-export const HOEHE = 190;                 // Kacheln in y
+export const KACHEL = Plan.KACHEL;
+export const BREITE = Plan.BREITE;
+export const HOEHE = Plan.HOEHE;
+export const ART = Plan.ART;
+export const BAU = Plan.BAU;
+export const BEZIRK = Plan.BEZIRK;
+export const wahrzeichen = Plan.wahrzeichen;
 
-export const ART = {
-  WASSER: 0, STRAND: 1, STRASSE: 2, KREUZUNG: 3,
-  GEHWEG: 4, PARK: 5, PARKPLATZ: 6, GEBAEUDE: 7, HAFEN: 8
-};
+export const art = Plan.art;
+export const fest = Plan.fest;
+export const bauArt = Plan.bauArt;
+export const hausNr = Plan.hausNr;
+export const bezirkVon = Plan.bezirkVon;
+export const befahrbar = Plan.befahrbar;
 
-/* Immer gleicher Zufall für denselben Ort */
+/* Immer gleicher Zufall für denselben Ort (Deko, Verteilungen) */
 export function streu(x, y, salz = 0) {
   let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(salz, 2147483647);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/* ── Straßenraster ──
-   Alle 14 Kacheln eine Straße. Jede vierte ist doppelt so breit. */
-const BLOCK = 14;
-const SCHMAL = 2;
-const AVENUE = 4;
+export const inMeter = t => t * KACHEL;
+export const inKachel = m => Math.floor(m / KACHEL);
+export const festAnPunkt = (mx, my) => fest(inKachel(mx), inKachel(my));
+export const istStrasse = (tx, ty) => befahrbar(art(tx, ty));
 
-const imRaster = t => ((t % BLOCK) + BLOCK) % BLOCK;
-const blockNr = t => Math.floor(t / BLOCK);
-export const bandBreite = t => (((blockNr(t) % 4) + 4) % 4 === 0 ? AVENUE : SCHMAL);
-const istStrassenBand = t => imRaster(t) < bandBreite(t);
-const istGehwegBand = t => imRaster(t) === bandBreite(t) || imRaster(t) === BLOCK - 1;
+export const START = Plan.startSuchen();
 
-/* Küste: Osten ist Meer, davor Sandstrand */
-const STRAND_VON = 186;
-const WASSER_VON = 194;
-
-export function bezirk(tx, ty) {
-  if (tx < 30 && ty > HOEHE - 40) return "hafen";
-  if (tx > 160) return "strand";
-  if (Math.hypot(tx - 104, ty - 92) < 42) return "innenstadt";
-  return "wohnen";
+/* ── Fahrspuren ──────────────────────────────────────────
+   Rechtsverkehr: in Fahrtrichtung liegt die eigene Spur rechts. Die
+   Breite der Straße wird an Ort und Stelle abgetastet, weil das Raster
+   nicht mehr gleichmäßig ist. */
+export function bandGrenzen(tx, ty, senkrecht) {
+  let von = senkrecht ? tx : ty;
+  let bis = von;
+  const prüfe = k => (senkrecht ? istStrasse(k, ty) : istStrasse(tx, k));
+  while (prüfe(von - 1) && bis - (von - 1) < 8) von--;
+  while (prüfe(bis + 1) && (bis + 1) - von < 8) bis++;
+  return { von, bis, breite: bis - von + 1 };
 }
 
-export function art(tx, ty) {
-  if (tx < 0 || ty < 0 || tx >= BREITE || ty >= HOEHE) return ART.WASSER;
-
-  /* Hafenbecken im Südwesten */
-  if (tx < 26 && ty > HOEHE - 30) return tx < 22 && ty > HOEHE - 26 ? ART.WASSER : ART.HAFEN;
-
-  if (tx >= WASSER_VON) return ART.WASSER;
-  if (tx >= STRAND_VON) return ART.STRAND;
-
-  const sx = istStrassenBand(tx), sy = istStrassenBand(ty);
-  if (sx && sy) return ART.KREUZUNG;
-  if (sx || sy) return ART.STRASSE;
-  if (istGehwegBand(tx) || istGehwegBand(ty)) return ART.GEHWEG;
-
-  const bx = blockNr(tx), by = blockNr(ty);
-  const los = streu(bx, by, 7);
-  const geg = bezirk(tx, ty);
-
-  if (geg === "wohnen" && los < 0.16) return ART.PARK;
-  if (geg !== "wohnen" && los < 0.09) return ART.PARK;
-  if (los < 0.20) return ART.PARKPLATZ;
-
-  /* Innenhof: in manchen Blöcken bleibt die Mitte frei */
-  const w = bandBreite(tx), h = bandBreite(ty);
-  const ix = imRaster(tx) - w, iy = imRaster(ty) - h;
-  const innenX = BLOCK - w - 1, innenY = BLOCK - h - 1;
-  if (los > 0.74 && ix > 2 && iy > 2 && ix < innenX - 3 && iy < innenY - 3) {
-    return geg === "wohnen" ? ART.PARK : ART.PARKPLATZ;
+export function spurMitte(tx, ty, richtung, senkrecht) {
+  const { von, bis, breite } = bandGrenzen(tx, ty, senkrecht);
+  let kachel;
+  if (senkrecht) {
+    /* nach oben (richtung −1): rechte Seite ist Osten */
+    kachel = richtung < 0 ? bis : von;
+    if (breite >= 4) kachel = richtung < 0 ? bis - (Math.random() < 0.5 ? 0 : 1)
+                                           : von + (Math.random() < 0.5 ? 0 : 1);
+  } else {
+    kachel = richtung > 0 ? bis : von;
+    if (breite >= 4) kachel = richtung > 0 ? bis - (Math.random() < 0.5 ? 0 : 1)
+                                           : von + (Math.random() < 0.5 ? 0 : 1);
   }
-
-  return ART.GEBAEUDE;
+  return inMeter(kachel) + KACHEL / 2;
 }
 
-export function fest(tx, ty) {
-  const a = art(tx, ty);
-  return a === ART.GEBAEUDE || a === ART.WASSER;
-}
-
-/* Ein Block besteht aus mehreren Häusern: in der Innenstadt wenige große,
-   im Wohngebiet viele kleine. */
-export function hausId(tx, ty) {
-  const bx = blockNr(tx), by = blockNr(ty);
-  const geg = bezirk(tx, ty);
-  const w = bandBreite(tx), h = bandBreite(ty);
-  const ix = Math.max(0, imRaster(tx) - w - 1), iy = Math.max(0, imRaster(ty) - h - 1);
-  const innenX = Math.max(1, BLOCK - w - 2), innenY = Math.max(1, BLOCK - h - 2);
-  const teile = geg === "wohnen"
-    ? 2 + Math.floor(streu(bx, by, 29) * 3)
-    : 1 + Math.floor(streu(bx, by, 29) * 2);
-  const hx = Math.min(teile - 1, Math.floor((ix / innenX) * teile));
-  const hy = Math.min(teile - 1, Math.floor((iy / innenY) * teile));
-  return { bx, by, hx, hy, ix, iy, innenX, innenY, teile, geg };
-}
-
-/* Höhe nur für die Optik: Innenstadt hoch, Hafen flach */
-function hoeheVon(tx, ty) {
-  const id = hausId(tx, ty);
-  const zufall = streu(id.bx * 7 + id.hx, id.by * 7 + id.hy, 3);
-  if (id.geg === "innenstadt") {
-    const mitte = 1 - Math.min(1, Math.hypot(tx - 104, ty - 92) / 46);
-    return 0.42 + mitte * 0.5 + zufall * 0.25;
+/* Nächste Kreuzung in Fahrtrichtung (Mitte in Metern) */
+export function naechsteKreuzung(x, y, dx, dy) {
+  let tx = inKachel(x), ty = inKachel(y);
+  for (let s = 1; s < 70; s++) {
+    const px = tx + dx * s, py = ty + dy * s;
+    const a = art(px, py);
+    if (a === ART.KREUZUNG) {
+      /* Ausdehnung der Kreuzung bestimmen und Mitte nehmen */
+      let x0 = px, x1 = px, y0 = py, y1 = py;
+      while (art(x0 - 1, py) === ART.KREUZUNG) x0--;
+      while (art(x1 + 1, py) === ART.KREUZUNG) x1++;
+      while (art(px, y0 - 1) === ART.KREUZUNG) y0--;
+      while (art(px, y1 + 1) === ART.KREUZUNG) y1++;
+      return {
+        tx: px, ty: py,
+        x: inMeter((x0 + x1) / 2) + KACHEL / 2,
+        y: inMeter((y0 + y1) / 2) + KACHEL / 2
+      };
+    }
+    if (!befahrbar(a)) return null;
   }
-  if (id.geg === "hafen") return 0.16 + zufall * 0.16;
-  if (id.geg === "strand") return 0.28 + zufall * 0.45;
-  return 0.18 + zufall * 0.3;
+  return null;
 }
 
-/* ── Farben ── */
+/* ── Ampeln ──
+   Jede Kreuzung hat eine feste Taktverschiebung. 10 s Grün Nord-Süd,
+   2 s Gelb/Räumen, 10 s Grün Ost-West, wieder 2 s. */
+const TAKT = 24;
+export function ampelPhase(tx, ty, zeit) {
+  const t = (zeit / 1000 + streu(Math.floor(tx / 6), Math.floor(ty / 6), 53) * TAKT) % TAKT;
+  if (t < 10) return "ns";            // Nord-Süd fährt
+  if (t < 12) return "ns-gelb";
+  if (t < 22) return "ow";            // Ost-West fährt
+  return "ow-gelb";
+}
+
+export function ampelNordSued(tx, ty, zeit) {
+  const p = ampelPhase(tx, ty, zeit);
+  return p === "ns" || p === "ns-gelb";
+}
+
+export function ampelGruen(tx, ty, zeit, senkrecht) {
+  const p = ampelPhase(tx, ty, zeit);
+  return senkrecht ? p === "ns" : p === "ow";
+}
+
+/* ── Farben ─────────────────────────────────────────────── */
 const FARBE = {
-  wasser: "#12305a",
-  wasser2: "#17406f",
+  wasser: "#123a63",
   strand: "#d9c391",
   strasse: "#31333c",
-  gehweg: "#6d6f78",
+  autobahn: "#2b2d35",
+  bruecke: "#3a3d46",
+  gehweg: "#70737c",
   park: "#2f6b45",
   parkplatz: "#3c3f4a",
   hafen: "#4a4d57"
 };
 
-const DAECHER = {
-  innenstadt: ["#3a4463", "#44425e", "#2f3b58", "#4a4a6b", "#353f5c"],
-  strand: ["#c9a893", "#d7bda4", "#bf9d8c", "#cdb3a6", "#c2a288"],
-  hafen: ["#5a5f63", "#4f565c", "#63635c", "#555b60"],
-  wohnen: ["#8a6a63", "#7a6b84", "#6f7f86", "#87775c", "#7d6672", "#6d7a6a"]
+/* Dachfarben je Bauart — bunt genug, dass die Stadt lebt */
+const DACH = {
+  [Plan.BAU.WOHNHAUS]: ["#a4635a", "#8d6f8f", "#6f8496", "#9c8a5f", "#7f6f92", "#6e8a72"],
+  [Plan.BAU.HOCHHAUS]: ["#44507a", "#4d4a74", "#3a4d77", "#565a84", "#414a6b"],
+  [Plan.BAU.HOTEL]: ["#e0b9a0", "#dcc7a6", "#d2a68f", "#e6cdb6", "#cfa98b"],
+  [Plan.BAU.LAGER]: ["#5f6570", "#565c66", "#69707a", "#4f555f"],
+  [Plan.BAU.LADEN]: ["#c96f6a", "#d8a03f", "#5d9fb0", "#b06fa8", "#6fa96b"],
+  [Plan.BAU.BANK]: ["#c9b072"],
+  [Plan.BAU.POLIZEI]: ["#3f5d96"],
+  [Plan.BAU.FEUERWEHR]: ["#b3453c"],
+  [Plan.BAU.KRANKENHAUS]: ["#d8dde4"],
+  [Plan.BAU.STADION]: ["#6c8f5f"],
+  [Plan.BAU.KIRCHE]: ["#8d8fa6"],
+  [Plan.BAU.SCHULE]: ["#c08a55"],
+  [Plan.BAU.TANKSTELLE]: ["#d9d3c2"],
+  [Plan.BAU.KAUFHAUS]: ["#8f6fa8", "#7a7fb5"],
+  [Plan.BAU.WERK]: ["#6a6f62", "#77705d"]
 };
 
-function dachFarbe(id) {
-  const liste = DAECHER[id.geg] || DAECHER.wohnen;
-  return liste[Math.floor(streu(id.bx * 9 + id.hx, id.by * 9 + id.hy, 11) * liste.length)];
+function dachFarbe(tx, ty) {
+  const liste = DACH[bauArt(tx, ty)] || DACH[Plan.BAU.WOHNHAUS];
+  return liste[Math.floor(streu(hausNr(tx, ty), 7, 11) * liste.length) % liste.length];
 }
 
-function dunkler(hex, faktor) {
-  const n = parseInt(hex.slice(1), 16);
-  const r = Math.round(((n >> 16) & 255) * faktor);
-  const g = Math.round(((n >> 8) & 255) * faktor);
-  const b = Math.round((n & 255) * faktor);
-  return `rgb(${r},${g},${b})`;
+function dunkler(farbe, faktor) {
+  const n = parseInt(farbe.slice(1), 16);
+  return `rgb(${Math.round(((n >> 16) & 255) * faktor)},${Math.round(((n >> 8) & 255) * faktor)},${Math.round((n & 255) * faktor)})`;
 }
 
-/* ── Kacheln malen ── */
+/* ── Straße ─────────────────────────────────────────────── */
 function strasseMalen(ctx, tx, ty, px, py, g, a) {
-  ctx.fillStyle = FARBE.strasse;
+  ctx.fillStyle = a === ART.AUTOBAHN ? FARBE.autobahn : a === ART.BRUECKE ? FARBE.bruecke : FARBE.strasse;
   ctx.fillRect(px, py, g + 1, g + 1);
   Tex.malen(ctx, "asphalt", streu(tx, ty, 101), px, py, g);
 
   if (a === ART.KREUZUNG) {
-    ctx.fillStyle = "rgba(236,232,220,.42)";
-    const wx = bandBreite(tx), wy = bandBreite(ty);
-    for (let i = 0; i < 4; i++) {
-      const t = (i + 0.25) / 4;
-      if (imRaster(ty) === 0) ctx.fillRect(px + g * t, py + g * 0.06, g * 0.11, g * 0.2);
-      if (imRaster(ty) === wy - 1) ctx.fillRect(px + g * t, py + g * 0.74, g * 0.11, g * 0.2);
-      if (imRaster(tx) === 0) ctx.fillRect(px + g * 0.06, py + g * t, g * 0.2, g * 0.11);
-      if (imRaster(tx) === wx - 1) ctx.fillRect(px + g * 0.74, py + g * t, g * 0.2, g * 0.11);
+    ctx.fillStyle = "rgba(236,232,220,.38)";
+    /* Zebrastreifen an den Rändern der Kreuzung */
+    const randOben = art(tx, ty - 1) !== ART.KREUZUNG && befahrbar(art(tx, ty - 1));
+    const randUnten = art(tx, ty + 1) !== ART.KREUZUNG && befahrbar(art(tx, ty + 1));
+    const randLinks = art(tx - 1, ty) !== ART.KREUZUNG && befahrbar(art(tx - 1, ty));
+    const randRechts = art(tx + 1, ty) !== ART.KREUZUNG && befahrbar(art(tx + 1, ty));
+    for (let k = 0; k < 4; k++) {
+      const t = (k + 0.25) / 4;
+      if (randOben) ctx.fillRect(px + g * t, py + g * 0.04, g * 0.12, g * 0.18);
+      if (randUnten) ctx.fillRect(px + g * t, py + g * 0.78, g * 0.12, g * 0.18);
+      if (randLinks) ctx.fillRect(px + g * 0.04, py + g * t, g * 0.18, g * 0.12);
+      if (randRechts) ctx.fillRect(px + g * 0.78, py + g * t, g * 0.18, g * 0.12);
     }
     return;
   }
 
-  const senkrecht = istStrassenBand(tx) && !istStrassenBand(ty);
-  const breite = bandBreite(senkrecht ? tx : ty);
-  const spur = imRaster(senkrecht ? tx : ty);
+  if (a === ART.BRUECKE) {
+    /* Geländer an den Seiten */
+    ctx.fillStyle = "rgba(210,214,224,.5)";
+    if (!befahrbar(art(tx - 1, ty))) ctx.fillRect(px, py, g * 0.12, g + 1);
+    if (!befahrbar(art(tx + 1, ty))) ctx.fillRect(px + g * 0.88, py, g * 0.12, g + 1);
+    if (!befahrbar(art(tx, ty - 1))) ctx.fillRect(px, py, g + 1, g * 0.12);
+    if (!befahrbar(art(tx, ty + 1))) ctx.fillRect(px, py + g * 0.88, g + 1, g * 0.12);
+  }
 
-  if (breite === AVENUE) {
-    if (spur === 1) {                                  // begrünte Mittelinsel
-      ctx.fillStyle = "rgba(74,104,80,.95)";
-      if (senkrecht) ctx.fillRect(px + g * 0.74, py, g * 0.52, g + 1);
-      else ctx.fillRect(px, py + g * 0.74, g + 1, g * 0.52);
-    } else if (spur === 0 || spur === 3) {             // gestrichelte Spurlinien
-      ctx.fillStyle = "rgba(235,225,180,.5)";
-      const seite = spur === 0 ? 0.98 : 0.02;
-      if (senkrecht) {
-        ctx.fillRect(px + g * seite - g * 0.02, py + g * 0.1, g * 0.05, g * 0.34);
-        ctx.fillRect(px + g * seite - g * 0.02, py + g * 0.58, g * 0.05, g * 0.34);
-      } else {
-        ctx.fillRect(px + g * 0.1, py + g * seite - g * 0.02, g * 0.34, g * 0.05);
-        ctx.fillRect(px + g * 0.58, py + g * seite - g * 0.02, g * 0.34, g * 0.05);
-      }
+  /* Mittel- und Spurlinien: aus der Lage im Band bestimmt */
+  const senkrecht = befahrbar(art(tx, ty - 1)) && befahrbar(art(tx, ty + 1));
+  const band = bandGrenzen(tx, ty, senkrecht);
+  const stelle = (senkrecht ? tx : ty) - band.von;
+  const mitte = (band.breite - 1) / 2;
+
+  if (a === ART.AUTOBAHN) {
+    ctx.fillStyle = "rgba(235,225,180,.55)";
+    if (Math.abs(stelle - mitte) < 0.6) {                    // Mittelschutz
+      ctx.fillStyle = "rgba(190,196,206,.8)";
+      if (senkrecht) ctx.fillRect(px + g * 0.42, py, g * 0.16, g + 1);
+      else ctx.fillRect(px, py + g * 0.42, g + 1, g * 0.16);
+    } else if (stelle === 0 || stelle === band.breite - 1) {  // Randstreifen
+      ctx.fillStyle = "rgba(235,235,225,.45)";
+      if (senkrecht) ctx.fillRect(px + (stelle === 0 ? g * 0.06 : g * 0.88), py, g * 0.06, g + 1);
+      else ctx.fillRect(px, py + (stelle === 0 ? g * 0.06 : g * 0.88), g + 1, g * 0.06);
     }
-  } else if (spur === 1) {                             // schmale Straße
-    ctx.fillStyle = "rgba(235,225,180,.85)";
-    if (senkrecht) ctx.fillRect(px - g * 0.03, py + g * 0.2, g * 0.06, g * 0.6);
-    else ctx.fillRect(px + g * 0.2, py - g * 0.03, g * 0.6, g * 0.06);
+    return;
+  }
+
+  if (band.breite >= 4 && Math.abs(stelle - mitte) < 0.6) {
+    ctx.fillStyle = "rgba(74,104,80,.95)";                   // begrünte Mittelinsel
+    if (senkrecht) ctx.fillRect(px + g * 0.3, py, g * 0.4, g + 1);
+    else ctx.fillRect(px, py + g * 0.3, g + 1, g * 0.4);
+  } else if (band.breite <= 3 && Math.abs(stelle - mitte) < 0.55) {
+    ctx.fillStyle = "rgba(235,225,180,.8)";                  // Mittelstreifen
+    if (senkrecht) ctx.fillRect(px + g * 0.46, py + g * 0.15, g * 0.08, g * 0.7);
+    else ctx.fillRect(px + g * 0.15, py + g * 0.46, g * 0.7, g * 0.08);
   }
 }
 
-function gehwegMalen(ctx, tx, ty, px, py, g, geg) {
+/* ── Gehweg mit Bäumen, Laternen, Hydranten ─────────────── */
+function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
   ctx.fillStyle = FARBE.gehweg;
   ctx.fillRect(px, py, g + 1, g + 1);
   Tex.malen(ctx, "gehweg", streu(tx, ty, 103), px, py, g);
 
+  /* Bordsteinkante zur Straße */
+  ctx.fillStyle = "rgba(226,206,120,.35)";
+  if (befahrbar(art(tx, ty - 1))) ctx.fillRect(px, py, g + 1, g * 0.1);
+  if (befahrbar(art(tx, ty + 1))) ctx.fillRect(px, py + g * 0.9, g + 1, g * 0.1);
+  if (befahrbar(art(tx - 1, ty))) ctx.fillRect(px, py, g * 0.1, g + 1);
+  if (befahrbar(art(tx + 1, ty))) ctx.fillRect(px + g * 0.9, py, g * 0.1, g + 1);
+
   const l = streu(tx, ty, 13);
-  const palmen = geg === "strand" ? 0.72 : 0.9;
-  if (l > palmen) {                                    // Palme oder Baum
-    const bild = Tex.tex(geg === "strand" ? "palme" : "baum", streu(tx, ty, 107));
-    if (bild) ctx.drawImage(bild, px - g * 0.16, py - g * 0.16, g * 1.32, g * 1.32);
-  } else if (l > 0.86) {                               // Laterne
-    ctx.fillStyle = "#23252c";
+  const palmen = bez === Plan.BEZIRK.STRAND ? 0.7 : 0.9;
+  if (l > palmen) {
+    const b = Tex.tex(bez === Plan.BEZIRK.STRAND ? "palme" : "baum", streu(tx, ty, 107));
+    if (b) ctx.drawImage(b, px - g * 0.16, py - g * 0.16, g * 1.32, g * 1.32);
+  } else if (l > 0.84) {
+    ctx.fillStyle = "#23252c";                               // Laterne
     ctx.fillRect(px + g * 0.44, py + g * 0.44, g * 0.12, g * 0.12);
-  } else if (l < 0.05) {                               // Telefonzelle
-    ctx.fillStyle = "#2a5fa8";
-    ctx.fillRect(px + g * 0.34, py + g * 0.34, g * 0.3, g * 0.34);
-    ctx.fillStyle = "rgba(255,255,255,.3)";
-    ctx.fillRect(px + g * 0.38, py + g * 0.38, g * 0.22, g * 0.12);
+    ctx.fillStyle = "rgba(255,240,190,.25)";
+    ctx.beginPath();
+    ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (l < 0.04) {
+    ctx.fillStyle = "#c0433c";                               // Hydrant
+    ctx.fillRect(px + g * 0.44, py + g * 0.42, g * 0.14, g * 0.2);
+  } else if (l > 0.79 && l < 0.82) {
+    ctx.fillStyle = "#2e3440";                               // Mülleimer
+    ctx.fillRect(px + g * 0.4, py + g * 0.4, g * 0.2, g * 0.22);
   }
 }
 
-/* Ampelphase einer Kreuzung: true = Nord-Süd hat Grün.
-   Zeichnen und Verkehr fragen dieselbe Funktion, damit beides passt. */
-export function ampelNordSued(tx, ty, zeit) {
-  const takt = (zeit / 1000 + streu(blockNr(tx), blockNr(ty), 53) * 12) % 12;
-  return takt < 5.5;
-}
-
-/* Darf ein Auto über diese Kreuzung? senkrecht = Fahrt in Nord-Süd-Richtung */
-export function ampelGruen(tx, ty, zeit, senkrecht) {
-  return ampelNordSued(tx, ty, zeit) === senkrecht;
-}
-
-/* Ampeln an den Ecken der Kreuzung, im Takt umschaltend */
-function ampelMalen(ctx, tx, ty, px, py, g, zeit) {
-  ctx.fillStyle = "#1b1d24";
-  ctx.fillRect(px + g * 0.34, py + g * 0.34, g * 0.32, g * 0.32);
-  ctx.fillStyle = ampelNordSued(tx, ty, zeit) ? "#3fdc7a" : "#ff4a55";
-  ctx.beginPath();
-  ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.1, 0, Math.PI * 2);
-  ctx.fill();
-}
-
+/* ── Gebäude ────────────────────────────────────────────── */
 function gebaeudeMalen(ctx, tx, ty, px, py, g) {
-  const id = hausId(tx, ty);
-  const h = hoeheVon(tx, ty);
-  const dach = dachFarbe(id);
-  ctx.fillStyle = dach;
+  const bau = bauArt(tx, ty);
+  const h = Plan.hoeheVon(tx, ty);
+  const farbe = dachFarbe(tx, ty);
+  ctx.fillStyle = farbe;
   ctx.fillRect(px, py, g + 1, g + 1);
-  ctx.fillStyle = `rgba(255,255,255,${0.02 + h * 0.09})`;
+  ctx.fillStyle = `rgba(255,255,255,${0.02 + h * 0.08})`;
   ctx.fillRect(px, py, g + 1, g + 1);
   Tex.malen(ctx, "dach", streu(tx, ty, 127), px, py, g);
 
-  /* Fugen zwischen den Häusern eines Blocks */
-  const kante = (a, innen) => Math.floor((a / innen) * id.teile) !== Math.floor(((a + 1) / innen) * id.teile);
+  /* Fuge zum Nachbarhaus */
+  const nr = hausNr(tx, ty);
   ctx.fillStyle = "rgba(8,10,22,.5)";
-  if (kante(id.ix, id.innenX)) ctx.fillRect(px + g * 0.88, py, g * 0.14, g + 1);
-  if (kante(id.iy, id.innenY)) ctx.fillRect(px, py + g * 0.88, g + 1, g * 0.14);
+  if (hausNr(tx + 1, ty) !== nr) ctx.fillRect(px + g * 0.9, py, g * 0.12, g + 1);
+  if (hausNr(tx, ty + 1) !== nr) ctx.fillRect(px, py + g * 0.9, g + 1, g * 0.12);
 
   const d = streu(tx, ty, 23);
-  /* Große Aufbauten gehören dem ganzen Haus, nicht jeder Kachel:
-     sie erscheinen nur auf der Mittelkachel des Hauses. */
-  const mitteX = Math.floor((id.hx + 0.5) * id.innenX / id.teile);
-  const mitteY = Math.floor((id.hy + 0.5) * id.innenY / id.teile);
-  const hausMitte = id.ix === mitteX && id.iy === mitteY;
-  const hausLos = streu(id.bx * 9 + id.hx, id.by * 9 + id.hy, 71);
+  const mitteX = hausNr(tx - 1, ty) !== nr || hausNr(tx + 1, ty) !== nr;
 
-  if (id.geg === "innenstadt") {
-    if (hausMitte && hausLos > 0.62) {                 // Hubschrauberplatz
-      ctx.strokeStyle = "rgba(240,240,230,.5)";
-      ctx.lineWidth = Math.max(1, g * 0.05);
-      ctx.beginPath();
-      ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.3, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(240,240,230,.5)";
-      ctx.fillRect(px + g * 0.41, py + g * 0.32, g * 0.06, g * 0.36);
-      ctx.fillRect(px + g * 0.53, py + g * 0.32, g * 0.06, g * 0.36);
-      ctx.fillRect(px + g * 0.41, py + g * 0.47, g * 0.18, g * 0.06);
-    } else if (d > 0.62) {                             // Glasdach
-      ctx.fillStyle = "rgba(150,200,255,.12)";
-      ctx.fillRect(px + g * 0.18, py + g * 0.18, g * 0.64, g * 0.64);
-    } else if (d < 0.2) {                              // Technikaufbau
-      ctx.fillStyle = "rgba(0,0,0,.3)";
-      ctx.fillRect(px + g * 0.3, py + g * 0.28, g * 0.4, g * 0.3);
-    }
-  } else if (id.geg === "strand") {
-    if (hausMitte && hausLos > 0.5) {                  // Dachpool
-      ctx.fillStyle = "#2f8fd0";
-      ctx.fillRect(px + g * 0.24, py + g * 0.28, g * 0.5, g * 0.4);
+  switch (bau) {
+    case Plan.BAU.HOCHHAUS:
+      if (d > 0.9) {                                         // Hubschrauberplatz
+        ctx.strokeStyle = "rgba(240,240,230,.5)";
+        ctx.lineWidth = Math.max(1, g * 0.05);
+        ctx.beginPath();
+        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (d > 0.55) {
+        ctx.fillStyle = "rgba(150,200,255,.14)";             // Glasdach
+        ctx.fillRect(px + g * 0.16, py + g * 0.16, g * 0.68, g * 0.68);
+      } else if (d < 0.2) {
+        ctx.fillStyle = "rgba(0,0,0,.28)";                   // Technik
+        ctx.fillRect(px + g * 0.3, py + g * 0.28, g * 0.4, g * 0.3);
+      }
+      break;
+    case Plan.BAU.HOTEL:
+      if (d > 0.78) {
+        ctx.fillStyle = "#2f8fd0";                           // Dachpool
+        ctx.fillRect(px + g * 0.22, py + g * 0.26, g * 0.56, g * 0.44);
+        ctx.fillStyle = "rgba(255,255,255,.3)";
+        ctx.fillRect(px + g * 0.22, py + g * 0.26, g * 0.56, g * 0.1);
+      } else if (d < 0.3) {
+        ctx.fillStyle = "rgba(240,120,140,.75)";             // Sonnenschirme
+        ctx.beginPath();
+        ctx.arc(px + g * 0.36, py + g * 0.4, g * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + g * 0.66, py + g * 0.64, g * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    case Plan.BAU.LAGER:
+    case Plan.BAU.WERK:
+      ctx.fillStyle = "rgba(0,0,0,.12)";                     // Wellblech
+      for (let k = 0; k < 4; k++) ctx.fillRect(px, py + g * (0.12 + k * 0.22), g + 1, g * 0.07);
+      if (d > 0.82) {
+        ctx.fillStyle = ["#c0533f", "#2f6f8f", "#c9a23a"][Math.floor(d * 100) % 3];
+        ctx.fillRect(px + g * 0.18, py + g * 0.3, g * 0.64, g * 0.34);
+      }
+      if (bau === Plan.BAU.WERK && d < 0.18) {
+        ctx.fillStyle = "#4a4f57";                           // Schornstein
+        ctx.beginPath();
+        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    case Plan.BAU.LADEN:
+    case Plan.BAU.KAUFHAUS:
+      if (mitteX) {                                          // Markise zur Straße
+        ctx.fillStyle = "rgba(255,255,255,.18)";
+        ctx.fillRect(px + g * 0.1, py + g * 0.1, g * 0.8, g * 0.2);
+      }
+      if (d > 0.7) {
+        ctx.fillStyle = "rgba(255,240,190,.5)";              // Leuchtreklame
+        ctx.fillRect(px + g * 0.24, py + g * 0.42, g * 0.52, g * 0.16);
+      }
+      break;
+    case Plan.BAU.BANK:
+      ctx.fillStyle = "rgba(255,240,190,.35)";
+      ctx.fillRect(px + g * 0.2, py + g * 0.2, g * 0.6, g * 0.6);
+      ctx.fillStyle = "rgba(80,60,20,.5)";
+      ctx.fillRect(px + g * 0.42, py + g * 0.2, g * 0.16, g * 0.6);
+      break;
+    case Plan.BAU.POLIZEI:
+      ctx.fillStyle = "rgba(255,255,255,.22)";
+      ctx.fillRect(px + g * 0.18, py + g * 0.4, g * 0.64, g * 0.2);
+      ctx.fillStyle = "#e8b53a";
+      ctx.fillRect(px + g * 0.42, py + g * 0.2, g * 0.16, g * 0.16);
+      break;
+    case Plan.BAU.FEUERWEHR:
       ctx.fillStyle = "rgba(255,255,255,.3)";
-      ctx.fillRect(px + g * 0.24, py + g * 0.28, g * 0.5, g * 0.08);
-    } else if (d < 0.22) {                             // Sonnenschirme
-      ctx.fillStyle = "rgba(240,120,140,.8)";
-      ctx.beginPath();
-      ctx.arc(px + g * 0.35, py + g * 0.4, g * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(px + g * 0.66, py + g * 0.62, g * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (id.geg === "hafen") {
-    ctx.fillStyle = "rgba(0,0,0,.12)";                 // Wellblech
-    for (let i = 0; i < 4; i++) ctx.fillRect(px, py + g * (0.12 + i * 0.22), g + 1, g * 0.07);
-    if (d > 0.8) {
-      ctx.fillStyle = ["#c0533f", "#2f6f8f", "#c9a23a"][Math.floor(d * 100) % 3];
-      ctx.fillRect(px + g * 0.2, py + g * 0.3, g * 0.6, g * 0.3);
-    }
-  } else {
-    if (hausMitte && hausLos > 0.82) {                 // Gartenpool
-      ctx.fillStyle = "#2f8fd0";
-      ctx.fillRect(px + g * 0.3, py + g * 0.34, g * 0.4, g * 0.3);
-    } else if (d < 0.18) {                             // Dachfenster
-      ctx.fillStyle = "rgba(180,220,255,.18)";
-      ctx.fillRect(px + g * 0.32, py + g * 0.32, g * 0.36, g * 0.36);
-    } else if (d > 0.62 && d < 0.68) {
-      ctx.fillStyle = "rgba(0,0,0,.2)";
-      ctx.fillRect(px + g * 0.55, py + g * 0.18, g * 0.24, g * 0.2);
-    }
+      ctx.fillRect(px + g * 0.15, py + g * 0.62, g * 0.7, g * 0.2);
+      break;
+    case Plan.BAU.KRANKENHAUS:
+      ctx.fillStyle = "#d8404a";                             // rotes Kreuz
+      ctx.fillRect(px + g * 0.42, py + g * 0.22, g * 0.16, g * 0.56);
+      ctx.fillRect(px + g * 0.22, py + g * 0.42, g * 0.56, g * 0.16);
+      break;
+    case Plan.BAU.STADION:
+      ctx.fillStyle = "#3f8b4f";
+      ctx.fillRect(px, py, g + 1, g + 1);
+      ctx.strokeStyle = "rgba(255,255,255,.4)";
+      ctx.lineWidth = Math.max(1, g * 0.04);
+      ctx.strokeRect(px + g * 0.1, py + g * 0.1, g * 0.8, g * 0.8);
+      break;
+    case Plan.BAU.KIRCHE:
+      ctx.fillStyle = "rgba(255,255,255,.2)";
+      ctx.fillRect(px + g * 0.44, py + g * 0.1, g * 0.12, g * 0.8);
+      ctx.fillRect(px + g * 0.24, py + g * 0.4, g * 0.52, g * 0.12);
+      break;
+    case Plan.BAU.SCHULE:
+      ctx.fillStyle = "rgba(255,255,255,.15)";
+      for (let k = 0; k < 3; k++) ctx.fillRect(px + g * (0.16 + k * 0.26), py + g * 0.3, g * 0.16, g * 0.4);
+      break;
+    case Plan.BAU.TANKSTELLE:
+      ctx.fillStyle = "#e8e2d2";
+      ctx.fillRect(px, py, g + 1, g + 1);
+      ctx.fillStyle = "#d8404a";
+      ctx.fillRect(px + g * 0.1, py + g * 0.1, g * 0.8, g * 0.16);
+      ctx.fillStyle = "#3b3f48";
+      ctx.fillRect(px + g * 0.36, py + g * 0.44, g * 0.28, g * 0.36);
+      break;
+    default:
+      if (d > 0.88) {
+        ctx.fillStyle = "#2f8fd0";                           // Pool im Garten
+        ctx.fillRect(px + g * 0.3, py + g * 0.34, g * 0.4, g * 0.3);
+      } else if (d < 0.16) {
+        ctx.fillStyle = "rgba(180,220,255,.18)";             // Dachfenster
+        ctx.fillRect(px + g * 0.32, py + g * 0.32, g * 0.36, g * 0.36);
+      } else if (d > 0.6 && d < 0.66) {
+        ctx.fillStyle = "rgba(0,0,0,.2)";                    // Lüftung
+        ctx.fillRect(px + g * 0.55, py + g * 0.18, g * 0.24, g * 0.2);
+      }
   }
 }
 
+/* ── Untergründe ────────────────────────────────────────── */
 function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
   const a = art(tx, ty);
-  const geg = bezirk(tx, ty);
+  const bez = bezirkVon(tx, ty);
 
   switch (a) {
     case ART.WASSER: {
       ctx.fillStyle = FARBE.wasser;
       ctx.fillRect(px, py, g + 1, g + 1);
       Tex.malen(ctx, "wasser", streu(tx, ty, 109), px, py, g);
-      /* Lichtreflex, der langsam über das Wasser wandert */
-      const w = Math.sin((tx * 0.7 + ty * 0.4) + zeit * 0.0009) * 0.5 + 0.5;
-      ctx.globalAlpha = 0.10 + w * 0.16;
+      const w = Math.sin(tx * 0.7 + ty * 0.4 + zeit * 0.0009) * 0.5 + 0.5;
+      ctx.globalAlpha = 0.08 + w * 0.14;
       ctx.fillStyle = "#bfe4ff";
       ctx.fillRect(px, py + g * (0.28 + w * 0.2), g + 1, g * 0.1);
       ctx.globalAlpha = 1;
       break;
     }
-
     case ART.STRAND: {
       ctx.fillStyle = FARBE.strand;
       ctx.fillRect(px, py, g + 1, g + 1);
       Tex.malen(ctx, "sand", streu(tx, ty, 111), px, py, g);
       const s = streu(tx, ty, 5);
-      if (s > 0.9) {
-        ctx.fillStyle = "rgba(240,120,140,.75)";       // Sonnenschirm
+      if (s > 0.93) {
+        ctx.fillStyle = "rgba(240,120,140,.8)";
         ctx.beginPath();
-        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.16, 0, Math.PI * 2);
+        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.17, 0, Math.PI * 2);
         ctx.fill();
-      } else if (s < 0.08) {
-        ctx.fillStyle = "rgba(190,168,120,.55)";
-        ctx.beginPath();
-        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.2, 0, Math.PI * 2);
-        ctx.fill();
+      } else if (s > 0.88) {
+        ctx.fillStyle = "rgba(255,255,255,.5)";              // Liege
+        ctx.fillRect(px + g * 0.36, py + g * 0.38, g * 0.28, g * 0.2);
       }
       break;
     }
-
     case ART.STRASSE:
     case ART.KREUZUNG:
+    case ART.AUTOBAHN:
+    case ART.BRUECKE:
       strasseMalen(ctx, tx, ty, px, py, g, a);
       break;
-
     case ART.GEHWEG:
-      gehwegMalen(ctx, tx, ty, px, py, g, geg);
-      if (imRaster(tx) === bandBreite(tx) && imRaster(ty) === bandBreite(ty)) {
-        ampelMalen(ctx, tx, ty, px, py, g, zeit);
-      }
+      gehwegMalen(ctx, tx, ty, px, py, g, bez);
       break;
-
     case ART.PARK: {
       ctx.fillStyle = FARBE.park;
       ctx.fillRect(px, py, g + 1, g + 1);
       Tex.malen(ctx, "gras", streu(tx, ty, 113), px, py, g);
       const b = streu(tx, ty, 17);
-      if (b < 0.12) {                                  // Weg durch den Park
-        ctx.fillStyle = "rgba(200,180,140,.5)";
+      if (b < 0.1) {
+        ctx.fillStyle = "rgba(200,180,140,.45)";             // Weg
         ctx.fillRect(px, py + g * 0.4, g + 1, g * 0.2);
-      } else if (b > 0.62) {                           // Baum
-        const bild = Tex.tex("baum", streu(tx, ty, 117));
-        if (bild) ctx.drawImage(bild, px - g * 0.2, py - g * 0.2, g * 1.4, g * 1.4);
-      } else if (b > 0.42) {                           // Busch
-        const bild = Tex.tex("busch", streu(tx, ty, 119));
-        if (bild) ctx.drawImage(bild, px, py, g, g);
+      } else if (b > 0.66) {
+        const baum = Tex.tex("baum", streu(tx, ty, 117));
+        if (baum) ctx.drawImage(baum, px - g * 0.2, py - g * 0.2, g * 1.4, g * 1.4);
+      } else if (b > 0.46) {
+        const busch = Tex.tex("busch", streu(tx, ty, 119));
+        if (busch) ctx.drawImage(busch, px, py, g, g);
+      } else if (b > 0.42) {
+        ctx.fillStyle = "#2f8fd0";                           // Teich
+        ctx.beginPath();
+        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.42, 0, Math.PI * 2);
+        ctx.fill();
       }
       break;
     }
-
     case ART.PARKPLATZ:
       ctx.fillStyle = FARBE.parkplatz;
       ctx.fillRect(px, py, g + 1, g + 1);
@@ -401,65 +471,102 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
       ctx.strokeStyle = "rgba(230,230,210,.22)";
       ctx.lineWidth = Math.max(1, g * 0.03);
       ctx.beginPath();
-      ctx.moveTo(px + g * 0.5, py + g * 0.1);
-      ctx.lineTo(px + g * 0.5, py + g * 0.9);
+      ctx.moveTo(px + g * 0.5, py + g * 0.12);
+      ctx.lineTo(px + g * 0.5, py + g * 0.88);
       ctx.stroke();
       break;
-
     case ART.HAFEN: {
       ctx.fillStyle = FARBE.hafen;
       ctx.fillRect(px, py, g + 1, g + 1);
       Tex.malen(ctx, "beton", streu(tx, ty, 123), px, py, g);
       const c = streu(tx, ty, 61);
-      if (c > 0.8) {                                   // Container
+      if (c > 0.78) {
         ctx.fillStyle = ["#c0533f", "#2f6f8f", "#c9a23a", "#4a7d52"][Math.floor(c * 100) % 4];
-        ctx.fillRect(px + g * 0.12, py + g * 0.2, g * 0.76, g * 0.5);
+        ctx.fillRect(px + g * 0.1, py + g * 0.18, g * 0.8, g * 0.54);
         ctx.fillStyle = "rgba(255,255,255,.12)";
-        ctx.fillRect(px + g * 0.12, py + g * 0.2, g * 0.76, g * 0.12);
-      } else {
-        ctx.fillStyle = "rgba(0,0,0,.16)";
-        ctx.fillRect(px, py + g * 0.46, g + 1, g * 0.08);
+        ctx.fillRect(px + g * 0.1, py + g * 0.18, g * 0.8, g * 0.12);
       }
       break;
     }
-
     default:
       gebaeudeMalen(ctx, tx, ty, px, py, g);
   }
 }
 
-/* Wände und Schatten: ein Versatz nach unten rechts, gemalt über die
-   Nachbarkachel — dadurch wirkt die Stadt räumlich, ohne echtes 3D. */
+/* ── Wände und Schatten ─────────────────────────────────── */
 function wandMalen(ctx, tx, ty, px, py, g) {
   if (art(tx, ty) !== ART.GEBAEUDE) return;
   const rechtsFrei = art(tx + 1, ty) !== ART.GEBAEUDE;
   const untenFrei = art(tx, ty + 1) !== ART.GEBAEUDE;
   if (!rechtsFrei && !untenFrei) return;
 
-  const id = hausId(tx, ty);
-  const h = hoeheVon(tx, ty);
-  const wand = g * 0.42 * h;
-  const schatten = g * 0.3 * h;
-  const dach = dachFarbe(id);
+  const h = Plan.hoeheVon(tx, ty);
+  const wand = g * 0.5 * h;
+  const schatten = g * 0.34 * h;
+  const farbe = dachFarbe(tx, ty);
 
   ctx.fillStyle = "rgba(6,10,24,.3)";
   if (rechtsFrei) ctx.fillRect(px + g + wand, py + wand * 0.4, schatten, g);
   if (untenFrei) ctx.fillRect(px + wand * 0.4, py + g + wand, g, schatten);
 
   if (rechtsFrei) {
-    ctx.fillStyle = dunkler(dach, 0.62);
+    ctx.fillStyle = dunkler(farbe, 0.6);
     ctx.fillRect(px + g, py, wand, g);
-    ctx.fillStyle = "rgba(255,240,190,.16)";           // Fensterreihen
-    for (let i = 0; i < 3; i++) {
-      ctx.fillRect(px + g + wand * (0.2 + i * 0.26), py + g * 0.18, wand * 0.13, g * 0.6);
-    }
+    ctx.fillStyle = "rgba(255,240,190,.16)";
+    for (let k = 0; k < 3; k++) ctx.fillRect(px + g + wand * (0.2 + k * 0.26), py + g * 0.18, wand * 0.13, g * 0.6);
   }
   if (untenFrei) {
-    ctx.fillStyle = dunkler(dach, 0.48);
+    ctx.fillStyle = dunkler(farbe, 0.46);
     ctx.fillRect(px, py + g, g + (rechtsFrei ? wand : 0), wand);
     ctx.fillStyle = "rgba(255,240,190,.13)";
-    for (let i = 0; i < 3; i++) {
-      ctx.fillRect(px + g * 0.18, py + g + wand * (0.2 + i * 0.26), g * 0.6, wand * 0.13);
+    for (let k = 0; k < 3; k++) ctx.fillRect(px + g * 0.18, py + g + wand * (0.2 + k * 0.26), g * 0.6, wand * 0.13);
+  }
+}
+
+/* ── Ampeln an den Kreuzungsecken ───────────────────────── */
+function ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM) {
+  for (let j = 0; j < zeilen; j++) {
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      if (art(tx, ty) !== ART.GEHWEG) continue;
+      /* Ecke an einer Kreuzung? */
+      const nachbarn = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        .filter(([dx, dy]) => art(tx + dx, ty + dy) === ART.KREUZUNG);
+      if (!nachbarn.length) continue;
+      if (streu(tx, ty, 71) > 0.5) continue;         // nicht an jeder Ecke
+
+      const [dx, dy] = nachbarn[0];
+      const senkrecht = dy !== 0;
+      const phase = ampelPhase(tx, ty, zeit);
+      const gruen = senkrecht ? phase === "ns" : phase === "ow";
+      const gelb = senkrecht ? phase === "ns-gelb" : phase === "ow-gelb";
+      const name = gruen ? "ampel_gruen" : gelb ? "ampel_gelb" : "ampel_rot";
+      const b = sprite(name);
+      const g = KACHEL * kamera.zoom;
+      const px = (inMeter(tx) - linksM) * kamera.zoom;
+      const py = (inMeter(ty) - obenM) * kamera.zoom;
+      if (!b) {                                       // Ersatz, falls Bild fehlt
+        ctx.fillStyle = gruen ? "#3fdc7a" : gelb ? "#ffd24a" : "#ff4a55";
+        ctx.fillRect(px + g * 0.38, py + g * 0.38, g * 0.24, g * 0.24);
+        continue;
+      }
+      /* Höhe vorgeben, nicht Breite: die Ampel ist ein hohes, schmales Bild */
+      const h = g * 1.5, w = (b.width / b.height) * h;
+      ctx.save();
+      ctx.translate(px + g / 2, py + g / 2);
+      ctx.rotate(Math.atan2(dy, dx) + Math.PI / 2);
+      ctx.drawImage(b, -w / 2, -h / 2, w, h);
+      /* Leuchten: kleiner Schein in der Ampelfarbe, damit man sie auch
+         bei kleiner Darstellung erkennt */
+      const licht = gruen ? "rgba(70,240,130," : gelb ? "rgba(255,200,60," : "rgba(255,70,90,";
+      const schein = ctx.createRadialGradient(0, -h * 0.26, 0, 0, -h * 0.26, w * 0.6);
+      schein.addColorStop(0, licht + "0.7)");
+      schein.addColorStop(1, licht + "0)");
+      ctx.fillStyle = schein;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.26, w * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
   }
 }
@@ -474,103 +581,29 @@ export function zeichnen(ctx, kamera, zeit) {
   const zeilen = Math.ceil(kamera.hoehe / g) + 3;
 
   for (let j = 0; j < zeilen; j++) {
-    for (let i = 0; i < spalten; i++) {
-      const tx = tx0 + i, ty = ty0 + j;
-      kachelMalen(ctx, tx, ty, (tx * KACHEL - linksM) * kamera.zoom,
-                  (ty * KACHEL - obenM) * kamera.zoom, g, zeit);
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      kachelMalen(ctx, tx, ty, (inMeter(tx) - linksM) * kamera.zoom,
+                  (inMeter(ty) - obenM) * kamera.zoom, g, zeit);
     }
   }
   for (let j = 0; j < zeilen; j++) {
-    for (let i = 0; i < spalten; i++) {
-      const tx = tx0 + i, ty = ty0 + j;
-      wandMalen(ctx, tx, ty, (tx * KACHEL - linksM) * kamera.zoom,
-                (ty * KACHEL - obenM) * kamera.zoom, g);
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      wandMalen(ctx, tx, ty, (inMeter(tx) - linksM) * kamera.zoom,
+                (inMeter(ty) - obenM) * kamera.zoom, g);
     }
   }
+  if (kamera.zoom > 14) ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM);
 }
 
-/* ── Hilfen für Bewegung und Aufbau ── */
-export const inMeter = t => t * KACHEL;
-export const inKachel = m => Math.floor(m / KACHEL);
-
-export function festAnPunkt(mx, my) {
-  return fest(inKachel(mx), inKachel(my));
-}
-
-/* Startplatz: der nächste Gehweg an einer Straße, ausgehend von der
-   Stadtmitte. Wird gesucht statt fest eingetragen — so stimmt er auch,
-   wenn sich das Straßenraster ändert. */
-function startSuchen(mx = 100, my = 92) {
-  for (let r = 0; r < 40; r++) {
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const tx = mx + dx, ty = my + dy;
-        if (art(tx, ty) !== ART.GEHWEG) continue;
-        const amRand = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-          .some(([ax, ay]) => art(tx + ax, ty + ay) === ART.STRASSE);
-        if (amRand) return { x: inMeter(tx) + KACHEL / 2, y: inMeter(ty) + KACHEL / 2 };
-      }
-    }
-  }
-  return { x: inMeter(mx), y: inMeter(my) };
-}
-
-export const START = startSuchen();
-
-/* ── Spuren für den Verkehr ──
-   Rechtsverkehr: In Fahrtrichtung liegt die eigene Spur rechts. Die
-   Funktionen liefern die Mitte der passenden Spur in Metern. */
-export const bandStart = t => Math.floor(t / BLOCK) * BLOCK;
-
-export function spurMitte(t, richtung, senkrecht) {
-  /* t = irgendeine Kachel im Straßenband, richtung = +1/−1 */
-  const s = bandStart(t);
-  const w = bandBreite(t);
-  let kachel;
-  if (senkrecht) {                       // Fahrt in y, Spur liegt in x
-    kachel = richtung < 0 ? s + w - 1 : s;         // nach oben → rechte Seite ist Osten
-    if (w === AVENUE) kachel = richtung < 0 ? s + w - 1 - Math.round(Math.random()) : s + Math.round(Math.random());
-  } else {                               // Fahrt in x, Spur liegt in y
-    kachel = richtung > 0 ? s + w - 1 : s;         // nach rechts → rechte Seite ist Süden
-    if (w === AVENUE) kachel = richtung > 0 ? s + w - 1 - Math.round(Math.random()) : s + Math.round(Math.random());
-  }
-  return inMeter(kachel) + KACHEL / 2;
-}
-
-/* Gibt es an dieser Stelle eine Straße in der gewünschten Richtung? */
-export function istStrasse(tx, ty) {
-  const a = art(tx, ty);
-  return a === ART.STRASSE || a === ART.KREUZUNG;
-}
-
-/* Nächste Kreuzungsmitte in Fahrtrichtung (in Metern) */
-export function naechsteKreuzung(x, y, dx, dy) {
-  const schritt = KACHEL;
-  for (let i = 1; i < 60; i++) {
-    const px = x + dx * schritt * i, py = y + dy * schritt * i;
-    const tx = inKachel(px), ty = inKachel(py);
-    if (art(tx, ty) === ART.KREUZUNG) {
-      const bx = bandStart(tx), by = bandStart(ty);
-      return {
-        tx, ty,
-        x: inMeter(bx) + (bandBreite(tx) * KACHEL) / 2,
-        y: inMeter(by) + (bandBreite(ty) * KACHEL) / 2
-      };
-    }
-    if (!istStrasse(tx, ty)) return null;
-  }
-  return null;
-}
-
-/* Freien Platz in der Nähe suchen (für Autos, Figuren, Missionen) */
+/* ── Freien Platz suchen ────────────────────────────────── */
 export function freierPunkt(nahX, nahY, arten, radius = 40) {
-  for (let versuch = 0; versuch < 400; versuch++) {
+  for (let versuch = 0; versuch < 500; versuch++) {
     const w = streu(versuch, 1, 31) * Math.PI * 2;
     const r = streu(versuch, 2, 37) * radius;
     const x = nahX + Math.cos(w) * r, y = nahY + Math.sin(w) * r;
-    const a = art(inKachel(x), inKachel(y));
-    if (arten.includes(a)) return { x, y };
+    if (arten.includes(art(inKachel(x), inKachel(y)))) return { x, y };
   }
   return { x: nahX, y: nahY };
 }

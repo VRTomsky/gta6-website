@@ -10,7 +10,7 @@
 
    Steuerung: WASD/Pfeile fahren und laufen, Umschalt rennen,
    E ein- und aussteigen, Leertaste Handbremse, Alt halten für den
-   Figurenwechsel, P pausieren.
+   Figurenwechsel, M Karte und Optionen, N Ton, F Vollbild, P Pause.
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
@@ -42,6 +42,8 @@ const hud = {
   auftrag: document.querySelector("[data-hud=auftrag]")
 };
 const radar = document.getElementById("spielKarte");
+const grossFeld = document.getElementById("spielGross");
+const grossKarte = document.getElementById("spielGrossKarte");
 const besteListe = document.getElementById("spielBeste");
 const eigenText = document.getElementById("spielEigen");
 const tonKnopf = document.getElementById("spielTon");
@@ -114,8 +116,11 @@ addEventListener("keydown", e => {
   }
   if (e.code === "KeyE") einUndAussteigen();
   if (e.code === "KeyF") vollbildUmschalten();
-  if (e.code === "KeyM") tonUmschalten();
-  if (e.code === "KeyP" || e.code === "Escape") pauseUmschalten();
+  if (e.code === "KeyM") karteUmschalten();
+  if (e.code === "KeyN") tonUmschalten();
+  if (e.code === "KeyH" && spieler().imAuto) Ton.hupe();
+  if ((e.code === "KeyP" || e.code === "Escape") && grossFeld.hidden) pauseUmschalten();
+  if (e.code === "Escape" && !grossFeld.hidden) karteUmschalten(false);
 });
 addEventListener("keyup", e => {
   tasten.delete(e.code);
@@ -176,19 +181,28 @@ function touchEinrichten() {
 
 /* ── Spielwelt aufbauen ──────────────────────────────────── */
 function weltBauen() {
-  zustand.autos = autosVerteilen(30, Karte.START.x, Karte.START.y, 110);
-  zustand.passanten = passantenVerteilen(55, Karte.START.x, Karte.START.y);
-  zustand.verkehr = verkehrAufbauen(22, Karte.START.x, Karte.START.y);
-  /* Ein Wagen steht auf der Straße neben dem Start — nah genug zum
-     Einsteigen, aber nicht auf der Figur */
-  let nah = null;
-  for (let i = 0; i < 40 && !nah; i++) {
-    const p = Karte.freierPunkt(Karte.START.x, Karte.START.y, [Karte.ART.STRASSE], 8 + i);
-    if (Math.hypot(p.x - Karte.START.x, p.y - Karte.START.y) > 3.6) nah = p;
+  zustand.autos = autosVerteilen(45, Karte.START.x, Karte.START.y, 130);
+  zustand.passanten = passantenVerteilen(75, Karte.START.x, Karte.START.y);
+  zustand.verkehr = verkehrAufbauen(65, Karte.START.x, Karte.START.y);
+  /* Ein Wagen steht auf der Straße neben dem Start: die nächste
+     Straßenkachel im Umkreis, mindestens 3,5 m entfernt. */
+  let beste = null;
+  const t0x = Karte.inKachel(Karte.START.x), t0y = Karte.inKachel(Karte.START.y);
+  for (let dy = -6; dy <= 6; dy++) {
+    for (let dx = -6; dx <= 6; dx++) {
+      const tx = t0x + dx, ty = t0y + dy;
+      if (Karte.art(tx, ty) !== Karte.ART.STRASSE) continue;
+      const x = Karte.inMeter(tx) + Karte.KACHEL / 2;
+      const y = Karte.inMeter(ty) + Karte.KACHEL / 2;
+      const d = Math.hypot(x - Karte.START.x, y - Karte.START.y);
+      if (d < 3.6) continue;
+      if (!beste || d < beste.d) beste = { x, y, d, tx, ty };
+    }
   }
-  nah = nah || { x: Karte.START.x + 5, y: Karte.START.y };
-  const senkrecht = Math.abs(nah.x - Karte.START.x) > Math.abs(nah.y - Karte.START.y);
-  zustand.autos.push(new Fahrzeug("cabrio", nah.x, nah.y, senkrecht ? -Math.PI / 2 : 0));
+  if (beste) {
+    const senkrecht = Karte.istStrasse(beste.tx, beste.ty + 2) && Karte.istStrasse(beste.tx, beste.ty - 2);
+    zustand.autos.push(new Fahrzeug("cabrio", beste.x, beste.y, senkrecht ? -Math.PI / 2 : 0));
+  }
 }
 
 /* ── Ein- und Aussteigen ─────────────────────────────────── */
@@ -203,6 +217,7 @@ function einUndAussteigen() {
     f.vx = auto.vx * 0.2; f.vy = auto.vy * 0.2;
     f.imAuto = null;
     auto.fahrer = null;
+    Ton.tuer();
     hinweis(L("Ausgestiegen", "Out of the car"));
     return;
   }
@@ -215,6 +230,7 @@ function einUndAussteigen() {
   if (naechstes) {
     f.imAuto = naechstes;
     naechstes.fahrer = f;
+    Ton.tuer();
     hinweis(naechstes.daten.name);
   } else {
     hinweis(L("Kein Auto in der Nähe", "No car nearby"));
@@ -354,6 +370,7 @@ function zusammenstoesse(dt, f, alleAutos) {
         p.flucht = 3;
         if (rammPause <= 0) {
           zustand.fahndung.melden(1);
+          Ton.schreck();
           hinweis(L("Fußgänger angefahren", "You hit a pedestrian"));
           rammPause = 2.5;
         }
@@ -563,7 +580,11 @@ function rechnen(dt) {
   hudFahndung();
 
   /* ── Ton ── */
-  Ton.laufen(f.imAuto ? Math.hypot(f.imAuto.vx, f.imAuto.vy) : 0, zustand.fahndung.stufe, dt);
+  const auto = f.imAuto;
+  const rutschen = auto
+    ? Math.min(1, Math.abs(auto.vx * -Math.sin(auto.winkel) + auto.vy * Math.cos(auto.winkel)) / 6)
+    : 0;
+  Ton.laufen(auto ? Math.hypot(auto.vx, auto.vy) : 0, zustand.fahndung.stufe, dt, rutschen);
 
   kameraFolgen(dt);
 
@@ -726,6 +747,38 @@ async function bestenlisteZeigen() {
     </li>`).join("");
 }
 
+/* ── Große Karte (Taste M) ──
+   Sie hält das Spiel an, zeigt die ganze Stadt mit Zielen und bietet
+   die wichtigsten Einstellungen. */
+function karteUmschalten(an) {
+  const auf = an === undefined ? grossFeld.hidden : an;
+  grossFeld.hidden = !auf;
+  zustand.pause = auf ? true : false;
+  pauseFeld.hidden = true;
+  if (auf) {
+    grossKarteZeichnen();
+  } else {
+    letzte = performance.now();
+    leinwand.focus();
+  }
+}
+
+function grossKarteZeichnen() {
+  const kasten = grossKarte.getBoundingClientRect();
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  grossKarte.width = Math.max(320, Math.round(kasten.width * dpr));
+  grossKarte.height = Math.max(240, Math.round(kasten.height * dpr));
+  Minikarte.grosseKarteZeichnen(grossKarte, zustand, spieler());
+}
+
+grossFeld.addEventListener("click", e => {
+  const k = e.target.closest("[data-gross]");
+  if (!k) return;
+  if (k.dataset.gross === "ton") tonUmschalten();
+  if (k.dataset.gross === "vollbild") vollbildUmschalten();
+  if (k.dataset.gross === "zu") karteUmschalten(false);
+});
+
 /* ── Ton an und aus ─────────────────────────────────────── */
 function tonUmschalten() {
   const an = Ton.stumm();
@@ -760,13 +813,14 @@ pauseFeld.addEventListener("click", () => pauseUmschalten(false));
 async function starten() {
   start.classList.add("is-laden");
   const autos = Object.keys(TYPEN).map(t => "auto_" + t);
+  const ampeln = ["ampel_rot", "ampel_gelb", "ampel_gruen"];
   const figuren = [];
   for (const art of ["lucia", "jason", "polizist", "polizistin", ...PASSANT_ARTEN]) {
     figuren.push(`${art}_steht`);
     for (let i = 0; i < 8; i++) figuren.push(`${art}_lauf${i}`);
   }
   Tex.bauen();
-  await Bilder.laden([...autos, ...figuren]);
+  await Bilder.laden([...autos, ...ampeln, ...figuren]);
 
   Ton.bereit();
   touchEinrichten();
@@ -794,3 +848,6 @@ wechselFeld.addEventListener("click", e => {
 
 document.getElementById("spielStartKnopf").addEventListener("click", starten);
 groesseAnpassen();
+
+/* Rechtsklick im Spiel soll kein Browser-Menü öffnen */
+buehne.addEventListener("contextmenu", e => e.preventDefault());
