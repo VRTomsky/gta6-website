@@ -71,6 +71,7 @@ const pauseFeld = document.getElementById("spielPause");
 const wechselFeld = document.getElementById("spielWechsel");
 const buehne = document.querySelector(".sbuehne");
 const vollKnopf = document.getElementById("spielVollbild");
+const karteKnopf = document.getElementById("spielKarteKnopf");
 const ruhig = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const kamera = { x: Karte.START.x, y: Karte.START.y, zoom: 30, breite: 0, hoehe: 0 };
@@ -189,7 +190,7 @@ leinwand.addEventListener("wheel", e => {
 /* ── Steuerung mit dem Finger ──
    Links ein Kreuz, das wie ein Stick funktioniert, rechts vier Knöpfe.
    Erscheint nur, wenn das Gerät Touch kann. */
-const finger = { x: 0, y: 0, aktiv: false, bremse: false };
+const finger = { x: 0, y: 0, aktiv: false, bremse: false, gas: false, hand: false, lenken: false };
 const istTouch = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
 
 function touchEinrichten() {
@@ -202,6 +203,16 @@ function touchEinrichten() {
     const r = stick.getBoundingClientRect();
     mitte = mitte || { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     const dx = e.clientX - mitte.x, dy = e.clientY - mitte.y;
+    if (finger.lenken) {
+      /* Am Steuer zählt nur links und rechts. Der Ausschlag wird
+         gekrümmt: kleine Bewegungen lenken fein, große voll. */
+      const roh = Math.max(-1, Math.min(1, dx / (r.width * 0.38)));
+      finger.x = Math.sign(roh) * Math.pow(Math.abs(roh), 1.4);
+      finger.y = 0;
+      finger.aktiv = true;
+      knopf.style.transform = `translate(${finger.x * r.width * 0.33}px, 0)`;
+      return;
+    }
     const weite = Math.min(1, Math.hypot(dx, dy) / (r.width * 0.42));
     const w = Math.atan2(dy, dx);
     finger.x = Math.cos(w) * weite;
@@ -221,27 +232,44 @@ function touchEinrichten() {
   stick.addEventListener("pointerup", los);
   stick.addEventListener("pointercancel", los);
 
+  const losLassen = art => {
+    if (art === "bremse") finger.bremse = false;
+    if (art === "gas") finger.gas = false;
+    if (art === "hand") finger.hand = false;
+    if (art === "feuer") maus.feuer = false;
+  };
+
   touchFeld.querySelectorAll("[data-touch]").forEach(b => {
     const art = b.dataset.touch;
     b.addEventListener("pointerdown", e => {
       e.preventDefault();
       if (art === "e") einsteigenOderLaden();
       if (art === "bremse") finger.bremse = true;
+      if (art === "gas") finger.gas = true;
+      if (art === "hand") finger.hand = true;
       if (art === "feuer") maus.feuer = true;
+      if (art === "hupe") Ton.hupe();
+      if (art === "sprung" && spieler().springen()) Ton.sprung();
+      if (art === "karte") karteUmschalten();
       if (art === "wechsel") {
         if (zustand.wahl) wechselSchliessen(true);
         else { wechselOeffnen(); wechselWaehlen(zustand.aktiv === "lucia" ? "jason" : "lucia"); }
       }
     });
-    b.addEventListener("pointerup", () => {
-      if (art === "bremse") finger.bremse = false;
-      if (art === "feuer") maus.feuer = false;
-    });
-    b.addEventListener("pointercancel", () => {
-      if (art === "bremse") finger.bremse = false;
-      if (art === "feuer") maus.feuer = false;
-    });
+    b.addEventListener("pointerup", () => losLassen(art));
+    b.addEventListener("pointercancel", () => losLassen(art));
   });
+}
+
+/* Am Steuer sieht die Bedienung anders aus als zu Fuß */
+function touchModus(imAuto) {
+  if (!istTouch || finger.lenken === !!imAuto) return;
+  finger.lenken = !!imAuto;
+  touchFeld.classList.toggle("stouch--auto", !!imAuto);
+  finger.x = finger.y = 0;
+  finger.gas = finger.bremse = finger.hand = false;
+  const knopf = stick.querySelector("i");
+  if (knopf) knopf.style.transform = "";
 }
 
 /* ── Spielwelt aufbauen ──────────────────────────────────── */
@@ -718,13 +746,19 @@ function rechnen(dt) {
   if (zustand.wahl) return;                        // Auswahl offen: Spiel wartet
 
   const f = spieler();
+  touchModus(!!f.imAuto);
   let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
   let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
-  if (finger.aktiv) {                               // Finger hat Vorrang
+  if (f.imAuto && istTouch) {
+    /* Lenken über das Band, Gas und Bremse über die Knöpfe */
+    if (finger.aktiv) quer = finger.x;
+    if (finger.gas) vor = 1;
+    else if (finger.bremse) vor = -1;
+  } else if (finger.aktiv) {                        // zu Fuß: Finger hat Vorrang
     quer = finger.x;
     vor = -finger.y;
   }
-  const bremse = tasten.has("Space") || finger.bremse;
+  const bremse = (tasten.has("Space") && f.imAuto) || finger.hand;
 
   if (f.imAuto) {
     f.imAuto.fahren(vor, quer, bremse, dt);
@@ -1192,6 +1226,10 @@ radar.addEventListener("wheel", e => {
 }, { passive: false });
 
 radar.addEventListener("click", e => {
+  /* Mit dem Finger ist die Minikarte zu klein, um darauf zu zielen —
+     dort öffnet ein Tipp die große Karte, und der Wegpunkt wird dort
+     gesetzt. Mit der Maus bleibt es beim Wegpunkt. */
+  if (istTouch) { karteUmschalten(true); return; }
   const ort = Minikarte.ortAusMinikarte(radar, spieler(), e.clientX, e.clientY);
   wegpunktSetzen(ort);
 });
@@ -1203,6 +1241,7 @@ function tonUmschalten() {
   hinweis(an ? L("Ton an", "Sound on") : L("Ton aus", "Sound off"));
 }
 tonKnopf.addEventListener("click", tonUmschalten);
+if (karteKnopf) karteKnopf.addEventListener("click", () => karteUmschalten());
 
 /* ── Vollbild ───────────────────────────────────────────── */
 function vollbildUmschalten() {

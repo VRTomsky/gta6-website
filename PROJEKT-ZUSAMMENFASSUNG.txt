@@ -286,6 +286,23 @@ WAS BISHER GEMACHT WURDE
    - Das Fadenkreuz an der Maus ist weg.
    - Waffe wechseln mit dem Mausrad oder Q, direkt mit 1-5.
 
+19. Spiel, siebter Schritt (21.09.2026) - fuer Tablet und Handy:
+   - Lenkung am Steuer komplett neu: aus dem Steuerkreuz wird ein
+     breites Lenkband nur fuer links und rechts, dazu eigene Knoepfe
+     fuer Gas, Bremse, Handbremse und Hupe. Mit dem Stick zu fahren
+     war auf dem iPad nicht zu beherrschen.
+   - Neuer Kartenknopf neben Ton und Vollbild, und ein Tipp auf die
+     Minikarte oeffnet jetzt die grosse Karte. Auf dem Tablet liess
+     sich die Karte vorher gar nicht oeffnen.
+   - Die grosse Karte fuellt auf kleinen Schirmen die obere Haelfte,
+     darunter Legende und Knoepfe.
+   - Alle zwoelf Fahrzeuge neu gerendert: weisse Scheinwerfer auf der
+     Haube, rote Rueckleuchten auf dem Heck, helle Frontscheibe und
+     dunkle Heckscheibe. Man sieht sofort, wo vorn ist.
+   - Streifenwagen mit breitem Lichtbalken und dunkler Haube,
+     Rettungswagen mit rotem Kreuz auf dem Dach, Feuerwehr mit Leiter
+     und Reflexstreifen.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

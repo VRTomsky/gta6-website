@@ -282,7 +282,17 @@
 .ston:hover{ background:var(--pink); color:var(--ink); border-color:var(--pink); }
 .ston.is-aus [data-ton-wellen]{ opacity:.25; }
 
-/* ── Steuerung für Handys ── */
+/* ── Kartenknopf neben Ton und Vollbild ── */
+.skarteknopf{
+  position:absolute; right:calc(clamp(10px, 1.6vw, 18px) + 96px); bottom:clamp(10px, 1.6vw, 18px);
+  z-index:3; width:40px; height:40px; display:grid; place-items:center;
+  border-radius:12px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(8,13,29,.6); color:var(--cream); cursor:pointer;
+  backdrop-filter:blur(6px);
+}
+.skarteknopf:hover{ background:var(--pink); color:var(--ink); border-color:var(--pink); }
+
+/* ── Steuerung für Handys und Tablets ── */
 .stouch{ position:absolute; inset:0; z-index:2; pointer-events:none; }
 .stouch[hidden]{ display:none; }
 .stouch__stick{
@@ -290,12 +300,31 @@
   width:132px; height:132px; border-radius:50%;
   background:rgba(8,13,29,.45); border:1px solid rgba(255,255,255,.16);
   pointer-events:auto; touch-action:none;
+  transition:width .18s var(--ease), height .18s var(--ease), border-radius .18s var(--ease);
 }
 .stouch__stick i{
   position:absolute; left:50%; top:50%; width:52px; height:52px; margin:-26px 0 0 -26px;
   border-radius:50%; background:rgba(255,138,180,.75);
   box-shadow:0 6px 18px -6px rgba(0,0,0,.8);
 }
+.stouch__lenkhinweis{
+  position:absolute; left:0; right:0; bottom:8px; text-align:center;
+  font-family:var(--f-label); font-size:.62rem; letter-spacing:.18em;
+  text-transform:uppercase; color:rgba(255,255,255,.45); display:none;
+}
+
+/* Im Auto wird aus dem Kreuz ein breites Lenkband: der Daumen schiebt
+   nur noch nach links und rechts, das trifft man auch ohne hinzusehen. */
+.stouch--auto .stouch__stick{
+  width:210px; height:96px; border-radius:48px;
+}
+.stouch--auto .stouch__lenkhinweis{ display:block; }
+.stouch--auto .stouch__stick i{ width:64px; height:64px; margin:-32px 0 0 -32px; }
+
+/* Welche Knöpfe sichtbar sind, hängt daran, ob man am Steuer sitzt */
+.stouch [data-modus="auto"]{ display:none; }
+.stouch--auto [data-modus="fuss"]{ display:none; }
+.stouch--auto [data-modus="auto"]{ display:block; }
 .stouch__knoepfe{
   position:absolute; right:18px; bottom:18px;
   display:grid; grid-template-columns:repeat(2, 64px); gap:10px; justify-items:center;
@@ -307,7 +336,10 @@
   color:var(--cream); font-family:var(--f-label); font-weight:800; font-size:1.1rem;
   touch-action:none;
 }
-.stouch__knoepfe button:last-child{ grid-column:2; background:rgba(255,138,180,.35); }
+.stouch__knoepfe button[data-touch="e"]{ grid-column:2; background:rgba(255,138,180,.35); }
+.stouch__knoepfe button[data-touch="gas"]{
+  background:rgba(110,231,160,.3); border-color:rgba(110,231,160,.5);
+}
 .stouch__knoepfe button:active{ background:var(--pink); color:var(--ink); }
 
 /* ── Bestenliste ── */
@@ -345,11 +377,14 @@
   }
   .svoll{ right:auto; bottom:auto; left:10px; top:96px; width:34px; height:34px; border-radius:10px; }
   .ston{ right:auto; bottom:auto; left:52px; top:96px; width:34px; height:34px; border-radius:10px; }
-  .svoll svg, .ston svg{ width:16px; height:16px; }
+  .skarteknopf{ right:auto; bottom:auto; left:94px; top:96px; width:34px; height:34px; border-radius:10px; }
+  .svoll svg, .ston svg, .skarteknopf svg{ width:16px; height:16px; }
   .stouch__stick{ width:104px; height:104px; left:12px; bottom:12px; }
   .stouch__stick i{ width:42px; height:42px; margin:-21px 0 0 -21px; }
-  .stouch__knoepfe{ right:12px; bottom:12px; grid-template-columns:repeat(2, 52px); gap:8px; }
-  .stouch__knoepfe button{ width:52px; height:52px; font-size:.95rem; }
+  .stouch--auto .stouch__stick{ width:176px; height:84px; border-radius:42px; }
+  .stouch--auto .stouch__stick i{ width:54px; height:54px; margin:-27px 0 0 -27px; }
+  .stouch__knoepfe{ right:12px; bottom:12px; grid-template-columns:repeat(2, 58px); gap:8px; }
+  .stouch__knoepfe button{ width:58px; height:58px; font-size:1rem; }
   .shud__hinweis{ bottom:132px; font-size:.74rem; padding:6px 12px; }
   .shud__auftrag{ top:auto; bottom:170px; font-size:.72rem; }
   .shud__leben{ width:72px; }
@@ -430,7 +465,14 @@
 
 @media (max-width:760px), (pointer: coarse){
   .skarte{ left:auto; right:10px; top:150px; bottom:auto; width:118px; border-radius:14px; }
-  .sgross{ grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
-  .sgross__legende{ flex-direction:row; flex-wrap:wrap; gap:10px 16px; }
+  /* Auf kleinen Schirmen zaehlt die Karte, nicht die Ueberschrift:
+     Titel und Hinweis fallen weg, die Karte bekommt feste Mindesthoehe. */
+  .sgross{ grid-template-columns:1fr; grid-template-rows:minmax(48%, 1fr) auto; padding:10px; gap:8px; }
+  .sgross__kopf{ display:none; }
+  .sgross__hinweis{ display:none; }
+  .sgross__seite{ gap:8px; overflow:auto; }
+  .sgross__legende{ flex-direction:row; flex-wrap:wrap; gap:6px 14px; font-size:.78rem; }
+  .sgross__legende li{ font-size:.78rem; }
   .sgross__knoepfe{ flex-direction:row; flex-wrap:wrap; }
+  .sgross__knoepfe .btn{ padding:8px 14px; font-size:.8rem; }
 }

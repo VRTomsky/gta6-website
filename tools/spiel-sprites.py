@@ -286,12 +286,21 @@ def auto(name):
         lack.node_tree.nodes["Principled BSDF"].inputs["Coat Weight"].default_value = 0.6
     dunkel = tuple(c * 0.55 for c in d["lack"])
     lack_dunkel = farbe("lackd_" + name, dunkel, 0.3, 0.4)
-    glas = farbe("glas", (0.045, 0.07, 0.12), 0.08, 0.2)
+    # Frontscheibe hell und blau, Heckscheibe fast schwarz: von oben ist
+    # das der staerkste Hinweis darauf, wo vorn ist.
+    glas = farbe("glas_v", (0.20, 0.34, 0.52), 0.05, 0.3)
+    glas_h = farbe("glas_h", (0.03, 0.045, 0.08), 0.07, 0.2)
     schwarz = farbe("gummi", (0.045, 0.045, 0.055), 0.9)
     grau = farbe("kunststoff", (0.13, 0.14, 0.16), 0.75)
     chrom = farbe("chrom", (0.78, 0.80, 0.84), 0.2, 0.95)
-    licht_v = farbe("licht_v", (1.0, 0.96, 0.85), 0.15, 0.0, 3.0)
-    licht_h = farbe("licht_h", (0.95, 0.12, 0.18), 0.2, 0.0, 2.4)
+    licht_v = farbe("licht_v", (1.0, 0.95, 0.80), 0.12, 0.0, 1.5)
+    licht_h = farbe("licht_h", (0.92, 0.05, 0.09), 0.15, 0.0, 1.1)
+    licht_b = farbe("licht_b", (1.0, 0.45, 0.02), 0.18, 0.0, 1.0)
+    # Eigene, kraeftigere Farben fuer die Streifen auf Haube und Heckdeckel:
+    # von schraeg oben sieht man vor allem diese Flaechen, und genau daran
+    # soll man vorn und hinten erkennen.
+    dach_v = farbe("dach_v", (1.0, 0.98, 0.90), 0.1, 0.0, 2.8)
+    dach_h = farbe("dach_h", (0.88, 0.03, 0.06), 0.12, 0.0, 1.7)
 
     flach = d.get("flach")
     hoehe = 0.58 if flach else 0.70
@@ -327,9 +336,14 @@ def auto(name):
                 (0, -lang * 0.06, 0.62 + hoch / 2), lack, bevel=0.07)
         wuerfel("dach", (breit * 0.86, lang * 0.72, 0.07),
                 (0, -lang * 0.06, 0.62 + hoch), lack_dunkel, bevel=0.03)
-        wuerfel("frontscheibe", (breit * 0.84, 0.10, 0.44),
-                (0, lang * 0.34, 0.62 + hoch * 0.72), glas,
+        wuerfel("frontscheibe", (breit * 0.84, 0.10, 0.48),
+                (0, lang * 0.345, 0.62 + hoch * 0.70), glas,
                 drehung=(math.radians(-16), 0, 0), bevel=0.02)
+        # Hecktueren mit dunklem Fenster: hinten ist hinten
+        wuerfel("hecktuer", (breit * 0.80, 0.08, hoch * 0.7),
+                (0, -lang * 0.455, 0.62 + hoch * 0.5), lack_dunkel, bevel=0.03)
+        wuerfel("heckglas", (breit * 0.62, 0.06, hoch * 0.26),
+                (0, -lang * 0.47, 0.62 + hoch * 0.72), glas_h, bevel=0.02)
         for sx in (-1, 1):
             anzahl = 4 if d.get("bus") else 2
             for i in range(anzahl):
@@ -342,13 +356,20 @@ def auto(name):
             for sx in (-1, 1):
                 wuerfel(f"streifen{sx}", (0.05, lang * 0.7, 0.16),
                         (sx * (breit / 2 + 0.005), -lang * 0.06, 0.95), rot, bevel=0.02)
-            blau = farbe("blaulicht", (0.20, 0.42, 1.0), 0.18, 0.0, 4.0)
-            wuerfel("balken_b", (breit * 0.5, 0.22, 0.14), (0, lang * 0.24, 0.66 + hoch), blau, bevel=0.03)
+            blau = farbe("blaulicht", (0.20, 0.42, 1.0), 0.18, 0.0, 6.0)
+            wuerfel("balken_b", (breit * 0.72, 0.26, 0.15), (0, lang * 0.26, 0.66 + hoch), blau, bevel=0.03)
+            # Rotes Kreuz auf dem Dach
+            wuerfel("kreuz_q", (breit * 0.44, 0.34, 0.05), (0, -lang * 0.06, 0.655 + hoch), rot, bevel=0.01)
+            wuerfel("kreuz_l", (0.34, lang * 0.28, 0.04), (0, -lang * 0.06, 0.66 + hoch), rot, bevel=0.01)
         if d.get("feuer"):
             silber = farbe("leiter", (0.72, 0.74, 0.78), 0.35, 0.8)
             wuerfel("leiter", (0.42, lang * 0.78, 0.14), (0, -lang * 0.04, 0.70 + hoch), silber, bevel=0.03)
-            rotlicht = farbe("rotlicht", (1.0, 0.16, 0.22), 0.18, 0.0, 3.4)
-            wuerfel("balken_r", (breit * 0.55, 0.22, 0.14), (0, lang * 0.26, 0.66 + hoch), rotlicht, bevel=0.03)
+            rotlicht = farbe("rotlicht", (1.0, 0.16, 0.22), 0.18, 0.0, 5.5)
+            wuerfel("balken_r", (breit * 0.74, 0.26, 0.15), (0, lang * 0.28, 0.66 + hoch), rotlicht, bevel=0.03)
+            weiss = farbe("feuer_weiss", (0.95, 0.95, 0.95), 0.45)
+            for sx in (-1, 1):
+                wuerfel(f"reflex{sx}", (0.05, lang * 0.6, 0.14),
+                        (sx * (breit / 2 + 0.006), -lang * 0.05, 0.92), weiss, bevel=0.02)
     elif d.get("pritsche"):
         wuerfel("kabine", (breit * 0.88, lang * 0.30, 0.50), (0, lang * 0.16, 1.02), lack, bevel=0.05)
         wuerfel("dach", (breit * 0.84, lang * 0.17, 0.07), (0, lang * 0.13, 1.27), lack, bevel=0.04)
@@ -368,32 +389,64 @@ def auto(name):
         wuerfel("armatur", (breit * 0.74, 0.20, 0.16), (0, lang * 0.07, 0.94), grau, bevel=0.03)
     else:
         kabine_l = lang * (0.44 if flach else (0.62 if d.get("kombi") else 0.50))
-        wuerfel("kabine", (breit * 0.88, kabine_l, 0.46), (0, -lang * 0.03, 0.98), lack, bevel=0.07)
-        # Dach etwas schmaler und dunkler als der Lack
-        wuerfel("dach", (breit * 0.76, kabine_l * 0.52, 0.07), (0, -lang * 0.03, 1.22), lack, bevel=0.04)
-        wuerfel("frontscheibe", (breit * 0.80, 0.30, 0.10),
-                (0, -lang * 0.03 + kabine_l * 0.36, 1.16), glas,
-                drehung=(math.radians(-34), 0, 0), bevel=0.02)
-        wuerfel("heckscheibe", (breit * 0.76, 0.26, 0.10),
-                (0, -lang * 0.03 - kabine_l * 0.36, 1.16), glas,
-                drehung=(math.radians(32), 0, 0), bevel=0.02)
+        mitte_y = -lang * 0.03
+        wuerfel("kabine", (breit * 0.88, kabine_l * 0.78, 0.46), (0, mitte_y, 0.98), lack, bevel=0.07)
+        # Dach schmaler und dunkler als der Lack — dann liest sich das Auto
+        # von oben als Koerper mit Kabine statt als bunter Klotz
+        wuerfel("dach", (breit * 0.74, kabine_l * 0.48, 0.07), (0, mitte_y, 1.22), lack_dunkel, bevel=0.04)
+        # Front- und Heckscheibe stehen schraeg vor bzw. hinter der Kabine
+        wuerfel("frontscheibe", (breit * 0.82, 0.12, 0.54),
+                (0, mitte_y + kabine_l * 0.40, 1.02), glas,
+                drehung=(math.radians(-32), 0, 0), bevel=0.02)
+        wuerfel("heckscheibe", (breit * 0.76, 0.12, 0.46),
+                (0, mitte_y - kabine_l * 0.40, 1.04), glas_h,
+                drehung=(math.radians(30), 0, 0), bevel=0.02)
         for sx in (-1, 1):
-            wuerfel(f"seitenglas{sx}", (0.06, kabine_l * 0.74, 0.28),
-                    (sx * breit * 0.44, -lang * 0.03, 1.06), glas, bevel=0.02)
+            wuerfel(f"seitenglas{sx}", (0.06, kabine_l * 0.70, 0.26),
+                    (sx * breit * 0.44, mitte_y, 1.08), glas_h, bevel=0.02)
 
     # Spiegel
     for sx in (-1, 1):
         wuerfel(f"spiegel{sx}", (0.22, 0.12, 0.09),
                 (sx * (breit / 2 + 0.06), lang * 0.14, 0.94), lack_dunkel, bevel=0.02)
 
-    # Leuchten, in die Front eingelassen
+    # ── Leuchten ──
+    # Zwei Aufgaben: von vorn und hinten sollen Scheinwerfer und
+    # Rueckleuchten sichtbar sein, und von schraeg oben soll man auf einen
+    # Blick sehen, wo vorn ist. Deshalb sitzen die Leuchten in den Flaechen
+    # UND flach auf Haube und Heckdeckel: weisse Streifen vorn, ein rotes
+    # Band hinten.
+    haube_oben = 0.56 + hoehe * 0.30 + hoehe * 0.21
+    heck_oben = 0.56 + hoehe * 0.28 + hoehe * 0.20
     for sx in (-1, 1):
-        wuerfel(f"vorn{sx}", (0.30, 0.08, 0.14), (sx * breit * 0.28, lang * 0.485, 0.70), licht_v, bevel=0.02)
-        wuerfel(f"hinten{sx}", (0.32, 0.08, 0.14), (sx * breit * 0.28, -lang * 0.485, 0.70), licht_h, bevel=0.02)
+        wuerfel(f"vorn{sx}", (breit * 0.34, 0.10, 0.18),
+                (sx * breit * 0.27, lang * 0.487, 0.74), licht_v, bevel=0.02)
+        wuerfel(f"hinten{sx}", (breit * 0.36, 0.10, 0.20),
+                (sx * breit * 0.26, -lang * 0.487, 0.74), licht_h, bevel=0.02)
+        wuerfel(f"blink{sx}", (breit * 0.11, 0.09, 0.14),
+                (sx * breit * 0.455, -lang * 0.486, 0.74), licht_b, bevel=0.02)
+        if not d.get("kasten"):
+            wuerfel(f"haubenlicht{sx}", (breit * 0.32, lang * 0.075, 0.04),
+                    (sx * breit * 0.27, lang * 0.395, haube_oben + 0.03), dach_v, bevel=0.01)
+    if not d.get("kasten"):
+        for sx in (-1, 1):
+            wuerfel(f"heckdeckel{sx}", (breit * 0.30, lang * 0.06, 0.04),
+                    (sx * breit * 0.27, -lang * 0.40, heck_oben + 0.03), dach_h, bevel=0.01)
+        wuerfel("heckstrich", (breit * 0.30, lang * 0.025, 0.035),
+                (0, -lang * 0.40, heck_oben + 0.03), dach_h, bevel=0.01)
+    else:
+        # Kastenwagen: Streifen auf die Front- und Heckkante des Dachs
+        wuerfel("dachlicht_v", (breit * 0.70, lang * 0.05, 0.05),
+                (0, lang * 0.355, 0.66 + hoch), dach_v, bevel=0.01)
+        wuerfel("dachlicht_h", (breit * 0.70, lang * 0.05, 0.05),
+                (0, -lang * 0.42, 0.66 + hoch), dach_h, bevel=0.01)
 
-    wuerfel("stangev", (breit * 0.98, 0.16, 0.20), (0, lang * 0.47, 0.44), grau, bevel=0.04)
+    wuerfel("stangev", (breit * 0.98, 0.16, 0.20), (0, lang * 0.47, 0.44), chrom, bevel=0.04)
     wuerfel("stangeh", (breit * 0.98, 0.16, 0.20), (0, -lang * 0.47, 0.44), grau, bevel=0.04)
-    wuerfel("grill", (breit * 0.52, 0.10, 0.16), (0, lang * 0.49, 0.66), schwarz, bevel=0.02)
+    wuerfel("grill", (breit * 0.60, 0.10, 0.18), (0, lang * 0.49, 0.64), schwarz, bevel=0.02)
+    for i in range(3):
+        wuerfel(f"grillstab{i}", (breit * 0.58, 0.06, 0.02),
+                (0, lang * 0.50, 0.60 + i * 0.05), chrom, bevel=0.01)
 
     if d.get("taxi"):
         gelb = farbe("taxischild", (0.99, 0.86, 0.28), 0.35, 0.0, 1.6)
@@ -402,15 +455,20 @@ def auto(name):
             wuerfel(f"karo{sx}", (0.07, lang * 0.40, 0.16),
                     (sx * (breit / 2 + 0.005), -lang * 0.02, 0.74), schwarz, bevel=0.02)
     if d.get("polizei"):
-        blau = farbe("blaulicht", (0.22, 0.42, 1.0), 0.18, 0.0, 4.0)
-        rot = farbe("rotlicht", (1.0, 0.16, 0.22), 0.18, 0.0, 3.4)
-        wuerfel("balken", (breit * 0.70, 0.26, 0.10), (0, lang * 0.10, 1.29), schwarz, bevel=0.03)
-        wuerfel("balken_b", (breit * 0.30, 0.22, 0.13), (-breit * 0.17, lang * 0.10, 1.31), blau, bevel=0.03)
-        wuerfel("balken_r", (breit * 0.30, 0.22, 0.13), (breit * 0.17, lang * 0.10, 1.31), rot, bevel=0.03)
+        blau = farbe("blaulicht", (0.22, 0.42, 1.0), 0.18, 0.0, 6.0)
+        rot = farbe("rotlicht", (1.0, 0.16, 0.22), 0.18, 0.0, 5.0)
+        # Lichtbalken quer ueber das Dach, weit vorn: von oben sofort als
+        # Streifenwagen zu erkennen
+        wuerfel("balken", (breit * 0.86, 0.30, 0.09), (0, lang * 0.06, 1.28), schwarz, bevel=0.03)
+        wuerfel("balken_b", (breit * 0.38, 0.26, 0.14), (-breit * 0.22, lang * 0.06, 1.32), blau, bevel=0.03)
+        wuerfel("balken_r", (breit * 0.38, 0.26, 0.14), (breit * 0.22, lang * 0.06, 1.32), rot, bevel=0.03)
         streifen = farbe("streifen", (0.10, 0.16, 0.36), 0.5)
+        # Dunkle Motorhaube: klassische Zweifarbe
+        wuerfel("haube_dunkel", (breit * 0.80, lang * 0.24, 0.05),
+                (0, lang * 0.31, 0.56 + hoehe * 0.52), streifen, bevel=0.02)
         for sx in (-1, 1):
-            wuerfel(f"tuer{sx}", (0.05, lang * 0.40, 0.26),
-                    (sx * (breit / 2 + 0.008), -lang * 0.02, 0.62), streifen, bevel=0.02)
+            wuerfel(f"tuer{sx}", (0.05, lang * 0.40, 0.30),
+                    (sx * (breit / 2 + 0.008), -lang * 0.02, 0.64), streifen, bevel=0.02)
 
 
 def ampel(zustand):
@@ -474,6 +532,9 @@ def main():
     if nur == "autos":
         for a in AUTOS:
             auto_rendern(a, ziel)
+        return
+    if nur.startswith("eins:"):
+        auto_rendern(nur.split(":", 1)[1], ziel)
         return
     if nur == "ampeln":
         for z in ("rot", "gelb", "gruen"):

@@ -805,6 +805,21 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Fahrmodell:** Geschwindigkeitsvektor, der anteilig in Blickrichtung gezogen
   wird. Der Anteil ist der Grip — mit Handbremse rutscht der Wagen. Gelenkt wird
   nur bei Fahrt und mit steigendem Tempo weniger.
+- **Vorn und hinten am Auto (21.09.2026):** Die Kamera schaut von schräg hinten
+  oben, man sieht also vor allem Dach und Heck. Deshalb tragen alle Fahrzeuge
+  jetzt **zwei weiße Scheinwerferflächen auf der Haube** und **zwei rote
+  Rückleuchten auf dem Heckdeckel**, dazu eine helle blaue Frontscheibe und
+  eine fast schwarze Heckscheibe. Vorher sah ein Auto von oben vorn wie hinten
+  aus. Streifenwagen haben einen breiten Lichtbalken und eine dunkle Haube,
+  Rettungswagen ein rotes Kreuz auf dem Dach, die Feuerwehr Leiter und
+  Reflexstreifen; beide fahren im normalen Verkehr mit.
+- **Zwei Fallstricke beim Rendern** (beide haben je einen Durchgang gekostet):
+  1. `--ziel` **muss ein absoluter Pfad sein**. Mit einem relativen Pfad meldet
+     Blender „gerendert", schreibt die Datei aber woandershin — im Spiel bleibt
+     das alte Bild stehen.
+  2. Im Sammelmodus (`--nur autos`, alle Wagen in einer Blender-Sitzung) fehlte
+     ein Teil der Geometrie. Deshalb **je Fahrzeug eine eigene Sitzung**
+     (`--nur eins:<name>` in einer Schleife).
 - **Sprites:** Fahrzeuge kommen aus Blender (`tools/spiel-sprites.py`, Kamera
   20° geneigt, orthografisch, 64 px je Meter), Figuren werden gezeichnet
   (`tools/spiel-figuren.py`) — ein heruntergerechnetes 3D-Bild ist bei 25 Pixeln
@@ -864,9 +879,23 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   in Firestore (`bestenliste/{uid}`, öffentlich lesbar) und auf der Spielseite;
   ohne Konto nur im `localStorage`.
 - **Tasten:** `E` **oder `F`** ein- und aussteigen bzw. Waffenladen betreten,
-  `V` Vollbild (früher F), `M` Karte, `N` Ton, `H` Hupe, `Q`/Mausrad Waffe,
-  `1`–`4` Waffe direkt, Maustaste angreifen, `P` Pause. Auf Touch-Geräten
-  erscheinen Stick und vier Knöpfe automatisch (`pointer: coarse`).
+  `V` Vollbild (früher F), `M` Karte, `N` Ton, `H` Hupe, Mausrad/`Q` Waffe,
+  `1`–`5` Waffe direkt, Maustaste angreifen, Leertaste springen (im Auto
+  Handbremse), `P` Pause.
+- **Touch (21.09.2026 neu):** Auf Telefon und Tablet erscheint die Bedienung
+  automatisch (`pointer: coarse` oder `maxTouchPoints`). Zu Fuß: Stick in alle
+  Richtungen, rechts ✊ schlagen, ⤒ springen, ⇄ wechseln, E. **Am Steuer wird
+  aus dem Stick ein breites Lenkband**, das nur links und rechts kennt
+  (Ausschlag gekrümmt: `sign(x)·|x|^1.4`), dazu ▲ Gas, ▼ Bremse, H Handbremse
+  und ♪ Hupe. Mit dem Stick zu fahren war auf dem iPad nicht zu beherrschen —
+  das war die Rückmeldung, die zu diesem Umbau geführt hat. Umgeschaltet wird
+  in `touchModus()` über die Klasse `.stouch--auto`.
+- **Karte auf dem Tablet:** Neben Ton und Vollbild liegt ein **Kartenknopf**
+  (`#spielKarteKnopf`), und **ein Tipp auf die Minikarte öffnet die große
+  Karte**, statt einen Wegpunkt zu setzen — mit dem Finger trifft man die
+  kleine Karte nicht genau genug. Mit der Maus bleibt es beim Wegpunkt.
+  Auf kleinen Schirmen füllt die große Karte die obere Hälfte, darunter
+  stehen Legende und Knöpfe.
 - Die aktive Figur bekommt einen pinken Ring, die zweite einen blauen — sonst
   findet man sich zwischen den Passanten nicht wieder.
 - **Stadt (20.09.2026 neu):** kein Schachbrett mehr. Wasserarm mit Brücken,
@@ -931,10 +960,12 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - Neu erzeugen:
 
 ```bash
-"C:\Program Files\Blender Foundation\Blender 5.0lender.exe" -b -P tools/spiel-sprites.py -- --ziel assets/img/spiel --nur autos
+powershell -Command "$z='<Projektordner>\assets\img\spiel'; foreach ($a in @('cabrio','limo','sport','pickup','taxi','streife','kombi','transporter','bus','oldtimer','krankenwagen','feuerwehr')) { & 'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe' -b -P tools/spiel-sprites.py -- --ziel $z --nur ('eins:'+$a) }"
 python tools/spiel-figuren.py --ziel assets/img/spiel
 python tools/spiel-nachbearbeiten.py --ordner assets/img/spiel
 ```
+
+**Achtung:** `--nur muster` rendert auch `lucia_steht.png` und `jason_steht.png` als 3D-Figuren und überschreibt damit die gezeichneten Sprites. Danach immer `tools/spiel-figuren.py` laufen lassen.
 
 ## Farben
 

@@ -82,13 +82,24 @@
   <div class="sbuehne">
     <canvas id="spielFeld" tabindex="0" aria-label="Spielfeld" data-en-aria-label="Game canvas"></canvas>
 
+    <!-- Bedienung auf Telefon und Tablet.
+         Zu Fuß: Stick in alle Richtungen, rechts Schlagen, Springen,
+         Wechseln, Einsteigen. Im Auto wird aus dem Stick ein Lenkband,
+         das nur nach links und rechts geht, und rechts liegen Gas,
+         Bremse, Handbremse und Hupe. Mit dem Stick zu fahren war auf dem
+         Tablet nicht zu beherrschen. -->
     <div class="stouch" id="spielTouch" hidden aria-hidden="true">
-      <div class="stouch__stick" id="spielStick"><i></i></div>
+      <div class="stouch__stick" id="spielStick"><i></i><span class="stouch__lenkhinweis" data-en="steer">lenken</span></div>
       <div class="stouch__knoepfe">
-        <button type="button" data-touch="wechsel">⇄</button>
-        <button type="button" data-touch="bremse">B</button>
-        <button type="button" data-touch="feuer">✊</button>
-        <button type="button" data-touch="e">E</button>
+        <button type="button" data-touch="wechsel" data-modus="fuss">⇄</button>
+        <button type="button" data-touch="sprung" data-modus="fuss">⤒</button>
+        <button type="button" data-touch="feuer" data-modus="fuss">✊</button>
+        <button type="button" data-touch="e" data-modus="fuss">E</button>
+        <button type="button" data-touch="hand" data-modus="auto">H</button>
+        <button type="button" data-touch="hupe" data-modus="auto">♪</button>
+        <button type="button" data-touch="bremse" data-modus="auto">▼</button>
+        <button type="button" data-touch="gas" data-modus="auto">▲</button>
+        <button type="button" data-touch="e" data-modus="auto">E</button>
       </div>
     </div>
 
@@ -98,6 +109,16 @@
         <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
         <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" data-ton-wellen/>
+      </svg>
+    </button>
+
+    <button type="button" class="skarteknopf" id="spielKarteKnopf"
+            aria-label="Karte öffnen" data-en-aria-label="Open the map" title="Karte (M)"
+            data-en-title="Map (M)">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7z" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linejoin="round"/>
+        <path d="M9 4v13M15 7v13" fill="none" stroke="currentColor" stroke-width="2"/>
       </svg>
     </button>
 
@@ -237,7 +258,7 @@
       <li><kbd>N</kbd><span data-en="sound on/off">Ton an/aus</span></li>
       <li><kbd>H</kbd><span data-en="horn">Hupe</span></li>
     </ul>
-    <p class="stasten__hinweis" data-en="The minimap stays north-up: the mouse wheel zooms it, a click on it sets a waypoint. On a phone you get a thumbstick on the left and buttons on the right: ⇄ switch character, B handbrake, ✊ fight, E get in or out.">Die Minikarte bleibt nach Norden ausgerichtet: Mausrad zoomt, ein Klick darauf setzt einen Wegpunkt. Auf dem Handy erscheinen links ein Steuerkreuz und rechts vier Knöpfe: ⇄ Figur wechseln, B Handbremse, ✊ schlagen und schießen, E ein- und aussteigen.</p>
+    <p class="stasten__hinweis" data-en="The minimap stays north-up: the mouse wheel zooms it, a click on it sets a waypoint. On a phone or tablet the controls appear by themselves — on foot a thumbstick plus ✊ fight, ⤒ jump, ⇄ switch and E; behind the wheel the stick becomes a steering bar and you get ▲ gas, ▼ brake, H handbrake and ♪ horn. The map button next to the sound button opens the map, and so does a tap on the minimap.">Die Minikarte bleibt nach Norden ausgerichtet: Mausrad zoomt, ein Klick darauf setzt einen Wegpunkt. Auf Handy und Tablet erscheint die Bedienung von selbst — zu Fuß ein Steuerkreuz und rechts ✊ schlagen, ⤒ springen, ⇄ wechseln und E; am Steuer wird aus dem Kreuz ein Lenkband, dazu ▲ Gas, ▼ Bremse, H Handbremse und ♪ Hupe. Der Kartenknopf neben dem Tonknopf öffnet die Karte, ein Tipp auf die Minikarte ebenfalls.</p>
   </section>
 </main>
 
