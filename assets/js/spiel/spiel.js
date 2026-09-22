@@ -58,6 +58,7 @@ const hud = {
 const radar = document.getElementById("spielKarte");
 const grossFeld = document.getElementById("spielGross");
 const grossKarte = document.getElementById("spielGrossKarte");
+const orteFeld = document.getElementById("spielOrte");
 const ladenFeld = document.getElementById("spielLaden");
 const ladenListe = document.getElementById("spielLadenListe");
 const ladenGeld = document.getElementById("spielLadenGeld");
@@ -354,6 +355,10 @@ function aussteigen() {
   f.vy = auto.vy * 0.2;
   f.imAuto = null;
   auto.fahrer = null;
+  /* Ein abgestellter Wagen fährt nicht von selbst weiter. Ohne den Merker
+     übernahm die Verkehrs-KI ihn sofort wieder, als säße jemand drin.
+     Er rollt aus, bleibt stehen und wird später weit weg neu eingesetzt. */
+  auto.verlassen = true;
   f.entklemmen();
   Ton.tuer();
 }
@@ -842,9 +847,10 @@ function rechnen(dt) {
   for (const a of zustand.verkehr) {
     if (a.fahrer) continue;                      // gerade vom Spieler gefahren
     if (Math.abs(a.x - f.x) > 120 || Math.abs(a.y - f.y) > 120) continue;
+    if (a.verlassen) { a.fahren(0, 0, true, dt); continue; }   // abgestellt
     a.denken(dt, zustand.zeit * 1000, alleAutos, zustand.passanten);
   }
-  verkehrNachziehen(zustand.verkehr, f.x, f.y);
+  verkehrNachziehen(zustand.verkehr, f.x, f.y, 190, alleAutos);
 
   /* Passanten: nur die in der Nähe bewegen, der Rest ruht */
   const naheAutos = alleAutos.filter(a =>
@@ -1184,6 +1190,8 @@ function karteUmschalten(an) {
   zustand.pause = auf;
   pauseFeld.hidden = true;
   if (auf) {
+    Ton.anhalten();                // Motor und Sirene aus, sonst läuft der Ton weiter
+    orteFuellen();
     karteFrisch(true);
     karteSchleife();
   } else {
@@ -1260,9 +1268,71 @@ grossKarte.addEventListener("pointerup", e => {
   if (!schieben) return;
   const kurz = schieben.weg < 5;
   schieben = null;
-  if (kurz) wegpunktSetzen(Minikarte.ortAusKlick(grossKarte, ansicht, e.clientX, e.clientY));
+  if (kurz) {
+    wegpunktSetzen(Minikarte.ortAusKlick(grossKarte, ansicht, e.clientX, e.clientY));
+    orteFuellen();
+  }
 });
 grossKarte.addEventListener("pointercancel", () => { schieben = null; });
+
+/* ── Ortsliste neben der Karte ──
+   Alle festen Orte der Stadt, nach Entfernung sortiert. Ein Klick setzt
+   den Wegpunkt, ein zweiter löscht ihn wieder. */
+const ORT_ENGLISCH = {
+  "VCPD": "VCPD police station", "Feuerwache": "Fire station", "Klinik": "Hospital",
+  "Bank": "Bank", "Stadion": "Stadium", "Kaufhaus": "Mall",
+  "Tankstelle": "Gas station", "Kirche": "Church", "Schule": "School",
+  "Ammu-Vice": "Ammu-Vice gun shop"
+};
+const ORT_ART = {
+  [Karte.BAU.POLIZEI]: ["#3f6fd8", "Polizei", "Police"],
+  [Karte.BAU.FEUERWEHR]: ["#d8492f", "Feuerwehr", "Fire"],
+  [Karte.BAU.KRANKENHAUS]: ["#d8566f", "Klinik", "Hospital"],
+  [Karte.BAU.BANK]: ["#caa63c", "Bank", "Bank"],
+  [Karte.BAU.STADION]: ["#4aa07a", "Sport", "Sports"],
+  [Karte.BAU.KAUFHAUS]: ["#7b5fc4", "Einkaufen", "Shopping"],
+  [Karte.BAU.TANKSTELLE]: ["#c98a35", "Tankstelle", "Fuel"],
+  [Karte.BAU.KIRCHE]: ["#8892a8", "Kirche", "Church"],
+  [Karte.BAU.SCHULE]: ["#4f87a8", "Schule", "School"],
+  [Karte.BAU.WAFFEN]: ["#4bd07f", "Waffen", "Guns"],
+  [Karte.BAU.CLUB]: ["#e05bc0", "Nachtclub", "Nightclub"]
+};
+
+function orteFuellen() {
+  if (!orteFeld) return;
+  const pos = spieler().imAuto || spieler();
+  const liste = Karte.wahrzeichen
+    .map(w => ({ w, weit: Math.hypot(w.x - pos.x, w.y - pos.y) }))
+    .sort((a, b) => a.weit - b.weit);
+
+  orteFeld.textContent = "";
+  for (const { w, weit } of liste) {
+    const art = ORT_ART[w.bau] || ["#e6ecff", "Ort", "Landmark"];
+    const gesetzt = !!zustand.wegpunkt &&
+      Math.hypot(zustand.wegpunkt.x - w.x, zustand.wegpunkt.y - w.y) < 25;
+
+    const punkt = document.createElement("i");
+    punkt.style.background = art[0];
+    const name = document.createElement("span");
+    name.textContent = L(w.name, ORT_ENGLISCH[w.name] || w.name);
+    const weite = document.createElement("em");
+    weite.textContent = `${Math.round(weit)} m`;
+
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.title = L(art[1], art[2]);
+    knopf.setAttribute("aria-pressed", gesetzt ? "true" : "false");
+    knopf.append(punkt, name, weite);
+    knopf.addEventListener("click", () => {
+      wegpunktSetzen({ x: w.x, y: w.y });
+      orteFuellen();
+    });
+
+    const zeile = document.createElement("li");
+    zeile.appendChild(knopf);
+    orteFeld.appendChild(zeile);
+  }
+}
 
 function wegpunktSetzen(ort) {
   if (!ort) return;
@@ -1288,6 +1358,7 @@ grossFeld.addEventListener("click", e => {
   if (k.dataset.gross === "wegpunkt") {
     zustand.wegpunkt = null;
     zustand.route.leeren();
+    orteFuellen();
   }
   if (k.dataset.gross === "zu") karteUmschalten(false);
 });
@@ -1333,6 +1404,7 @@ document.addEventListener("fullscreenchange", () => {
 /* ── Pause, Start ───────────────────────────────────────── */
 function pauseUmschalten(an) {
   zustand.pause = an === undefined ? !zustand.pause : an;
+  if (zustand.pause) Ton.anhalten();
   pauseFeld.hidden = !zustand.pause;
   if (!zustand.pause) letzte = performance.now();
 }

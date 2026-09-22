@@ -31,7 +31,7 @@ export const BAU = {
   WOHNHAUS: 0, HOCHHAUS: 1, HOTEL: 2, LAGER: 3, LADEN: 4,
   BANK: 5, POLIZEI: 6, FEUERWEHR: 7, KRANKENHAUS: 8, STADION: 9,
   KIRCHE: 10, SCHULE: 11, TANKSTELLE: 12, KAUFHAUS: 13, WERK: 14,
-  WAFFEN: 15
+  WAFFEN: 15, CLUB: 16
 };
 
 export const BEZIRK = {
@@ -623,7 +623,11 @@ function wahrzeichenSetzen() {
     /* Ammu-Vice: drei Waffenläden, verteilt über die Stadt */
     { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [126, 66] },
     { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [72, 140] },
-    { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [186, 108] }
+    { bau: BAU.WAFFEN, name: "Ammu-Vice", nah: [186, 108] },
+    /* Nachtclubs — eigene Bauart, damit sie auf der Karte auftauchen */
+    { bau: BAU.CLUB, name: "Pink Flamingo", nah: [118, 92] },
+    { bau: BAU.CLUB, name: "Neon Kitty", nah: [168, 132] },
+    { bau: BAU.CLUB, name: "Club Sunset", nah: [82, 64] }
   ];
 
   for (const w of wunsch) {
@@ -632,7 +636,8 @@ function wahrzeichenSetzen() {
     const { nr, x0, y0, x1, y1 } = treffer;
     const h = w.bau === BAU.STADION ? 100
             : w.bau === BAU.TANKSTELLE ? 30
-            : w.bau === BAU.WAFFEN ? 55 : 70;
+            : w.bau === BAU.WAFFEN ? 55
+            : w.bau === BAU.CLUB ? 45 : 70;
     for (let ty = y0; ty <= y1; ty++) {
       for (let tx = x0; tx <= x1; tx++) {
         if (felder.haus[i(tx, ty)] !== nr) continue;
@@ -737,9 +742,42 @@ for (let ty = 0; ty < HOEHE; ty++) {
     h.zahl++;
   }
 }
+/* Kern: das größte volle Rechteck im Umriss. Darauf setzt der Zeichner
+   das Gebäudebild — so wird nie ein Haus angeschnitten, auch wenn das
+   Grundstück eine L-Form hat. Der Rest wird Hof. Histogramm-Verfahren:
+   je Zeile zählt `hoehen` die durchgehenden Kacheln nach oben. */
 for (const h of haeuser) {
   if (!h) continue;
-  h.voll = h.zahl === (h.x1 - h.x0 + 1) * (h.y1 - h.y0 + 1);
+  const breit = h.x1 - h.x0 + 1;
+  h.voll = h.zahl === breit * (h.y1 - h.y0 + 1);
+  if (h.voll) {
+    h.kx0 = h.x0; h.ky0 = h.y0; h.kx1 = h.x1; h.ky1 = h.y1;
+    h.kern = 1;
+    continue;
+  }
+  const hoehen = new Array(breit).fill(0);
+  let beste = 0;
+  for (let ty = h.y0; ty <= h.y1; ty++) {
+    for (let k = 0; k < breit; k++) {
+      const p = i(h.x0 + k, ty);
+      hoehen[k] = felder.haus[p] === h.nr && felder.art[p] === ART.GEBAEUDE ? hoehen[k] + 1 : 0;
+    }
+    for (let k = 0; k < breit; k++) {
+      if (!hoehen[k]) continue;
+      let l = k, r = k;
+      while (l > 0 && hoehen[l - 1] >= hoehen[k]) l--;
+      while (r < breit - 1 && hoehen[r + 1] >= hoehen[k]) r++;
+      const flaeche = hoehen[k] * (r - l + 1);
+      if (flaeche > beste) {
+        beste = flaeche;
+        h.kx0 = h.x0 + l; h.kx1 = h.x0 + r;
+        h.ky1 = ty; h.ky0 = ty - hoehen[k] + 1;
+      }
+    }
+  }
+  /* Bleibt vom Grundstück zu wenig übrig, malt der alte Zeichner das Dach */
+  h.kern = beste / h.zahl;
+  if (beste < 1) { h.kx0 = h.x0; h.ky0 = h.y0; h.kx1 = h.x1; h.ky1 = h.y1; }
 }
 
 /* ═══ Abfragen ═══════════════════════════════════════════ */

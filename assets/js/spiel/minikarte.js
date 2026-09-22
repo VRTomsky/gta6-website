@@ -48,7 +48,8 @@ const BAU_FARBE = {
   [Karte.BAU.KIRCHE]: "#8892a8",
   [Karte.BAU.SCHULE]: "#4f87a8",
   [Karte.BAU.HOCHHAUS]: "#39415a",
-  [Karte.BAU.WAFFEN]: "#4bd07f"
+  [Karte.BAU.WAFFEN]: "#4bd07f",
+  [Karte.BAU.CLUB]: "#e05bc0"
 };
 
 /* Sichtweite der Minikarte (Höhe des Ausschnitts in Metern) */

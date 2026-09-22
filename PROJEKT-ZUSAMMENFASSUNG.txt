@@ -357,6 +357,25 @@ WAS BISHER GEMACHT WURDE
    - Alle 204 Sprites liegen jetzt als WebP: 65 MB waeren es als
      PNG, so sind es 4 MB. Werkzeug dafuer: tools/spiel-webp.py.
 
+23. Spiel, elfter Schritt (22.09.2026) - nach Rueckmeldung:
+   - Gebaeude: Das Bild wird jetzt nach der Groesse des Grund-
+     stuecks ausgesucht, nicht mehr gewuerfelt. Kein Haus ist
+     mehr angeschnitten - gezeichnet wird auf das groesste volle
+     Rechteck des Grundstuecks, der Rest wird Hof mit Rasen und
+     Baeumen.
+   - Nachtclubs sind eine eigene Gebaeudeart: Pink Flamingo,
+     Neon Kitty, Club Sunset.
+   - Verkehr komplett ueberarbeitet. Vorher standen 62 von 70
+     Autos nach einer Minute still, fuhren auf den Gehweg und
+     ineinander. Ursachen waren fehlende Ersatzziele, falsch
+     gemessene Fahrspuren, geschnittene Kurven und ein Bremsen,
+     das nur an oder aus kannte. Jetzt stehen 3 von 70.
+   - Ein Auto, aus dem man aussteigt, bleibt stehen, statt von
+     selbst weiterzufahren, und verschwindet erst weit weg.
+   - Die grosse Karte haelt das Spiel jetzt wirklich an, auch den
+     Motorton, und hat eine Liste aller Orte: anklicken setzt den
+     Wegpunkt.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

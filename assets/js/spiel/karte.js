@@ -57,26 +57,32 @@ export const START = Plan.startSuchen();
 export function bandGrenzen(tx, ty, senkrecht) {
   let von = senkrecht ? tx : ty;
   let bis = von;
-  const prüfe = k => (senkrecht ? istStrasse(k, ty) : istStrasse(tx, k));
+  /* Nur die Fahrbahn zählt, nicht die Kreuzung: An einer Kreuzung maß das
+     Band vorher quer über die Querstraße mit, und die Spurmitte landete
+     auf dem Gehweg — deshalb fuhr der Verkehr dort ständig hinauf. */
+  const prüfe = k => {
+    const a = senkrecht ? art(k, ty) : art(tx, k);
+    return a === ART.STRASSE || a === ART.BRUECKE || a === ART.AUTOBAHN;
+  };
   while (prüfe(von - 1) && bis - (von - 1) < 8) von--;
   while (prüfe(bis + 1) && (bis + 1) - von < 8) bis++;
   return { von, bis, breite: bis - von + 1 };
 }
 
 export function spurMitte(tx, ty, richtung, senkrecht) {
-  const { von, bis, breite } = bandGrenzen(tx, ty, senkrecht);
-  let kachel;
-  if (senkrecht) {
-    /* nach oben (richtung −1): rechte Seite ist Osten */
-    kachel = richtung < 0 ? bis : von;
-    if (breite >= 4) kachel = richtung < 0 ? bis - (Math.random() < 0.5 ? 0 : 1)
-                                           : von + (Math.random() < 0.5 ? 0 : 1);
-  } else {
-    kachel = richtung > 0 ? bis : von;
-    if (breite >= 4) kachel = richtung > 0 ? bis - (Math.random() < 0.5 ? 0 : 1)
-                                           : von + (Math.random() < 0.5 ? 0 : 1);
-  }
-  return inMeter(kachel) + KACHEL / 2;
+  const { von, bis } = bandGrenzen(tx, ty, senkrecht);
+  /* Rechtsverkehr: erlaubt ist die eigene Hälfte der Fahrbahn. Genommen
+     wird darin die Spur, auf der der Wagen ohnehin schon fährt.
+
+     Vorher zeigte die Spur immer auf den äußersten Rand des Bandes. Auf
+     einer vierspurigen Autobahn lag der bis zu 25 Meter zur Seite — die
+     Wagen zogen quer über die Fahrbahn und landeten auf dem Gehweg. */
+  const mitte = (von + bis) / 2;
+  const rechts = senkrecht ? richtung < 0 : richtung > 0;   // nach oben: rechts ist Osten
+  const unten = rechts ? Math.ceil(mitte) : von;
+  const oben = rechts ? bis : Math.floor(mitte);
+  const eigen = senkrecht ? tx : ty;
+  return inMeter(Math.min(oben, Math.max(unten, eigen))) + KACHEL / 2;
 }
 
 /* Nächste Kreuzung in Fahrtrichtung (Mitte in Metern) */
@@ -185,7 +191,8 @@ const DACH = {
   [Plan.BAU.TANKSTELLE]: ["#d9d3c2"],
   [Plan.BAU.KAUFHAUS]: ["#8f6fa8", "#7a7fb5"],
   [Plan.BAU.WERK]: ["#6a6f62", "#77705d"],
-  [Plan.BAU.WAFFEN]: ["#3f5c46"]
+  [Plan.BAU.WAFFEN]: ["#3f5c46"],
+  [Plan.BAU.CLUB]: ["#8a3f7a"]
 };
 
 /* ── Gebäudebilder ────────────────────────────────────────
@@ -202,7 +209,8 @@ const HAUSBILD = {
                         "turm_bau", "turm_pool", "turm_helipad", "haus_block_lang"],
   [Plan.BAU.HOTEL]: ["turm_pool", "turm_bar", "haus_motel", "turm_helipad"],
   [Plan.BAU.LAGER]: ["bau_lager", "turm_tank"],
-  [Plan.BAU.LADEN]: ["bau_laden", "bau_diner", "bau_club", "haus_block2"],
+  [Plan.BAU.LADEN]: ["bau_laden", "bau_diner", "haus_block2"],
+  [Plan.BAU.CLUB]: ["bau_club"],
   [Plan.BAU.BANK]: ["bau_bank", "turm_bank"],
   [Plan.BAU.POLIZEI]: ["bau_polizei"],
   [Plan.BAU.FEUERWEHR]: ["bau_feuerwehr"],
@@ -215,70 +223,84 @@ const HAUSBILD = {
   [Plan.BAU.WAFFEN]: ["bau_waffen"]
 };
 
-/* Bild eines Hauses — einmal ausgewürfelt und am Haus gemerkt */
-function hausBild(h) {
-  if (!h) return null;
-  if (h.bild === undefined) {
-    const liste = HAUSBILD[h.bau];
-    h.bild = liste
-      ? liste[Math.floor(streu(h.nr, 3, 29) * liste.length) % liste.length]
-      : null;
+/* Die Bilder liegen mit 32 Bildpunkten je Meter im Ordner — daraus
+   ergibt sich, wie groß ein Gebäude gedacht ist. */
+const HAUS_PX = 32;
+
+/* Passendes Bild zum Grundstück suchen.
+   Vorher wurde einfach gewürfelt: ein 34-Meter-Einkaufszentrum landete
+   dann auf einem 12-Meter-Grundstück und war winzig, der kleine Club auf
+   einem Riesengrundstück verzerrt. Jetzt zählt, wie gut Länge und
+   Seitenverhältnis des Bildes zur Fläche passen; ein kleiner Zuschlag je
+   Hausnummer sorgt dafür, dass gleich große Grundstücke trotzdem
+   unterschiedliche Häuser bekommen. */
+function hausWaehlen(h) {
+  const liste = HAUSBILD[h.bau];
+  if (!liste) return null;
+  const a = (h.kx1 - h.kx0 + 1) * KACHEL;
+  const b2 = (h.ky1 - h.ky0 + 1) * KACHEL;
+  const langM = Math.max(a, b2), kurzM = Math.min(a, b2);
+  let bester = null, bestWert = Infinity;
+  for (let k = 0; k < liste.length; k++) {
+    const b = sprite(liste[k]);
+    if (!b) continue;
+    const lang = Math.max(b.width, b.height) / HAUS_PX;
+    const seite = Math.max(b.width, b.height) / Math.min(b.width, b.height);
+    const wert = Math.abs(Math.log(lang / langM))
+               + Math.abs(Math.log(seite / (langM / kurzM))) * 0.7
+               + streu(h.nr, k, 23) * 0.14;
+    if (wert < bestWert) { bestWert = wert; bester = liste[k]; }
   }
+  return bester;
+}
+
+/* Bild eines Hauses — einmal gewählt und am Haus gemerkt.
+   Bleibt vom Grundstück kein brauchbares Rechteck übrig (schmale
+   L-Formen), malt weiter der alte Dachzeichner. */
+function hausBild(h) {
+  if (!h || h.kern < 0.55) return null;
+  if (h.bild === undefined) h.bild = hausWaehlen(h);
   return h.bild ? sprite(h.bild) : null;
 }
 
 const hausVon = (tx, ty) => Plan.haeuser[hausNr(tx, ty)] || null;
 
-/* Hat diese Kachel ein Gebäudebild über sich? Dann malt der
-   Kachelzeichner kein Dach und der Wandzeichner keine Wand. */
+/* Liegt die Kachel unter einem Gebäudebild oder in dessen Hof? Dann malt
+   der Kachelzeichner kein Dach und der Wandzeichner keine Wand. */
 const bildHaus = (tx, ty) => !!hausBild(hausVon(tx, ty));
 
-/* Umriss eines Hauses, das kein volles Rechteck ist — zeilenweise
-   die zusammenhängenden Kachelstücke. Darauf wird das Bild beschnitten,
-   sonst ragte es über die Straße. */
-function hausPfad(h, linksM, obenM, zoom) {
-  const p = new Path2D();
-  const g = KACHEL * zoom;
-  for (let ty = h.y0; ty <= h.y1; ty++) {
-    let von = -1;
-    for (let tx = h.x0; tx <= h.x1 + 1; tx++) {
-      const drin = tx <= h.x1 && hausNr(tx, ty) === h.nr;
-      if (drin && von < 0) von = tx;
-      else if (!drin && von >= 0) {
-        p.rect((inMeter(von) - linksM) * zoom, (inMeter(ty) - obenM) * zoom,
-               (tx - von) * g + 1, g + 1);
-        von = -1;
-      }
-    }
-  }
-  return p;
+/* Gehört die Kachel zum Kern, also zur Fläche unter dem Bild? */
+function imKern(h, tx, ty) {
+  return tx >= h.kx0 && tx <= h.kx1 && ty >= h.ky0 && ty <= h.ky1;
 }
 
 function hausMalen(ctx, h, linksM, obenM, zoom) {
   const b = hausBild(h);
   if (!b) return;
-  const x = (inMeter(h.x0) - linksM) * zoom;
-  const y = (inMeter(h.y0) - obenM) * zoom;
-  const w = (h.x1 - h.x0 + 1) * KACHEL * zoom;
-  const t = (h.y1 - h.y0 + 1) * KACHEL * zoom;
+  /* Gezeichnet wird auf den Kern — das größte volle Rechteck des
+     Grundstücks. Dadurch muss nichts beschnitten werden, kein Haus ist
+     mehr angeschnitten. Was außen herum übrig bleibt, ist Hof. */
+  const x = (inMeter(h.kx0) - linksM) * zoom;
+  const y = (inMeter(h.ky0) - obenM) * zoom;
+  const w = (h.kx1 - h.kx0 + 1) * KACHEL * zoom;
+  const t = (h.ky1 - h.ky0 + 1) * KACHEL * zoom;
 
   /* Schatten nach unten rechts, so hoch wie das Haus */
-  const hoch = Plan.hoeheVon(h.x0, h.y0);
+  const hoch = Plan.hoeheVon(h.kx0, h.ky0);
   const weg = KACHEL * zoom * 0.42 * hoch;
   ctx.fillStyle = "rgba(6,10,24,.3)";
   ctx.fillRect(x + weg, y + weg, w, t);
 
-  ctx.save();
-  if (!h.voll) ctx.clip(hausPfad(h, linksM, obenM, zoom));
   if ((b.width >= b.height) !== (w >= t)) {
     /* Bild liegt quer zur Grundfläche — eine Vierteldrehung */
+    ctx.save();
     ctx.translate(x + w / 2, y + t / 2);
     ctx.rotate(Math.PI / 2);
     ctx.drawImage(b, -t / 2, -w / 2, t, w);
-  } else {
-    ctx.drawImage(b, x, y, w, t);
+    ctx.restore();
+    return;
   }
-  ctx.restore();
+  ctx.drawImage(b, x, y, w, t);
 }
 
 function dachFarbe(tx, ty) {
@@ -663,16 +685,30 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
       else if (h2 > 0.72) dekoMalen(ctx, "muellcontainer", px, py, g);
       break;
     }
-    default:
-      if (bildHaus(tx, ty)) {
+    default: {
+      const haus = hausVon(tx, ty);
+      if (hausBild(haus)) {
         /* Unter dem Gebäudebild liegt Boden — an den Rändern ist es
            durchsichtig, dort soll Gehweg durchscheinen, kein Dach. */
         ctx.fillStyle = FARBE.gehweg;
         ctx.fillRect(px, py, g + 1, g + 1);
         bodenMalen(ctx, "gehweg", px, py, g);
+        /* Was neben dem Bild übrig bleibt, wird Hof: Rasen mit Baum */
+        if (!imKern(haus, tx, ty)) {
+          const hof = streu(tx, ty, 159);
+          if (hof > 0.35) bodenMalen(ctx, "gras", px, py, g);
+          if (hof > 0.75) {
+            dekoMalen(ctx, bez === Plan.BEZIRK.STRAND ? "palme" : "baum", px, py, g);
+          } else if (hof > 0.68) {
+            dekoMalen(ctx, "bank", px, py, g, 0.5, 0.5,
+                      Math.round(streu(tx, ty, 161) * 4) * (Math.PI / 2));
+          }
+        }
         break;
       }
       gebaeudeMalen(ctx, tx, ty, px, py, g);
+      break;
+    }
   }
 }
 

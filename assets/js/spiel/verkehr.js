@@ -29,22 +29,111 @@ export class VerkehrsAuto extends Fahrzeug {
     this.ziel = null;
     this.wunschTempo = 9 + Math.random() * 7;      // 32–58 km/h
     this.geduld = 0;
+    this.drang = 0;                                // Sekunden „vorbeischieben"
+    this.abseits = 0;                              // Sekunden neben der Fahrbahn
     this.zielSuchen();
   }
 
   get senkrecht() { return this.dy !== 0; }
 
   /* Nächsten Punkt auf der eigenen Spur bestimmen: die Kreuzung voraus,
-     seitlich auf die richtige Spur geschoben. */
+     seitlich auf die richtige Spur geschoben.
+
+     Hier lag der Hauptgrund für die vielen stehenden Autos: Gab es voraus
+     keine Kreuzung mehr — Sackgasse, Kartenrand, oder der Wagen war von
+     der Fahrbahn abgekommen — blieb `ziel` leer und der Wagen stand für
+     immer. Jetzt gibt es für beide Fälle ein Ersatzziel. */
   zielSuchen() {
-    const k = Karte.naechsteKreuzung(this.x, this.y, this.dx, this.dy);
-    if (!k) { this.ziel = null; return; }
     const tx = Karte.inKachel(this.x), ty = Karte.inKachel(this.y);
+
+    /* Von der Straße abgekommen: zurück auf die nächste Fahrbahn zielen */
+    if (!Karte.istStrasse(tx, ty)) {
+      this.ziel = this.strasseSuchen(tx, ty);
+      this.verirrt = !this.ziel;
+      return;
+    }
+    this.verirrt = false;
+
+    /* Spurmitte auf einer Kachel messen, die wirklich Straße ist — auf
+       der Kreuzung stehend käme sonst ein falscher Seitenversatz heraus. */
+    let mx = tx, my = ty;
+    for (let k = 0; k < 4 && Karte.art(mx, my) !== Karte.ART.STRASSE; k++) {
+      mx += this.dx; my += this.dy;
+    }
+    if (!Karte.istStrasse(mx, my)) { mx = tx; my = ty; }
     const quer = this.senkrecht
+      ? Karte.spurMitte(mx, my, this.dy, true)
+      : Karte.spurMitte(mx, my, this.dx, false);
+
+    const k = Karte.naechsteKreuzung(this.x, this.y, this.dx, this.dy);
+    if (k) {
+      this.ziel = this.senkrecht ? { x: quer, y: k.y, tx: k.tx, ty: k.ty }
+                                 : { x: k.x, y: quer, tx: k.tx, ty: k.ty };
+      return;
+    }
+
+    /* Keine Kreuzung voraus: bis ans Ende der Fahrbahn fahren, dort wenden */
+    let weit = this.weiteVoraus(tx, ty, this.dx, this.dy);
+    if (weit === 0) {
+      /* Geht geradeaus gar nichts mehr — etwa auf einer schrägen Straße,
+         der das achsenparallele Suchen nicht folgen kann — dann die
+         Richtung mit dem längsten freien Stück nehmen. Ohne das blieb hier
+         ein Wagen stehen und staute alles hinter sich auf. */
+      let beste = null, bestWeit = 0;
+      for (const r of RICHTUNGEN) {
+        const w = this.weiteVoraus(tx, ty, r.dx, r.dy);
+        if (w > bestWeit) { bestWeit = w; beste = r; }
+      }
+      if (!beste) { this.ziel = null; this.verirrt = true; return; }
+      this.dx = beste.dx; this.dy = beste.dy;
+      weit = bestWeit;
+    }
+    const ex = tx + this.dx * weit, ey = ty + this.dy * weit;
+    const mitte = Karte.KACHEL / 2;
+    /* Richtung kann sich eben geändert haben — Spur neu messen */
+    const quer2 = this.senkrecht
       ? Karte.spurMitte(tx, ty, this.dy, true)
       : Karte.spurMitte(tx, ty, this.dx, false);
-    this.ziel = this.senkrecht ? { x: quer, y: k.y, tx: k.tx, ty: k.ty }
-                               : { x: k.x, y: quer, tx: k.tx, ty: k.ty };
+    this.ziel = this.senkrecht
+      ? { x: quer2, y: Karte.inMeter(ey) + mitte, tx: ex, ty: ey, ende: true }
+      : { x: Karte.inMeter(ex) + mitte, y: quer2, tx: ex, ty: ey, ende: true };
+  }
+
+  /* Wie weit geht es in dieser Richtung noch auf der Fahrbahn weiter? */
+  weiteVoraus(tx, ty, dx, dy) {
+    let w = 0;
+    while (w < 40 && Karte.istStrasse(tx + dx * (w + 1), ty + dy * (w + 1))) w++;
+    return w;
+  }
+
+  /* Nächste befahrbare Kachel in der Nähe — Ziel für den Weg zurück */
+  strasseSuchen(tx, ty) {
+    for (let r = 1; r <= 6; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          if (Karte.art(tx + dx, ty + dy) !== Karte.ART.STRASSE) continue;
+          /* Eine Kachel weiter in die Straße hinein, sonst bleibt der Wagen
+             mit den Vorderrädern am Bordstein stehen. */
+          const sx = Math.sign(dx), sy = Math.sign(dy);
+          const zx = Karte.istStrasse(tx + dx + sx, ty + dy + sy) ? tx + dx + sx : tx + dx;
+          const zy = Karte.istStrasse(tx + dx + sx, ty + dy + sy) ? ty + dy + sy : ty + dy;
+          const mitte = Karte.KACHEL / 2;
+          return {
+            x: Karte.inMeter(zx) + mitte, y: Karte.inMeter(zy) + mitte,
+            tx: zx, ty: zy, zurueck: true
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /* Am Ende der Straße umdrehen */
+  wenden() {
+    this.dx = -this.dx;
+    this.dy = -this.dy;
+    this.zielSuchen();
   }
 
   /* An der Kreuzung neue Richtung wählen */
@@ -61,36 +150,79 @@ export class VerkehrsAuto extends Fahrzeug {
     else wahl = moeglich[Math.floor(Math.random() * moeglich.length)] || geradeaus;
     if (!wahl) { this.dx = -this.dx; this.dy = -this.dy; }
     else { this.dx = wahl.dx; this.dy = wahl.dy; }
+
+    /* Erst aus der Kreuzung heraus zielen, dann weiter. Ohne diesen
+       Zwischenpunkt zog der Wagen vom Kreuzungsinneren schnurgerade auf
+       die übernächste Kreuzung zu — und schnitt die Kurve über den
+       Gehweg. */
+    const tx = Karte.inKachel(this.x), ty = Karte.inKachel(this.y);
+    let k = 1;
+    while (k < 5 && Karte.art(tx + this.dx * k, ty + this.dy * k) === Karte.ART.KREUZUNG) k++;
+    const ax = tx + this.dx * k, ay = ty + this.dy * k;
+    if (Karte.istStrasse(ax, ay)) {
+      const quer = this.senkrecht
+        ? Karte.spurMitte(ax, ay, this.dy, true)
+        : Karte.spurMitte(ax, ay, this.dx, false);
+      const mitte = Karte.KACHEL / 2;
+      this.ziel = this.senkrecht
+        ? { x: quer, y: Karte.inMeter(ay) + mitte, tx: ax, ty: ay, austritt: true }
+        : { x: Karte.inMeter(ax) + mitte, y: quer, tx: ax, ty: ay, austritt: true };
+      return;
+    }
     this.zielSuchen();
   }
 
-  /* Ist die Fahrbahn frei? Prüft Autos und Fußgänger im Kegel voraus. */
-  freiVoraus(autos, leute) {
+  /* Abstand zum nächsten Hindernis voraus, sonst Infinity.
+     Vorher war das ein Ja/Nein: Ein Fußgänger auf dem Gehweg reichte, um
+     einen Wagen für immer mitten auf der Straße anzuhalten, und bei Tempo
+     war der Blick zu kurz, um noch bremsen zu können. Jetzt zählen
+     Fußgänger nur, wenn sie wirklich auf der Fahrbahn stehen, und aus dem
+     Abstand wird gebremst statt geschaltet. */
+  hindernis(autos, leute) {
     const vor = { x: Math.cos(this.winkel), y: Math.sin(this.winkel) };
-    const reichweite = 4 + Math.abs(this.tempo) * 0.9;
-    const pruefen = liste => {
+    const sicht = 6 + Math.abs(this.tempo) * 1.3;
+    let naechstes = Infinity;
+    const pruefen = (liste, breite, reichweite, nurFahrbahn) => {
       for (const o of liste) {
         if (o === this) continue;
         const dx = o.x - this.x, dy = o.y - this.y;
         const laengs = dx * vor.x + dy * vor.y;
-        if (laengs < 0.5 || laengs > reichweite) continue;
-        const quer = Math.abs(-dx * vor.y + dy * vor.x);
-        if (quer < 2.1) return false;
+        if (laengs < 0.5 || laengs > reichweite || laengs >= naechstes) continue;
+        if (Math.abs(-dx * vor.y + dy * vor.x) > breite) continue;
+        if (nurFahrbahn &&
+            !Karte.befahrbar(Karte.art(Karte.inKachel(o.x), Karte.inKachel(o.y)))) continue;
+        naechstes = laengs;
       }
-      return true;
     };
-    return pruefen(autos) && pruefen(leute);
+    pruefen(autos, 2.3, sicht, false);
+    pruefen(leute, 1.4, Math.min(sicht, 8), true);
+    return naechstes;
   }
 
   denken(dt, zeit, autos, leute) {
-    if (!this.ziel) { this.zielSuchen(); if (!this.ziel) return; }
+    if (!this.ziel) {
+      this.zielSuchen();
+      /* Sackgasse: umdrehen statt für immer stehen */
+      if (!this.ziel) {
+        this.wenden();
+        if (!this.ziel) { this.verirrt = true; return; }
+      }
+    }
 
     const dx = this.ziel.x - this.x, dy = this.ziel.y - this.y;
     const entfernung = Math.hypot(dx, dy);
-    if (entfernung < 4.5) {                       // Kreuzung erreicht
-      this.abbiegen();
+    if (entfernung < (this.ziel.austritt ? 2.5 : 4.5)) {
+      if (this.ziel.ende) this.wenden();           // Straßenende: umdrehen
+      else if (this.ziel.austritt) this.zielSuchen();  // aus der Kreuzung heraus
+      else if (this.ziel.zurueck) this.zielSuchen(); // wieder auf der Fahrbahn
+      else this.abbiegen();                        // Kreuzung erreicht
       return;
     }
+
+    /* Wer sich dauerhaft neben der Fahrbahn verfranst — etwa beim Wenden
+       am Strand —, wird außer Sicht neu eingesetzt statt dort zu kurven. */
+    if (Karte.befahrbar(Karte.art(Karte.inKachel(this.x), Karte.inKachel(this.y)))) this.abseits = 0;
+    else if ((this.abseits += dt) > 6) this.verirrt = true;
 
     /* Lenken: Winkel zum Ziel ausgleichen */
     let ab = Math.atan2(dy, dx) - this.winkel;
@@ -103,17 +235,25 @@ export class VerkehrsAuto extends Fahrzeug {
     const aufKreuzung = Karte.art(Karte.inKachel(this.x), Karte.inKachel(this.y)) === Karte.ART.KREUZUNG;
     const rot = !aufKreuzung && entfernung < 9 && entfernung > 2.5 &&
       !Karte.ampelGruen(this.ziel.tx, this.ziel.ty, zeit, this.senkrecht);
-    const frei = this.freiVoraus(autos, leute);
-    let gas = 1;
-    if (rot || !frei) {
-      gas = this.tempo > 1.2 ? -1 : 0;
-      this.geduld += dt;
-      /* Steht zu lange? Dann neu ausrichten, damit nichts verklemmt */
-      if (this.geduld > 7) { this.geduld = 0; this.abbiegen(); }
-    } else {
-      this.geduld = 0;
-      if (this.tempo > this.wunschTempo) gas = 0;
+    /* Tempo nach Abstand statt An/Aus: Je mehr Platz vor der Stoßstange,
+       desto schneller. Mit einem harten Bremsschalter staute sich die
+       ganze Straße auf und löste sich nie wieder auf. */
+    const abstand = this.hindernis(autos, leute);
+    let wunsch = Math.min(this.wunschTempo, Math.max(0, (abstand - 5.5) * 0.9));
+    if (rot) wunsch = 0;
+    /* Drängeln: Zwei Wagen, die sich gegenseitig im Weg stehen, warteten
+       sonst bis in alle Ewigkeit aufeinander — die halbe Stadt stand nach
+       einer Minute. Wer zu lange steht und dabei keine rote Ampel vor sich
+       hat, schiebt sich kurz vorbei; anstoßen darf er dabei. */
+    if (this.tempo < 0.6 && !rot) this.geduld += dt; else this.geduld = 0;
+    if (this.geduld > 4) { this.drang = 1.5; this.geduld = 0; this.abbiegen(); }
+    if (this.drang > 0) {
+      this.drang -= dt;
+      wunsch = Math.max(wunsch, this.wunschTempo * 0.45);
     }
+
+    let gas = wunsch > this.tempo + 0.4 ? 1 : wunsch < this.tempo - 0.4 ? -1 : 0;
+    if (wunsch < 0.4 && this.tempo < 1.2) gas = 0;
 
     this.fahren(gas, lenken, false, dt);
   }
@@ -175,16 +315,21 @@ export function verkehrAufbauen(anzahl, umX, umY) {
 }
 
 /* Wer zu weit weg ist, wird vor dem Spieler neu eingesetzt */
-export function verkehrNachziehen(liste, x, y, weite = 190) {
+export function verkehrNachziehen(liste, x, y, weite = 190, alle = null) {
   for (const a of liste) {
     if (a.fahrer) continue;                        // vom Spieler geklaut
-    if (Math.hypot(a.x - x, a.y - y) < weite) continue;
+    const fern = Math.hypot(a.x - x, a.y - y);
+    /* Wer sich völlig verfahren hat, kommt schon früher zurück ins Spiel —
+       aber erst außer Sicht, damit er nicht vor der Nase verschwindet. */
+    if (fern < weite && !(a.verirrt && fern > 70)) continue;
     const p = startPunkt(x, y, 80 + Math.random() * 90);
-    if (!p || !platzFrei(liste, p.x, p.y)) continue;
+    if (!p || !platzFrei(alle || liste, p.x, p.y)) continue;
     a.x = p.x; a.y = p.y;
     a.dx = p.dx; a.dy = p.dy;
     a.winkel = winkelVon(p.dx, p.dy);
     a.vx = a.vy = 0;
+    a.geduld = 0;
+    a.verlassen = false;                           // fährt wieder mit
     a.zielSuchen();
   }
 }

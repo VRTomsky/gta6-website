@@ -851,6 +851,25 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   bekommen keine gemalte Wand mehr, nur einen Schatten nach unten rechts.
   Fehlt ein Bild (`BAU.TANKSTELLE` hat keines), malt weiter `gebaeudeMalen`
   das alte Dach — beide Wege laufen nebeneinander.
+- **Gebäude richtig setzen (22.09.2026, nach Rückmeldung):** Zwei Fehler in
+  der ersten Fassung — Bilder wurden gewürfelt statt nach Größe gewählt (ein
+  34-Meter-Einkaufszentrum landete auf einem 12-Meter-Grundstück und war
+  winzig, der kleine Club auf einem Riesengrundstück verzerrt), und auf
+  L-förmigen Grundstücken wurde das Bild am Umriss beschnitten, also
+  angeschnitten. Jetzt:
+
+  1. `stadtplan.js` rechnet je Haus den **Kern** aus — das größte volle
+     Rechteck im Umriss (Histogramm-Verfahren). Darauf kommt das Bild, es
+     wird nichts mehr beschnitten. Was außen übrig bleibt, wird Hof
+     (Rasen, Baum, Bank). Deckt der Kern weniger als 55 % des Grundstücks,
+     malt weiter der alte Dachzeichner.
+  2. `hausWaehlen()` sucht aus der Liste der Bauart das Bild, dessen
+     **Länge und Seitenverhältnis** am besten zum Kern passen; ein kleiner
+     Zuschlag je Hausnummer sorgt für Abwechslung. Die Bilder liegen mit
+     32 px/m, daraus ergibt sich ihre gedachte Größe.
+- **Nachtclubs:** eigene Bauart `BAU.CLUB` mit drei Wahrzeichen (Pink
+  Flamingo, Neon Kitty, Club Sunset). Vorher war `bau_club` nur eine von
+  mehreren Ladenfassaden und tauchte auf der Karte nicht auf.
 - **Alles als WebP (22.09.2026):** Die 204 Sprites wären als PNG rund 65 MB,
   als WebP sind es 4,2 MB. `bilder.js` lädt nur noch `.webp`.
   **Nach jedem Bogenlauf `python tools/spiel-webp.py --ordner assets/img/spiel`
@@ -867,6 +886,27 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   nicht mit der Laufrichtung gedreht werden, sonst liegen sie quer auf
   der Straße. Genau das war der erste Fehler nach dem Umstieg.
   Ab vier Sternen steigt die Spezialeinheit aus (`swat`, mehr Leben).
+- **Verkehr, große Reparatur (22.09.2026):** Der Nutzer meldete stehende
+  Autos, Auffahrunfälle und Wagen, die nach dem Aussteigen von selbst
+  weiterfuhren. Gemessen mit einer Simulation ohne Bild (60 Wagen, 60 s):
+  **62 von 70 Wagen bewegten sich in 30 Sekunden keine 5 Meter.** Fünf
+  Ursachen, alle in `verkehr.js` bzw. `karte.js`:
+
+  | Fehler | Was passierte | Behoben durch |
+  |---|---|---|
+  | `zielSuchen` ohne Ersatz | Keine Kreuzung voraus (Sackgasse, Kartenrand, schräge Straße) → `ziel = null` → Wagen stand für immer und staute alles hinter sich | Ziel bis ans Straßenende, dort wenden; geht geradeaus nichts, die Richtung mit dem längsten freien Stück |
+  | Spurmitte an der Kreuzung | `bandGrenzen` maß über die Querstraße mit, die Spur lag auf dem Gehweg | Band zählt nur Fahrbahn, keine Kreuzung |
+  | Spurmitte auf breiten Straßen | Ziel war immer der äußerste Rand — auf der Autobahn bis 25 m zur Seite | Eigene Fahrbahnhälfte, darin die Spur, auf der der Wagen schon fährt |
+  | Kurven geschnitten | Nach dem Abbiegen zog der Wagen aus der Kreuzung schnurgerade auf die übernächste zu, quer über den Gehweg | Zwischenziel am Kreuzungsausgang (`austritt`) |
+  | Bremsen als Schalter | Ein Fußgänger auf dem Gehweg hielt einen Wagen dauerhaft an; zwei Wagen blockierten sich gegenseitig ewig | Abstand statt Ja/Nein, Wunschtempo proportional zur Lücke; Fußgänger zählen nur auf der Fahrbahn; nach 4 s Stillstand „Drängeln" (1,5 s Vorrang für sich selbst) |
+
+  Danach: 3 von 70 stehen, im Schnitt 90 m in 30 Sekunden, kaum noch
+  ineinander. Wer länger als 6 s neben der Fahrbahn kurvt, gilt als
+  verirrt und wird außer Sicht neu eingesetzt.
+- **Abgestelltes Auto bleibt stehen:** Beim Aussteigen bekommt der Wagen
+  `verlassen = true`. Ohne den Merker übernahm ihn die Verkehrs-KI sofort
+  wieder und er fuhr davon, als säße jemand drin. Jetzt rollt er aus und
+  wird erst weit weg (oder verirrt) wieder eingesetzt.
 - **Vorn und hinten am Auto (21.09.2026):** Die Kamera schaut von schräg hinten
   oben, man sieht also vor allem Dach und Heck. Deshalb tragen alle Fahrzeuge
   jetzt **zwei weiße Scheinwerferflächen auf der Haube** und **zwei rote
@@ -1026,6 +1066,18 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   gebraucht und verkleinert gezeichnet, sonst franst jede Kachelkante aus.
   Dafür braucht `.skarte` in `spiel.css` `pointer-events:auto` — die übrige
   Anzeige ist durchlässig.
+- **Ortsliste auf der großen Karte (22.09.2026):** Rechts neben der Karte
+  stehen alle festen Orte der Stadt (`Karte.wahrzeichen`, 16 Stück:
+  Wache, Feuerwache, Klinik, Bank, Stadion, Kaufhaus, zwei Tankstellen,
+  Kirche, Schule, drei Ammu-Vice, drei Nachtclubs), nach Entfernung
+  sortiert, mit Farbpunkt der Bauart und Meterangabe. Ein Klick setzt den
+  Wegpunkt, ein zweiter löscht ihn. Gebaut in `spiel.js` (`orteFuellen`),
+  gefüllt beim Öffnen der Karte.
+- **Karte hält das Spiel wirklich an:** `zustand.pause` stoppte zwar die
+  Rechenschleife, aber Motor und Sirene sind Dauertöne, deren Lautstärke
+  nur in `Ton.laufen` gesetzt wird — sie liefen einfach weiter und es
+  klang, als spiele das Spiel im Hintergrund. `Ton.anhalten()` blendet sie
+  beim Pausieren und beim Öffnen der Karte aus.
 - **Route folgt Straßen** (`wege.js`): A* über die befahrbaren Kacheln, Start
   und Ziel werden auf die nächste Straße gezogen. Vorher lief eine gerade Linie
   quer über Häuser und den Fluss. Eine ganze Suche kostet bis zu 20 ms, deshalb

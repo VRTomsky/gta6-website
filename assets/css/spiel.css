@@ -485,6 +485,32 @@
 .sm--fahne{ border-radius:0; clip-path:polygon(18% 0, 100% 22%, 18% 46%, 18% 100%, 2% 100%, 2% 0); }
 .sm--pfeil{ border-radius:0; clip-path:polygon(50% 0, 100% 100%, 50% 76%, 0 100%); }
 .sm--punkt{ width:8px; height:8px; }
+/* Ortsliste: anklicken setzt den Wegpunkt */
+.sgross__orte{ display:flex; flex-direction:column; gap:6px; min-height:0; }
+.sgross__titel{
+  margin:0; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--fg-dim); font-weight:700;
+}
+.sgross__liste{
+  list-style:none; margin:0; padding:0 4px 0 0; display:flex; flex-direction:column;
+  gap:2px; overflow-y:auto; max-height:min(42vh, 320px);
+}
+.sgross__liste button{
+  width:100%; display:flex; align-items:center; gap:9px; text-align:left;
+  background:none; border:1px solid transparent; border-radius:9px;
+  padding:6px 9px; color:var(--fg-mid); font:inherit; font-size:.84rem;
+  cursor:pointer; transition:background .15s, color .15s, border-color .15s;
+}
+.sgross__liste button:hover,
+.sgross__liste button:focus-visible{
+  background:rgba(255,255,255,.06); color:var(--fg); border-color:var(--line2);
+}
+.sgross__liste button[aria-pressed="true"]{
+  background:rgba(255,74,160,.14); border-color:rgba(255,74,160,.5); color:var(--fg);
+}
+.sgross__liste i{ width:10px; height:10px; border-radius:50%; flex:none; }
+.sgross__liste span{ flex:1; }
+.sgross__liste em{ font-style:normal; color:var(--fg-dim); font-size:.76rem; }
 .sgross__knoepfe{ display:flex; flex-direction:column; gap:8px; }
 .sgross__hinweis{ margin:0; font-size:.78rem; color:var(--fg-dim); }
 
@@ -496,6 +522,7 @@
   .sgross__kopf{ display:none; }
   .sgross__hinweis{ display:none; }
   .sgross__seite{ gap:8px; overflow:auto; }
+  .sgross__liste{ max-height:26vh; }
   .sgross__legende{ flex-direction:row; flex-wrap:wrap; gap:6px 14px; font-size:.78rem; }
   .sgross__legende li{ font-size:.78rem; }
   .sgross__knoepfe{ flex-direction:row; flex-wrap:wrap; }

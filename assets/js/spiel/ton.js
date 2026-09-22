@@ -144,6 +144,17 @@ export function laufen(tempo, fahndung, dt, rutschen = 0) {
   }
 }
 
+/* Alles Dauerhafte ausblenden — Pause und offene Karte.
+   Ohne das lief der Motor weiter und es klang, als spiele das Spiel im
+   Hintergrund weiter, obwohl längst nichts mehr gerechnet wurde. */
+export function anhalten() {
+  if (!ctx) return;
+  const jetzt = ctx.currentTime;
+  if (motor) motor.g.gain.setTargetAtTime(0, jetzt, 0.05);
+  if (reifen) reifen.g.gain.setTargetAtTime(0, jetzt, 0.05);
+  if (sirene) sirene.g.gain.setTargetAtTime(0, jetzt, 0.05);
+}
+
 /* Kurzes Rauschen beim Aufprall, Stärke 0…1 */
 export function rumms(staerke = 1) {
   if (!ctx) return;
