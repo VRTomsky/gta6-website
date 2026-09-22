@@ -209,6 +209,9 @@
   background:linear-gradient(90deg, #ff4f70, #ffd24a 60%, #3fdc7a);
   transition:width .2s var(--ease);
 }
+/* Ausdauer: dieselbe Leiste, nur andere Farben */
+.shud__ausdauerreihe{ color:#ffd24a; }
+.shud__ausdauer i{ background:linear-gradient(90deg, #ffb03a, #ffe79a); }
 .shud__waffe{
   display:flex; align-items:center; gap:8px;
   padding:3px 8px; border-radius:8px;

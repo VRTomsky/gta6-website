@@ -870,21 +870,45 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Nachtclubs:** eigene Bauart `BAU.CLUB` mit drei Wahrzeichen (Pink
   Flamingo, Neon Kitty, Club Sunset). Vorher war `bau_club` nur eine von
   mehreren Ladenfassaden und tauchte auf der Karte nicht auf.
-- **Tänzerinnen (in Arbeit):** Für den Pink Flamingo sind acht Figuren
+- **Innenräume (22.09.2026, `innen.js`):** Die drei Nachtclubs sind
+  betretbar — das erste Gebäude mit echtem Innenleben. Vor jedem Club
+  liegt ein pinker Leuchtpunkt auf dem Gehweg (`clubTuerenSuchen`, die
+  nächste Gehwegkachel am Grundstück), **E** geht hinein.
+
+  Sechs Räume, jeder ein Bild von oben mit 48 px/m: Eingang, Tanzfläche,
+  Bar, VIP, Garderobe, Büro. In `RAEUME` steht je Raum die Größe in
+  Metern, eine Liste von **Sperren** (Kästen für Wände und Möbel), die
+  **Türen** als Rechtecke mit Zielraum und die **Aktionen**. Der Spieler
+  ist ein Kreis mit 34 cm Radius und wird aus Kästen über die kürzeste
+  Seite herausgeschoben — mehr Physik braucht es nicht. Ein Raum wird
+  immer ganz gezeigt, der Zoom ergibt sich aus der Leinwand.
+
+  | Ort | E macht |
+  |---|---|
+  | Tresen links in der Bar | Drink, $20, +18 Leben, +80 Ausdauer |
+  | Tresen rechts in der Bar | Essen, $35, +40 Leben, +55 Ausdauer |
+  | Bühne im VIP-Raum | Private Dance, $200, Bild blendet ab, danach alles voll |
+  | Türöffnungen | Raum wechseln, unten im Eingang zurück auf die Straße |
+
+  Acht Tänzerinnen laufen mit (`tanz1` … `tanz8`), zwei tanzen auf der
+  Bühne. Dazu ein dumpfer Viervierteltakt (`Ton.club`). Das ist etwas
+  anderes als `zustand.drinnen` beim Ladenraub — das bleibt ein reiner
+  Bildschirm.
+- **Ausdauer:** neue Leiste im HUD neben dem Leben. Rennen kostet 20 je
+  Sekunde, Stehen bringt 8 je Sekunde zurück; ohne Ausdauer geht nur noch
+  Gehen. Essen und Trinken im Club füllen sie auf.
+- **Tänzerinnen:** Für den Pink Flamingo sind acht Figuren
   geplant. Die Bögen `tanz1` … `tanz8` stehen schon in `spiel-bogen.py` —
   je ein Bild pro Figur, **vier Ansichten mal vier Posen wie bei Jason und
   Lucia**, Größe 1,72 m. Erst dadurch laufen sie; ein Bogen mit nur drei
   Standbildern reicht nicht. Die Prompts dafür liegen in
   `2d bilder/PROMPT-taenzerinnen-laufen.txt` (der Ordner geht nicht ins
-  Repository). Sobald die Bilder da sind: zuschneiden, in `wesen.js` zu
-  `VIER_RICHTUNGEN` dazu, in `spiel.js` vorladen.
-- **Innenraum des Clubs (geplant):** Sechs Räume als je ein Bild von
-  oben, Prompts in `2d bilder/PROMPT-stripclub-innen.txt`. Maßstab steht
-  im Seitenverhältnis (3:2 = 24 × 16 m, 4:3 = 16 × 12 m), Türöffnungen
-  sind in den Wänden markiert. Der Spieler läuft im Raumbild, Wände und
-  Möbel blockieren über von Hand gesetzte Kästen, an den Türen wird der
-  Raum gewechselt. Das ist etwas anderes als `zustand.drinnen` beim
-  Ladenraub — das ist nur ein Bildschirm ohne Bewegung.
+  Repository). Sie laufen nur im Gebäude, deshalb brauchen sie nichts in
+  `wesen.js` — `innen.js` setzt die Bildnamen selbst zusammen.
+- **Neue Räume nachrüsten:** Bild mit `PX = 48` auf Metermaß skalieren
+  (Skript wie bei den sechs bestehenden), als `innen_<name>.webp`
+  ablegen, in `RAEUME` eintragen — Größe, Sperren, Türen, Aktionen. Die
+  Kästen setzt man am schnellsten über eine Vorschau mit Metergitter.
 - **Alles als WebP (22.09.2026):** Die 204 Sprites wären als PNG rund 65 MB,
   als WebP sind es 4,2 MB. `bilder.js` lädt nur noch `.webp`.
   **Nach jedem Bogenlauf `python tools/spiel-webp.py --ordner assets/img/spiel`

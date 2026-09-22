@@ -376,6 +376,21 @@ WAS BISHER GEMACHT WURDE
      Motorton, und hat eine Liste aller Orte: anklicken setzt den
      Wegpunkt.
 
+24. Spiel, zwoelfter Schritt (22.09.2026) - Nachtclubs zum Betreten:
+   - Die drei Nachtclubs kann man betreten. Vor der Tuer leuchtet ein
+     pinker Punkt, E geht hinein.
+   - Sechs Raeume: Eingang, Tanzflaeche, Bar, VIP, Garderobe und
+     Buero mit Tresor. Man laeuft wirklich darin herum, Waende und
+     Moebel blockieren, an den Tueren wechselt der Raum.
+   - Acht Taenzerinnen laufen mit, zwei tanzen auf der Buehne.
+   - An der Bar gibt es mit E Drinks fuer 20 und Essen fuer 35 Dollar.
+     Beides fuellt Leben und die neue Ausdauerleiste.
+   - Ausdauer: Rennen mit Umschalt kostet sie, Stehen bringt sie
+     langsam zurueck.
+   - Im VIP-Raum kostet ein Private Dance 200 Dollar. Das Bild blendet
+     ab, danach sind Leben und Ausdauer wieder voll.
+   - Dazu ein dumpfer Beat, solange man im Club ist.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

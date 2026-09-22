@@ -27,6 +27,7 @@ import { Fahrzeug, autosVerteilen, TYPEN } from "./fahrzeug.js";
 import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
 import { Missionen } from "./missionen.js";
+import * as Innen from "./innen.js";
 import { Arsenal, feuern, laedenSetzen, WAFFEN, WARE } from "./waffen.js";
 import * as Waffenbilder from "./waffenbilder.js";
 import { Route } from "./wege.js";
@@ -49,6 +50,8 @@ const hud = {
   sterne: document.querySelector("[data-hud=sterne]"),
   leben: document.querySelector("[data-hud=leben]"),
   lebenZahl: document.querySelector("[data-hud=lebenZahl]"),
+  ausdauer: document.querySelector("[data-hud=ausdauer]"),
+  ausdauerZahl: document.querySelector("[data-hud=ausdauerZahl]"),
   waffe: document.querySelector("[data-hud=waffe]"),
   waffenBild: document.querySelector("[data-hud=waffenbild]"),
   schuss: document.querySelector("[data-hud=schuss]"),
@@ -98,7 +101,12 @@ const zustand = {
   passanten: [],
   zeit: 0,
   leben: 100,
+  ausdauer: 100,              // Rennen kostet, Essen und Trinken füllt auf
   geld: 0,
+  innen: null,                // Zustand im Gebäude (innen.js)
+  clubTueren: [],             // Eingänge der drei Nachtclubs
+  schwarz: null,              // { rest, dauer, text } für die Ausblendung
+  clubTuer: null,             // Eingang des Pink Flamingo auf der Straße
   fahndung: new Fahndung(),
   missionen: new Missionen(Karte.START.x, Karte.START.y),
   arsenal: new Arsenal(),
@@ -284,6 +292,7 @@ function weltBauen() {
   zustand.autos = autosVerteilen(22, Karte.START.x, Karte.START.y, 150, zustand.verkehr);
   zustand.passanten = passantenVerteilen(75, Karte.START.x, Karte.START.y);
   zustand.laeden = laedenSetzen(Karte.START.x, Karte.START.y);
+  zustand.clubTueren = clubTuerenSuchen();
   /* Ein Wagen steht auf der Straße neben dem Start: die nächste
      Straßenkachel im Umkreis, mindestens 3,5 m entfernt. */
   let beste = null;
@@ -309,9 +318,113 @@ function weltBauen() {
   }
 }
 
+/* ── Pink Flamingo ──────────────────────────────────────────
+   Die Tür liegt auf dem Gehweg vor dem Club: die nächste begehbare
+   Kachel am Rand des Grundstücks. Dort steht der Leuchtpunkt, und dort
+   steht man auch wieder, wenn man herauskommt. */
+function clubTuerenSuchen() {
+  const tueren = [];
+  for (const club of Karte.wahrzeichen) {
+    if (club.bau !== Karte.BAU.CLUB) continue;
+    const tx = Karte.inKachel(club.x), ty = Karte.inKachel(club.y);
+    let beste = null, bestWeit = Infinity;
+    for (let dy = -9; dy <= 9; dy++) {
+      for (let dx = -9; dx <= 9; dx++) {
+        if (Karte.art(tx + dx, ty + dy) !== Karte.ART.GEHWEG) continue;
+        const weit = Math.hypot(dx, dy);
+        if (weit >= bestWeit) continue;
+        bestWeit = weit;
+        beste = { x: Karte.inMeter(tx + dx) + Karte.KACHEL / 2,
+                  y: Karte.inMeter(ty + dy) + Karte.KACHEL / 2, name: club.name };
+      }
+    }
+    if (beste) tueren.push(beste);
+  }
+  return tueren;
+}
+
+/* Tür, vor der der Spieler gerade steht */
+function clubTuerNah(f, weite = 2.6) {
+  let beste = null, bestWeit = weite;
+  for (const t of zustand.clubTueren) {
+    const d = Math.hypot(t.x - f.x, t.y - f.y);
+    if (d < bestWeit) { bestWeit = d; beste = t; }
+  }
+  return beste;
+}
+
+function clubBetreten(tuer) {
+  zustand.clubTuer = tuer;
+  Innen.betreten(zustand, "eingang", "raus");
+  radar.hidden = true;
+  Ton.tuer();
+  Ton.anhalten();
+  innenLetzte = "";
+  hinweis(L(`${tuer.name} — WASD laufen, E benutzen`,
+            `${tuer.name} — WASD to walk, E to use`));
+}
+
+function clubVerlassen() {
+  const f = spieler();
+  if (zustand.clubTuer) {
+    f.x = zustand.clubTuer.x;
+    f.y = zustand.clubTuer.y + 2;
+    f.vx = f.vy = 0;
+  }
+  zustand.innen = null;
+  zustand.schwarz = null;
+  radar.hidden = false;
+  Ton.tuer();
+  kamera.x = f.x;
+  kamera.y = f.y;
+}
+
+/* E im Gebäude: Tür, Getränk, Essen oder VIP */
+function innenTaste() {
+  const a = Innen.naheAktion(zustand);
+  if (!a) return;
+  if (a.art === "tuer") {
+    if (a.ziel === "raus") { clubVerlassen(); return; }
+    Innen.betreten(zustand, a.ziel, zustand.innen.raum);
+    innenLetzte = "";                              // Hinweis neu zeigen
+    Ton.tuer();
+    hinweis(L(...Innen.raumName(zustand)));
+    return;
+  }
+  if (a.art === "drink" || a.art === "essen") {
+    if (zustand.geld < a.preis) {
+      hinweis(L(`Zu wenig Geld ($${a.preis})`, `Not enough money ($${a.preis})`));
+      return;
+    }
+    zustand.geld -= a.preis;
+    const essen = a.art === "essen";
+    zustand.leben = Math.min(100, zustand.leben + (essen ? 40 : 18));
+    zustand.ausdauer = Math.min(100, zustand.ausdauer + (essen ? 55 : 80));
+    Ton.kasse();
+    hinweis(essen ? L("Burger und Pommes — satt", "Burger and fries — full")
+                  : L("Ein Drink aufs Haus-Preis", "One drink, house price"));
+    return;
+  }
+  if (a.art === "tanz") {
+    if (zustand.geld < a.preis) {
+      hinweis(L(`Der VIP-Raum kostet $${a.preis}`, `The VIP room costs $${a.preis}`));
+      return;
+    }
+    zustand.geld -= a.preis;
+    zustand.schwarz = { rest: 4.2, dauer: 4.2 };
+    Ton.kasse();
+    return;
+  }
+}
+
 /* ── Ein- und Aussteigen, Laden betreten ─────────────────── */
 function einsteigenOderLaden() {
   const f = spieler();
+  if (zustand.innen) { innenTaste(); return; }
+  if (!f.imAuto) {
+    const tuer = clubTuerNah(f);
+    if (tuer) { clubBetreten(tuer); return; }
+  }
   if (!f.imAuto) {
     const laden = zustand.laeden.find(l => Math.hypot(l.x - f.x, l.y - f.y) < 4);
     if (laden) { ladenOeffnen(); return; }
@@ -562,7 +675,84 @@ function hudFahndung() {
   const leben = Math.max(0, Math.min(100, zustand.leben));
   hud.leben.style.width = leben + "%";
   hud.lebenZahl.textContent = Math.round(leben);
+  const kraft = Math.max(0, Math.min(100, zustand.ausdauer));
+  hud.ausdauer.style.width = kraft + "%";
+  hud.ausdauerZahl.textContent = Math.round(kraft);
   hud.geld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
+}
+
+/* ── Ausdauer ──
+   Rennen kostet, Stehen füllt langsam wieder auf. Essen und Getränke im
+   Club füllen sie auf einen Schlag. */
+function ausdauerRechnen(dt, rennt) {
+  zustand.ausdauer = Math.max(0, Math.min(100,
+    zustand.ausdauer + (rennt ? -20 : 8) * dt));
+}
+
+/* ── Im Gebäude ──────────────────────────────────────────── */
+let innenLetzte = "";
+function innenRechnen(dt) {
+  /* Schwarzbild nach dem VIP-Besuch */
+  if (zustand.schwarz) {
+    Ton.club(dt, 1.5);
+    zustand.schwarz.rest -= dt;
+    if (zustand.schwarz.rest <= 0) {
+      zustand.schwarz = null;
+      zustand.leben = 100;
+      zustand.ausdauer = 100;
+      hinweis(L("Teuer. Aber du fühlst dich wie neu.",
+                "Pricey. But you feel brand new."));
+    }
+    hudFahndung();
+    return;
+  }
+
+  let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
+  let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
+  if (finger.aktiv) { quer = finger.x; vor = -finger.y; }
+  const willRennen = tasten.has("ShiftLeft") || tasten.has("ShiftRight");
+  const rennt = willRennen && zustand.ausdauer > 1 && (quer !== 0 || vor !== 0);
+  ausdauerRechnen(dt, rennt);
+
+  const naht = Innen.rechnen(dt, quer, -vor, rennt, zustand);
+  const schluessel = naht ? naht.art + (naht.ziel || "") : "";
+  if (schluessel !== innenLetzte) {
+    innenLetzte = schluessel;
+    if (naht) hinweis(innenText(naht));
+  }
+  Ton.club(dt);
+  hudFahndung();
+  hud.ort.textContent = L(...Innen.raumName(zustand));
+  hud.tempo.textContent = "";
+}
+
+function innenText(a) {
+  if (a.art === "tuer") {
+    return a.ziel === "raus" ? L("E — zurück auf die Straße", "E — back outside")
+                             : L("E — Tür", "E — door");
+  }
+  if (a.art === "drink") return L(`E — Drink kaufen ($${a.preis})`, `E — buy a drink ($${a.preis})`);
+  if (a.art === "essen") return L(`E — Essen kaufen ($${a.preis})`, `E — buy food ($${a.preis})`);
+  if (a.art === "tanz") return L(`E — Private Dance ($${a.preis})`, `E — private dance ($${a.preis})`);
+  return "";
+}
+
+function innenZeichnen() {
+  Innen.zeichnen(ctx, zustand, kamera);
+  if (!zustand.schwarz) return;
+  /* Ausblendung: rein, halten, wieder heraus */
+  const f = zustand.schwarz;
+  const anteil = 1 - f.rest / f.dauer;
+  const deckung = Math.min(1, anteil * 4, f.rest * 4);
+  ctx.fillStyle = `rgba(0,0,0,${deckung})`;
+  ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
+  if (deckung > 0.9) {
+    ctx.fillStyle = "rgba(255,74,160,.75)";
+    ctx.font = `700 ${Math.round(kamera.hoehe * 0.05)}px "Barlow Condensed", system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText("VIP", kamera.breite / 2, kamera.hoehe / 2);
+    ctx.textAlign = "start";
+  }
 }
 
 let hinweisZeit = 0;
@@ -790,6 +980,10 @@ function rechnen(dt) {
     return;
   }
 
+  /* Im Gebäude läuft eine eigene, viel kleinere Schleife — die Stadt
+     ruht solange. */
+  if (zustand.innen) { innenRechnen(dt); return; }
+
   touchModus(!!f.imAuto);
   let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
   let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
@@ -810,7 +1004,10 @@ function rechnen(dt) {
     f.y = f.imAuto.y;
     f.winkel = f.imAuto.winkel;
   } else {
-    f.bewegen(quer, -vor, tasten.has("ShiftLeft") || tasten.has("ShiftRight"), dt);
+    const willRennen = tasten.has("ShiftLeft") || tasten.has("ShiftRight");
+    const rennt = willRennen && zustand.ausdauer > 1 && (quer !== 0 || vor !== 0);
+    ausdauerRechnen(dt, rennt);
+    f.bewegen(quer, -vor, rennt, dt);
   }
 
   /* Schlagen und schießen. Die getragene Waffe wird jedes Bild
@@ -924,6 +1121,7 @@ function routenZiel() {
 }
 
 function zeichnen() {
+  if (zustand.innen) { innenZeichnen(); return; }
   Minikarte.zeichnen(radar, zustand, spieler());
   ctx.fillStyle = "#0b1124";
   ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
@@ -935,6 +1133,27 @@ function zeichnen() {
                         Math.abs(o.y - kamera.y) < kamera.hoehe / kamera.zoom / 2 + rand;
   const aufBild = (x, y) => [(x - kamera.x) * kamera.zoom + kamera.breite / 2,
                              (y - kamera.y) * kamera.zoom + kamera.hoehe / 2];
+
+  /* Die Clubeingänge, pink statt grün */
+  for (const tuer of zustand.clubTueren) {
+    if (!sichtbar(tuer)) continue;
+    const [px, py] = aufBild(tuer.x, tuer.y);
+    const r = kamera.zoom * 1.2;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, "rgba(255,74,160,.8)");
+    g.addColorStop(1, "rgba(255,74,160,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (kamera.zoom > 16) {
+      ctx.fillStyle = "rgba(255,230,245,.9)";
+      ctx.font = `700 ${Math.round(kamera.zoom * 0.34)}px "Barlow Condensed", system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(tuer.name, px, py - kamera.zoom * 0.9);
+      ctx.textAlign = "start";
+    }
+  }
 
   /* Waffenläden als leuchtender Punkt */
   for (const laden of zustand.laeden) {
@@ -1476,7 +1695,8 @@ async function starten() {
     "bau_kirche", "bau_schule", "bau_laden", "bau_markt", "bau_waffen",
     "bau_diner", "bau_lager"
   ];
-  await Bilder.laden([...autos, ...ampeln, ...boden, ...deko, ...haeuser, ...figuren]);
+  await Bilder.laden([...autos, ...ampeln, ...boden, ...deko, ...haeuser, ...figuren,
+                      ...Innen.bildnamen()]);
 
   Ton.bereit();
   touchEinrichten();
@@ -1490,8 +1710,8 @@ async function starten() {
   bestwertLaden();
   bestenlisteZeigen();
   addEventListener("pagehide", bestwertSichern);
-  hinweis(L("E einsteigen · Maustaste schlagen · Leertaste springen · M Karte",
-            "E to get in · mouse to fight · space to jump · M for the map"));
+  hinweis(L("E einsteigen und Clubs betreten · Umschalt rennen · Maustaste schlagen · M Karte",
+            "E to get in and enter clubs · shift to run · mouse to fight · M for the map"));
   letzte = performance.now();
   requestAnimationFrame(schleife);
 }

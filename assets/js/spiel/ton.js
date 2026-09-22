@@ -155,6 +155,28 @@ export function anhalten() {
   if (sirene) sirene.g.gain.setTargetAtTime(0, jetzt, 0.05);
 }
 
+/* Dumpfer Viervierteltakt im Club — jeden Bildaufbau aufrufen.
+   Kein Musikstück, nur ein Kickdrum-Puls hinter der Wand. */
+let clubZeit = 0;
+export function club(dt, laut = 1) {
+  if (!ctx || ctx.state !== "running") return;
+  clubZeit -= dt;
+  if (clubZeit > 0) return;
+  clubZeit = 0.52;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(115, t);
+  o.frequency.exponentialRampToValueAtTime(44, t + 0.17);
+  g.gain.setValueAtTime(0.085 * laut, t);
+  g.gain.exponentialRampToValueAtTime(0.0008, t + 0.32);
+  o.connect(g);
+  g.connect(summe);
+  o.start(t);
+  o.stop(t + 0.34);
+}
+
 /* Kurzes Rauschen beim Aufprall, Stärke 0…1 */
 export function rumms(staerke = 1) {
   if (!ctx) return;
