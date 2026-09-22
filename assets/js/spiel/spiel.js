@@ -902,8 +902,14 @@ function auftragAnzeigen() {
 
 /* ── Kamera und Größe ───────────────────────────────────── */
 function groesseAnpassen() {
-  const dpr = Math.min(2, devicePixelRatio || 1);
   const b = leinwand.clientWidth, h = leinwand.clientHeight;
+  /* Im Vollbild auf einem feinen Schirm wären das über acht Millionen
+     Bildpunkte je Bild — das schaffte kein Browser flüssig. Deshalb ist
+     die Leinwand bei rund 2,6 Millionen Punkten gedeckelt; gestreckt
+     wird sie ohnehin vom Browser. */
+  const hoechst = 2.6e6;
+  const dpr = Math.min(2, devicePixelRatio || 1,
+                       Math.sqrt(hoechst / Math.max(1, b * h)));
   leinwand.width = Math.round(b * dpr);
   leinwand.height = Math.round(h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -942,17 +948,48 @@ function ortsname(x, y) {
 
 /* ── Schleife ───────────────────────────────────────────── */
 let letzte = 0;
+let letzterFehler = "";
+let letztesBild = 0;
+
+/* Ein Fehler in einem einzelnen Bild darf nicht das ganze Spiel
+   einfrieren — vorher sah das aus wie ein Absturz. Jetzt wird das Bild
+   übersprungen, der Fehler einmal gemeldet und weitergespielt. */
+function sicher(was, name) {
+  try {
+    was();
+    return true;
+  } catch (fehler) {
+    const text = String(fehler && fehler.message || fehler);
+    if (text !== letzterFehler) {
+      letzterFehler = text;
+      console.error(`[Spiel] Fehler in ${name}:`, fehler);
+      hinweis(L("Kurzer Aussetzer — läuft weiter", "Brief hiccup — still running"));
+    }
+    return false;
+  }
+}
+
 function schleife(jetzt) {
   if (!zustand.laeuft) return;
   requestAnimationFrame(schleife);
+  letztesBild = performance.now();
   const dt = Math.min(0.05, (jetzt - letzte) / 1000 || 0);
   letzte = jetzt;
   if (zustand.pause) return;
 
   zustand.zeit += dt;
-  rechnen(dt);
-  zeichnen();
+  if (sicher(() => rechnen(dt), "rechnen")) sicher(zeichnen, "zeichnen");
 }
+
+/* Wächter: Bleibt die Bildschleife stehen — etwa weil der Browser sie
+   nach einem Vollbildwechsel abgeworfen hat —, wird sie neu gestartet. */
+setInterval(() => {
+  if (!zustand.laeuft || zustand.pause) return;
+  if (performance.now() - letztesBild < 2000) return;
+  letztesBild = performance.now();
+  letzte = performance.now();
+  requestAnimationFrame(schleife);
+}, 2000);
 
 function rechnen(dt) {
   if (zustand.fahrt) {

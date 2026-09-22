@@ -894,6 +894,52 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   Bühne. Dazu ein dumpfer Viervierteltakt (`Ton.club`). Das ist etwas
   anderes als `zustand.drinnen` beim Ladenraub — das bleibt ein reiner
   Bildschirm.
+- **Das Spiel hing im Vollbild (22.09.2026):** Der Nutzer bekam nach
+  kurzer Fahrt ein Standbild. Gemessen: **90 Millisekunden je Bild** —
+  im Vollbild mit feinem Schirm zeichnete die Karte über tausend Kacheln
+  plus Bäume, Laternen, Häuser und Wände, jedes Bild neu. Drei Eingriffe:
+
+  1. **Zwischenspeicher** in `karte.js`: Boden, Gebäudebilder und Wände
+     werden in Stücken von 8 × 8 Kacheln auf eigene Leinwände gemalt und
+     danach nur noch kopiert (`stueckHolen`, `flaecheMalen`). Ändert sich
+     der Zoom um mehr als 18 Prozent, werden die Stücke neu gebaut —
+     aber höchstens zwei je Bild, sonst ruckelt es beim Beschleunigen.
+     Danach: **2,7 ms im Schnitt statt 90.** Preis: Das Glitzern auf dem
+     Wasser steht still.
+  2. **Leinwand gedeckelt** auf rund 2,6 Millionen Bildpunkte
+     (`groesseAnpassen`). Vollbild auf einem feinen Schirm wären über
+     acht Millionen gewesen.
+  3. **Bildschleife abgesichert:** `rechnen` und `zeichnen` laufen in
+     `sicher()`. Ein Fehler kostet jetzt ein Bild statt das ganze Spiel,
+     wird einmal gemeldet, und ein Wächter startet die Schleife neu,
+     falls zwei Sekunden lang kein Bild mehr kam.
+- **Häuser drehen sich zur Straße:** `hausDrehung` zählt Straße und
+  Gehweg an allen vier Seiten des Grundstücks und dreht das Bild so, dass
+  die Vorderseite (im Bild unten) dorthin zeigt — vorher stand der Club
+  mit dem Eingang zur Hauswand. Gewählt wird nur unter den Drehungen, die
+  zum Grundriss passen.
+- **Parken:** Auf Parkplätzen stehen alle Wagen eines Platzes in
+  derselben Richtung, quer zur langen Seite, jede dritte Reihe bleibt als
+  Fahrgasse frei. Am Straßenrand wird nur noch auf breiten Straßen
+  geparkt (Band ≥ 4 Kacheln) und dabei an den Bordstein gerückt — vorher
+  standen die Wagen in der Fahrspur.
+- **Passanten bleiben auf dem Gehweg:** Parkplätze sind aus `GEHBAR`
+  heraus. Wer doch einmal daneben steht, geht zielstrebig zurück; die
+  Gehwegregel beim Vorausschauen gilt nur, wenn man schon auf einem
+  Gehweg steht — sonst dreht sich einer auf dem Parkplatz im Kreis, weil
+  auch der Rückweg kein Gehweg ist. Gemessen nach 40 Sekunden: 62 von 75
+  auf dem Gehweg, 13 im Park, **keiner mehr auf Parkplatz oder Straße**.
+- **Eigene Ortssymbole:** `ORTSYMBOL` in `minikarte.js` — runde Plakette
+  in der Farbe der Bauart, darauf ein selbst gezeichnetes Piktogramm
+  (Schild, Flamme, Kreuz, Tempel, Ball, Tasche, Zapfsäule, Buch,
+  Zielscheibe, Cocktailglas). **Nicht** aus einem anderen Spiel
+  übernommen — Rockstars Symbole sind urheberrechtlich geschützt, und
+  für diese Seite gilt ohnehin: alles selbst gemacht.
+- **Türen im Club waren nicht erreichbar:** Die Türrechtecke liegen in
+  der Wand, die Wandgrenze hielt einen aber schon davor an — man kam nur
+  vom Eingang auf die Tanzfläche und sonst nirgendwo hin. Jetzt zählt
+  eine Tür großzügig (eine Armlänge um ihr Rechteck, `inTuerBand`), und
+  `naheAktion` misst zur Türmitte statt zum Rechteck.
 - **Ausdauer:** neue Leiste im HUD neben dem Leben. Rennen kostet 20 je
   Sekunde, Stehen bringt 8 je Sekunde zurück; ohne Ausdauer geht nur noch
   Gehen. Essen und Trinken im Club füllen sie auf.

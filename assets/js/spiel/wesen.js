@@ -281,7 +281,9 @@ const RICHTUNGEN = ["vorn", "hinten", "links", "rechts"];
 /* Spalte 0 steht, 1–3 laufen: Schritt links, Mitte, Schritt rechts, Mitte */
 const LAUF_POSEN = [1, 2, 3, 2];
 
-const GEHBAR = [Karte.ART.GEHWEG, Karte.ART.PARK, Karte.ART.STRAND, Karte.ART.PARKPLATZ];
+/* Wo Passanten sich aufhalten. Parkplätze sind bewusst nicht dabei —
+   dort liefen sie ständig zwischen den Autos herum. */
+const GEHBAR = [Karte.ART.GEHWEG, Karte.ART.PARK, Karte.ART.STRAND];
 
 export class Passant extends Figur {
   constructor(art, x, y) {
@@ -317,24 +319,40 @@ export class Passant extends Figur {
 
     this.warten -= dt;
     if (this.warten <= 0 && this.flucht <= 0) {
-      this.warten = 1.5 + Math.random() * 4;
-      /* meistens weiterlaufen, manchmal abbiegen oder stehen bleiben */
-      const w = Math.random();
-      if (w < 0.25) this.ziel = null;                        // Pause
-      else if (w < 0.6) this.ziel = Math.round(Math.random() * 4) * (Math.PI / 2);
-      else this.ziel = Math.random() * Math.PI * 2;
+      /* Auf der Straße gelandet — etwa nach einer Flucht? Dann
+         zielstrebig zurück auf den Gehweg statt weiter herumzuirren. */
+      if (!this.aufGehweg(this.x, this.y)) {
+        const heim = Karte.freierPunkt(this.x, this.y, [Karte.ART.GEHWEG], 9);
+        this.ziel = heim ? Math.atan2(heim.y - this.y, heim.x - this.x)
+                         : Math.random() * Math.PI * 2;
+        this.warten = 1;
+      } else {
+        this.warten = 1.5 + Math.random() * 4;
+        /* meistens weiterlaufen, manchmal abbiegen oder stehen bleiben */
+        const w = Math.random();
+        if (w < 0.25) this.ziel = null;                      // Pause
+        else if (w < 0.6) this.ziel = Math.round(Math.random() * 4) * (Math.PI / 2);
+        else this.ziel = Math.random() * Math.PI * 2;
+      }
     }
 
     let dx = 0, dy = 0;
     if (this.ziel !== null) {
       dx = Math.cos(this.ziel);
       dy = Math.sin(this.ziel);
-      /* Vor die Füße schauen: kein Haus, und möglichst auf dem Gehweg */
-      const vx = this.x + dx * 1.4, vy = this.y + dy * 1.4;
-      if (this.blockiert(vx, vy) || (this.flucht <= 0 && !this.aufGehweg(vx, vy))) {
+      /* Vor die Füße schauen: kein Haus, und möglichst auf dem Gehweg.
+         Die Gehwegregel gilt nur, wenn man schon auf einem steht — sonst
+         dreht sich einer, der auf dem Parkplatz gelandet ist, im Kreis,
+         weil auch der Weg zurück kein Gehweg ist. */
+      const vx = this.x + dx * 2.0, vy = this.y + dy * 2.0;
+      const aufWeg = this.aufGehweg(this.x, this.y);
+      if (this.blockiert(vx, vy) ||
+          (aufWeg && this.flucht <= 0 && !this.aufGehweg(vx, vy))) {
         this.ziel += Math.PI / 2 + Math.random();
         dx = dy = 0;
       }
+      /* Zurück auf den Gehweg wird schneller gegangen als geschlendert */
+      if (!aufWeg && this.flucht <= 0) { dx *= 1.6; dy *= 1.6; }
     }
     this.bewegen(dx * (this.flucht > 0 ? 1 : 0.55), dy * (this.flucht > 0 ? 1 : 0.55),
                  this.flucht > 0, dt);

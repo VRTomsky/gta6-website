@@ -238,6 +238,95 @@ export const MARKEN = {
   wegpunkt:    { farbe: "#ff4aa0", form: "fahne",  name: ["Dein Wegpunkt", "Your waypoint"] }
 };
 
+/* ── Symbole der Orte ──
+   Selbst gezeichnet, nicht aus einem anderen Spiel übernommen: eine
+   runde Plakette in der Farbe der Bauart, darauf ein weißes Piktogramm.
+   Gezeichnet wird in einem Feld von −1 bis 1, damit jede Größe passt. */
+const ORTSYMBOL = {
+  [Karte.BAU.POLIZEI]: { farbe: "#3f6fd8", malen: c => {   // Schild
+    c.moveTo(0, -0.95); c.lineTo(0.8, -0.55); c.lineTo(0.62, 0.35);
+    c.lineTo(0, 0.95); c.lineTo(-0.62, 0.35); c.lineTo(-0.8, -0.55);
+    c.closePath();
+  } },
+  [Karte.BAU.FEUERWEHR]: { farbe: "#d8492f", malen: c => {  // Flamme
+    c.moveTo(0.05, -0.95); c.bezierCurveTo(0.75, -0.2, 0.62, 0.75, 0, 0.95);
+    c.bezierCurveTo(-0.62, 0.75, -0.72, -0.05, -0.12, -0.5);
+    c.bezierCurveTo(-0.2, -0.1, 0.05, 0.05, 0.12, -0.2);
+    c.bezierCurveTo(0.2, -0.45, 0.1, -0.7, 0.05, -0.95);
+  } },
+  [Karte.BAU.KRANKENHAUS]: { farbe: "#d8566f", malen: c => { // Kreuz
+    c.rect(-0.28, -0.9, 0.56, 1.8); c.rect(-0.9, -0.28, 1.8, 0.56);
+  } },
+  [Karte.BAU.BANK]: { farbe: "#caa63c", malen: c => {        // Tempel
+    c.moveTo(0, -0.95); c.lineTo(0.95, -0.4); c.lineTo(-0.95, -0.4); c.closePath();
+    c.rect(-0.75, -0.25, 0.28, 0.9); c.rect(-0.14, -0.25, 0.28, 0.9);
+    c.rect(0.47, -0.25, 0.28, 0.9); c.rect(-0.95, 0.68, 1.9, 0.27);
+  } },
+  [Karte.BAU.STADION]: { farbe: "#4aa07a", malen: c => {     // Ball
+    c.arc(0, 0, 0.9, 0, Math.PI * 2);
+    c.moveTo(-0.9, 0); c.lineTo(0.9, 0);
+  } },
+  [Karte.BAU.KAUFHAUS]: { farbe: "#7b5fc4", malen: c => {    // Einkaufstasche
+    c.rect(-0.75, -0.3, 1.5, 1.25);
+    c.moveTo(-0.4, -0.3); c.lineTo(-0.4, -0.7);
+    c.bezierCurveTo(-0.4, -1.1, 0.4, -1.1, 0.4, -0.7);
+    c.lineTo(0.4, -0.3);
+  } },
+  [Karte.BAU.TANKSTELLE]: { farbe: "#c98a35", malen: c => {  // Zapfsäule
+    c.rect(-0.8, -0.85, 1.05, 1.8);
+    c.moveTo(0.35, -0.45); c.lineTo(0.7, -0.45); c.lineTo(0.7, 0.35);
+  } },
+  [Karte.BAU.KIRCHE]: { farbe: "#8892a8", malen: c => {      // Kreuz mit Fuß
+    c.rect(-0.2, -0.95, 0.4, 1.9); c.rect(-0.7, -0.5, 1.4, 0.4);
+  } },
+  [Karte.BAU.SCHULE]: { farbe: "#4f87a8", malen: c => {      // Buch
+    c.rect(-0.9, -0.7, 1.8, 1.4);
+    c.moveTo(0, -0.7); c.lineTo(0, 0.7);
+  } },
+  [Karte.BAU.WAFFEN]: { farbe: "#4bd07f", malen: c => {      // Zielscheibe
+    c.arc(0, 0, 0.9, 0, Math.PI * 2);
+    c.moveTo(0.35, 0); c.arc(0, 0, 0.35, 0, Math.PI * 2);
+  } },
+  [Karte.BAU.CLUB]: { farbe: "#e05bc0", malen: c => {        // Cocktailglas
+    c.moveTo(-0.85, -0.75); c.lineTo(0.85, -0.75); c.lineTo(0.1, 0.1);
+    c.lineTo(0.1, 0.8); c.lineTo(0.55, 0.9); c.lineTo(-0.55, 0.9);
+    c.lineTo(-0.1, 0.8); c.lineTo(-0.1, 0.1); c.closePath();
+  } },
+  [Karte.BAU.WERK]: { farbe: "#8a8f78", malen: c => {        // Halle
+    c.rect(-0.9, -0.2, 1.8, 1.1);
+    c.moveTo(-0.9, -0.2); c.lineTo(0, -0.9); c.lineTo(0.9, -0.2);
+  } }
+};
+
+/* Plakette mit Piktogramm — für alle festen Orte der Stadt */
+function ortsSymbol(ctx, bau, px, py, r) {
+  const z = ORTSYMBOL[bau];
+  if (!z) return false;
+  ctx.save();
+  ctx.translate(px, py);
+  /* Plakette */
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = z.farbe;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, r * 0.16);
+  ctx.strokeStyle = "rgba(8,12,24,.85)";
+  ctx.stroke();
+  /* Piktogramm */
+  ctx.scale(r * 0.58, r * 0.58);
+  ctx.beginPath();
+  z.malen(ctx);
+  ctx.fillStyle = "#fff";
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 0.26;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  return true;
+}
+
 function symbol(ctx, art, px, py, r) {
   const m = MARKEN[art] || MARKEN.wahrzeichen;
   ctx.save();
@@ -381,7 +470,7 @@ export function ortAusKlick(leinwand, ansicht, klickX, klickY) {
 export function kartenMarken(zustand) {
   const liste = [];
   for (const w of Karte.wahrzeichen) {
-    liste.push({ x: w.x, y: w.y, art: "wahrzeichen", name: w.name });
+    liste.push({ x: w.x, y: w.y, art: "wahrzeichen", name: w.name, bau: w.bau });
   }
   for (const l of zustand.laeden || []) {
     liste.push({ x: l.x, y: l.y, art: "laden", name: l.name || "Ammu-Vice" });
@@ -449,6 +538,7 @@ export function grosseKarteZeichnen(leinwand, zustand, spieler, ansicht, maus) {
     m.px = px;
     m.py = py;
     if (m.art === "wegpunkt") wegpunktMalen(ctx, [px, py], pt(15));
+    else if (m.bau !== undefined && ortsSymbol(ctx, m.bau, px, py, pt(9))) continue;
     else symbol(ctx, m.art, px, py, pt(m.art === "wahrzeichen" ? 4 : 7));
   }
 

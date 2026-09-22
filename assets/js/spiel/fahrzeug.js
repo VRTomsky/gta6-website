@@ -212,22 +212,39 @@ export function autosVerteilen(anzahl, umX, umY, radius, meiden = []) {
 
     let x, y, winkel;
     if (a === Karte.ART.PARKPLATZ) {
+      /* Ordentlich parken statt kreuz und quer: Alle Wagen eines
+         Platzes stehen in derselben Richtung, quer zur langen Seite,
+         und jede dritte Reihe bleibt als Fahrgasse frei. */
+      const zaehlen = (dx, dy) => {
+        let n = 0;
+        while (n < 10 && Karte.art(tx + dx * (n + 1), ty + dy * (n + 1)) === Karte.ART.PARKPLATZ) n++;
+        return n;
+      };
+      const quer = zaehlen(1, 0) + zaehlen(-1, 0);
+      const laengs = zaehlen(0, 1) + zaehlen(0, -1);
+      const reihenQuer = quer >= laengs;             // Reihen laufen waagerecht
+      if (reihenQuer ? ty % 3 === 1 : tx % 3 === 1) continue;   // Fahrgasse
       x = Karte.inMeter(tx) + Karte.KACHEL / 2;
       y = Karte.inMeter(ty) + Karte.KACHEL / 2;
-      winkel = Math.round(Karte.streu(versuch, 5, 43) * 3) * (Math.PI / 2);
+      winkel = reihenQuer ? (ty % 2 ? Math.PI / 2 : -Math.PI / 2)
+                          : (tx % 2 ? 0 : Math.PI);
     } else {
-      /* Am Rand der Fahrbahn parken, nicht mitten in der Spur */
+      /* Am Bordstein parken, nicht in der Fahrspur. Schmale Straßen
+         bleiben ganz frei — sonst steht der Verkehr vor dem Wagen. */
       const senkrecht = Karte.istStrasse(tx, ty + 2) && Karte.istStrasse(tx, ty - 2);
       const band = Karte.bandGrenzen(tx, ty, senkrecht);
-      if (band.breite < 3) continue;                 // schmale Gasse bleibt frei
+      if (band.breite < 4) continue;
       const rand = Karte.streu(versuch, 6, 51) < 0.5 ? band.von : band.bis;
+      const zumBord = (Karte.KACHEL - 2.0) / 2;      // an die Kante rücken
       if (senkrecht) {
-        x = Karte.inMeter(rand) + Karte.KACHEL / 2;
+        x = Karte.inMeter(rand) + Karte.KACHEL / 2 +
+            (rand === band.von ? -zumBord : zumBord);
         y = Karte.inMeter(ty) + Karte.KACHEL / 2;
         winkel = rand === band.von ? Math.PI / 2 : -Math.PI / 2;
       } else {
         x = Karte.inMeter(tx) + Karte.KACHEL / 2;
-        y = Karte.inMeter(rand) + Karte.KACHEL / 2;
+        y = Karte.inMeter(rand) + Karte.KACHEL / 2 +
+            (rand === band.von ? -zumBord : zumBord);
         winkel = rand === band.von ? 0 : Math.PI;
       }
     }

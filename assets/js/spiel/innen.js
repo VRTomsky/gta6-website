@@ -120,11 +120,23 @@ function freiSchieben(raum, pos) {
   }
 }
 
-/* Innerhalb der Wände bleiben — aber in einer Türöffnung darf man raus,
-   sonst käme man an der Wandkante nie durch. */
+/* Innerhalb der Wände bleiben — in einer Türöffnung darf man bis an die
+   Wandkante heran.
+
+   Hier steckte der Fehler, wegen dem im Club nur Eingang und Tanzfläche
+   erreichbar waren: Die Türen liegen in der Wand, die Wandgrenze hielt
+   einen aber schon davor an. Also zählt eine Tür jetzt großzügig — eine
+   Armlänge um ihr Rechteck herum. */
+function inTuerBand(raum, x, y, rand = 0.75) {
+  return raum.tueren.some(t => imKasten([t.x, t.y, t.b, t.h], x, y, rand));
+}
+
 function inDenWaenden(raum, pos) {
-  const inTuer = raum.tueren.some(t => imKasten([t.x, t.y, t.b, t.h], pos.x, pos.y, 0.2));
-  if (inTuer) return;
+  if (inTuerBand(raum, pos.x, pos.y)) {
+    pos.x = klemmen(pos.x, 0.1, raum.breite - 0.1);
+    pos.y = klemmen(pos.y, 0.1, raum.hoehe - 0.1);
+    return;
+  }
   pos.x = klemmen(pos.x, raum.wand + RADIUS, raum.breite - raum.wand - RADIUS);
   pos.y = klemmen(pos.y, raum.wand + RADIUS, raum.hoehe - raum.wand - RADIUS);
 }
@@ -135,6 +147,7 @@ function freierPunkt(raum) {
     const x = raum.wand + 0.8 + Math.random() * (raum.breite - 2 * raum.wand - 1.6);
     const y = raum.wand + 0.8 + Math.random() * (raum.hoehe - 2 * raum.wand - 1.6);
     if (raum.sperren.some(s => imKasten(s, x, y, 0.5))) continue;
+    if (raum.tueren.some(t => imKasten([t.x, t.y, t.b, t.h], x, y, 1.2))) continue;
     return { x, y };
   }
   return { x: raum.breite / 2, y: raum.hoehe / 2 };
@@ -256,7 +269,8 @@ export function naheAktion(zustand) {
   }
   if (s.sperre > 0) return null;
   for (const t of raum.tueren) {
-    if (imKasten([t.x, t.y, t.b, t.h], s.x, s.y, 0.35)) {
+    /* Mitte der Tür, nicht das Rechteck: Man steht ja davor, nicht drin. */
+    if (Math.hypot(t.x + t.b / 2 - s.x, t.y + t.h / 2 - s.y) < 2.2) {
       return { art: "tuer", ziel: t.ziel, raum };
     }
   }

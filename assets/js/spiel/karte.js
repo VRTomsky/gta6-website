@@ -269,6 +269,43 @@ const hausVon = (tx, ty) => Plan.haeuser[hausNr(tx, ty)] || null;
    der Kachelzeichner kein Dach und der Wandzeichner keine Wand. */
 const bildHaus = (tx, ty) => !!hausBild(hausVon(tx, ty));
 
+/* Zu welcher Seite des Grundstücks liegt die Straße?
+   Die Bilder zeigen die Vorderseite unten — also wird das Haus so
+   gedreht, dass seine Front zur Straße zeigt. Vorher stand der Club
+   mit dem Eingang zur Hauswand. */
+function strassenSeiten(h) {
+  const zaehlen = (x0, y0, x1, y1) => {
+    let n = 0;
+    for (let ty = y0; ty <= y1; ty++) {
+      for (let tx = x0; tx <= x1; tx++) {
+        const a = art(tx, ty);
+        if (a === ART.STRASSE || a === ART.KREUZUNG) n += 2;
+        else if (a === ART.GEHWEG) n += 1;
+      }
+    }
+    return n;
+  };
+  return {
+    s: zaehlen(h.x0, h.y1 + 1, h.x1, h.y1 + 2),
+    n: zaehlen(h.x0, h.y0 - 2, h.x1, h.y0 - 1),
+    o: zaehlen(h.x1 + 1, h.y0, h.x1 + 2, h.y1),
+    w: zaehlen(h.x0 - 2, h.y0, h.x0 - 1, h.y1)
+  };
+}
+
+/* Vierteldrehungen im Uhrzeigersinn: 0 = Front nach Süden, 1 = Westen,
+   2 = Norden, 3 = Osten. Gewählt wird unter den Drehungen, die zum
+   Grundriss passen, die mit der meisten Straße davor. */
+function hausDrehung(h, b) {
+  const bildQuer = b.width >= b.height;
+  const platzQuer = (h.kx1 - h.kx0) >= (h.ky1 - h.ky0);
+  const kandidaten = bildQuer === platzQuer ? [0, 2] : [1, 3];
+  const seiten = strassenSeiten(h);
+  const wohin = { 0: seiten.s, 1: seiten.w, 2: seiten.n, 3: seiten.o };
+  return kandidaten[0] >= 0 && wohin[kandidaten[1]] > wohin[kandidaten[0]]
+    ? kandidaten[1] : kandidaten[0];
+}
+
 /* Gehört die Kachel zum Kern, also zur Fläche unter dem Bild? */
 function imKern(h, tx, ty) {
   return tx >= h.kx0 && tx <= h.kx1 && ty >= h.ky0 && ty <= h.ky1;
@@ -291,16 +328,18 @@ function hausMalen(ctx, h, linksM, obenM, zoom) {
   ctx.fillStyle = "rgba(6,10,24,.3)";
   ctx.fillRect(x + weg, y + weg, w, t);
 
-  if ((b.width >= b.height) !== (w >= t)) {
-    /* Bild liegt quer zur Grundfläche — eine Vierteldrehung */
-    ctx.save();
-    ctx.translate(x + w / 2, y + t / 2);
-    ctx.rotate(Math.PI / 2);
-    ctx.drawImage(b, -t / 2, -w / 2, t, w);
-    ctx.restore();
-    return;
-  }
-  ctx.drawImage(b, x, y, w, t);
+  if (h.dreh === undefined) h.dreh = hausDrehung(h, b);
+  if (h.dreh === 0) { ctx.drawImage(b, x, y, w, t); return; }
+
+  /* Gedreht gezeichnet: Bei einer Vierteldrehung tauschen Breite und
+     Höhe, deshalb wird das Bild in der getauschten Größe gemalt. */
+  const quer = h.dreh % 2 === 1;
+  ctx.save();
+  ctx.translate(x + w / 2, y + t / 2);
+  ctx.rotate(h.dreh * (Math.PI / 2));
+  ctx.drawImage(b, quer ? -t / 2 : -w / 2, quer ? -w / 2 : -t / 2,
+                quer ? t : w, quer ? w : t);
+  ctx.restore();
 }
 
 function dachFarbe(tx, ty) {
@@ -791,6 +830,89 @@ function ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM
   }
 }
 
+/* ── Zwischenspeicher für den Untergrund ────────────────────
+   Der Boden ist mit Abstand das Teuerste: im Vollbild sind das über
+   tausend Kacheln je Bild, dazu Bäume, Laternen, Bänke. Gemessen waren
+   das 90 Millisekunden — das Spiel sah dabei aus, als hinge es.
+
+   Deshalb wird der Boden in Stücken von 8 × 8 Kacheln (32 m) einmal auf
+   eine eigene Leinwand gemalt und danach nur noch als fertiges Bild
+   kopiert. Neu gebaut wird erst, wenn sich der Zoom deutlich ändert;
+   dazwischen werden die Stücke passend skaliert.
+
+   Der Preis: Das Glitzern auf dem Wasser steht still. Das fällt kaum
+   auf, 60 Bilder je Sekunde dagegen schon. */
+const STUECK = 8;
+const lager = new Map();
+let bauBudget = 0;                  // wie viele Stücke dieses Bild neu dürfen
+
+function stueckHolen(cx, cy, zeit, zoom) {
+  const schluessel = cx + "," + cy;
+  const da = lager.get(schluessel);
+  /* Passt der Zoom halbwegs, wird das alte Stück einfach skaliert.
+     Neu gebaut wird nur ein paar Stück je Bild — sonst ruckelt es beim
+     Beschleunigen, wenn die Kamera herauszoomt. */
+  if (da && (Math.abs(da.zoom / zoom - 1) <= 0.18 || bauBudget <= 0)) return da;
+  if (da) bauBudget--;
+
+  const g = KACHEL * zoom;
+  const seite = Math.ceil(STUECK * g) + 2;
+  const leinwand = document.createElement("canvas");
+  leinwand.width = seite;
+  leinwand.height = seite;
+  const c = leinwand.getContext("2d");
+  flaecheMalen(c, cx * STUECK, cy * STUECK, STUECK, STUECK,
+               inMeter(cx * STUECK), inMeter(cy * STUECK), zoom, zeit);
+  const stueck = { leinwand, kante: STUECK * g, zoom };
+  lager.delete(schluessel);
+  lager.set(schluessel, stueck);
+  /* Höchstens rund 60 MB im Speicher halten, ältestes Stück fliegt raus */
+  const grenze = Math.max(12, Math.min(200, Math.round(15e6 / (seite * seite))));
+  while (lager.size > grenze) {
+    const erster = lager.keys().next().value;
+    lager.delete(erster);
+  }
+  return stueck;
+}
+
+/* Wird die Stadt verändert oder der Zoom sehr anders, muss alles neu */
+export function lagerLeeren() {
+  lager.clear();
+}
+
+/* Boden, Gebäudebilder und Wände eines Ausschnitts — alles, was sich
+   nicht bewegt. Genau das landet im Lager. */
+function flaecheMalen(ctx, tx0, ty0, spalten, zeilen, linksM, obenM, zoom, zeit) {
+  const g = KACHEL * zoom;
+  for (let j = 0; j < zeilen; j++) {
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      kachelMalen(ctx, tx, ty, (inMeter(tx) - linksM) * zoom,
+                  (inMeter(ty) - obenM) * zoom, g, zeit);
+    }
+  }
+  /* Gebäudebilder: jedes Haus einmal, egal wie viele Kacheln es hat.
+     Ragt eines über den Rand, malt das Nachbarstück den Rest. */
+  const gemalt = new Set();
+  for (let j = 0; j < zeilen; j++) {
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      if (art(tx, ty) !== ART.GEBAEUDE) continue;
+      const nr = hausNr(tx, ty);
+      if (!nr || gemalt.has(nr)) continue;
+      gemalt.add(nr);
+      hausMalen(ctx, Plan.haeuser[nr], linksM, obenM, zoom);
+    }
+  }
+  for (let j = 0; j < zeilen; j++) {
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      wandMalen(ctx, tx, ty, (inMeter(tx) - linksM) * zoom,
+                (inMeter(ty) - obenM) * zoom, g);
+    }
+  }
+}
+
 export function zeichnen(ctx, kamera, zeit) {
   const g = KACHEL * kamera.zoom;
   const linksM = kamera.x - kamera.breite / 2 / kamera.zoom;
@@ -800,31 +922,18 @@ export function zeichnen(ctx, kamera, zeit) {
   const spalten = Math.ceil(kamera.breite / g) + 3;
   const zeilen = Math.ceil(kamera.hoehe / g) + 3;
 
-  for (let j = 0; j < zeilen; j++) {
-    for (let k = 0; k < spalten; k++) {
-      const tx = tx0 + k, ty = ty0 + j;
-      kachelMalen(ctx, tx, ty, (inMeter(tx) - linksM) * kamera.zoom,
-                  (inMeter(ty) - obenM) * kamera.zoom, g, zeit);
-    }
-  }
-  /* Gebäudebilder: jedes Haus einmal, egal wie viele Kacheln es hat */
-  const gemalt = new Set();
-  for (let j = 0; j < zeilen; j++) {
-    for (let k = 0; k < spalten; k++) {
-      const tx = tx0 + k, ty = ty0 + j;
-      if (art(tx, ty) !== ART.GEBAEUDE) continue;
-      const nr = hausNr(tx, ty);
-      if (!nr || gemalt.has(nr)) continue;
-      gemalt.add(nr);
-      hausMalen(ctx, Plan.haeuser[nr], linksM, obenM, kamera.zoom);
-    }
-  }
-
-  for (let j = 0; j < zeilen; j++) {
-    for (let k = 0; k < spalten; k++) {
-      const tx = tx0 + k, ty = ty0 + j;
-      wandMalen(ctx, tx, ty, (inMeter(tx) - linksM) * kamera.zoom,
-                (inMeter(ty) - obenM) * kamera.zoom, g);
+  bauBudget = 2;
+  const cx0 = Math.floor(tx0 / STUECK), cy0 = Math.floor(ty0 / STUECK);
+  const cx1 = Math.floor((tx0 + spalten) / STUECK);
+  const cy1 = Math.floor((ty0 + zeilen) / STUECK);
+  const kante = STUECK * KACHEL * kamera.zoom;
+  for (let cy = cy0; cy <= cy1; cy++) {
+    for (let cx = cx0; cx <= cx1; cx++) {
+      const stueck = stueckHolen(cx, cy, zeit, kamera.zoom);
+      const px = (inMeter(cx * STUECK) - linksM) * kamera.zoom;
+      const py = (inMeter(cy * STUECK) - obenM) * kamera.zoom;
+      ctx.drawImage(stueck.leinwand, 0, 0, stueck.kante, stueck.kante,
+                    px, py, kante + 1, kante + 1);
     }
   }
   if (kamera.zoom > 14) ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM);

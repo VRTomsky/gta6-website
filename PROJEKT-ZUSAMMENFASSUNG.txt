@@ -391,6 +391,23 @@ WAS BISHER GEMACHT WURDE
      ab, danach sind Leben und Ausdauer wieder voll.
    - Dazu ein dumpfer Beat, solange man im Club ist.
 
+25. Spiel, dreizehnter Schritt (22.09.2026) - Fehlerrunde:
+   - Das Spiel hing im Vollbild nach kurzer Fahrt. Ursache war die
+     Zeichenlast: 90 Millisekunden je Bild. Der Untergrund wird
+     jetzt in Stuecken zwischengespeichert, die Leinwand ist
+     gedeckelt, und ein Fehler kostet nur noch ein Bild statt das
+     ganze Spiel. Jetzt sind es 2,7 Millisekunden.
+   - Im Club kam man nur vom Eingang auf die Tanzflaeche. Die
+     Tueren lagen in der Wand und waren dadurch unerreichbar.
+     Jetzt kommt man in Bar, VIP, Garderobe und Buero.
+   - Haeuser drehen sich zur Strasse - der Club stand verkehrt.
+   - Auf Parkplaetzen stehen die Autos in Reihen statt kreuz und
+     quer, am Strassenrand nur noch auf breiten Strassen.
+   - Passanten bleiben auf dem Gehweg statt ueber Parkplaetze und
+     Strassen zu laufen.
+   - Die Karte hat eigene Ortssymbole statt bunter Punkte. Selbst
+     gezeichnet - fremde Spielsymbole sind geschuetzt.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI
