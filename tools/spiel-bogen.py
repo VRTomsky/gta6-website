@@ -23,6 +23,7 @@ import os
 from PIL import Image, ImageChops, ImageFilter
 
 PX_PRO_METER = 64
+PX_HAUS = 32      # Häuser sind riesig — halber Maßstab reicht, spart Speicher
 ZIEL = "assets/img/spiel"
 
 
@@ -74,6 +75,60 @@ BOEGEN = {
 }
 
 RICHTUNGEN = ["vorn", "hinten", "links", "rechts"]
+
+# ── Bodenkacheln ──
+#  Kein grüner Hintergrund, sondern ein Raster aus Kacheln mit schmalem
+#  Steg dazwischen. Die werden nach Raster geschnitten, innen beschnitten
+#  (damit der Steg wegfällt) und auf Kachelgröße gebracht.
+BOEGEN["boden"] = dict(
+    spalten=4, zeilen=3, hintergrund="keiner", art="boden", kachel=128,
+    zellen=[
+        ("asphalt", 0), ("asphalt_riss", 0), ("gehweg", 0), ("sand", 0),
+        ("gras", 0), ("parkplatz", 0), ("erde", 0), ("platz", 0),
+        ("wasser", 0), ("hafen", 0), ("kies", 0), ("nass", 0),
+    ])
+
+# ── Straßenzubehör und Strandkram ──
+BOEGEN["zubehoer"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="deko",
+    zellen=[
+        ("ampel_neu", 1.4), ("laterne", 2.2), ("bank", 0.7), ("palme", 4.0),
+        ("baum", 4.0), ("hydrant", 0.5), ("muelleimer", 0.7), ("telefon", 1.0),
+        ("haltestelle", 1.6), ("zeitungsbox", 0.6), ("cafetisch", 2.4), ("marktstand", 2.0),
+    ])
+
+BOEGEN["strand"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="deko",
+    zellen=[
+        ("steg", 4.0), ("promenade", 3.0), ("schirm", 2.4), ("liegen", 2.0),
+        ("turm", 3.0), ("jetski", 2.6), ("boot", 5.0), ("segler", 7.0),
+        ("container", 2.4), ("muellcontainer", 1.4), ("volleyball", 1.0), ("ruderboot", 1.6),
+    ])
+
+# ── Häuser: Maß ist die längere Kante der Grundfläche ──
+BOEGEN["wohnen"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("haus_klein", 10), ("haus_bungalow", 10), ("haus_block2", 16), ("haus_block_lang", 24),
+        ("haus_stuck", 14), ("haus_villa", 18), ("haus_alt", 20), ("haus_motel", 26),
+        ("haus_strand", 12), ("haus_reihe", 22), ("haus_hof", 20), ("haus_modern", 16),
+    ])
+
+BOEGEN["tuerme"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("turm_buero", 20), ("turm_glas", 18), ("turm_pool", 24), ("turm_helipad", 22),
+        ("turm_bar", 24), ("turm_deco", 20), ("turm_antennen", 18), ("turm_bank", 24),
+        ("turm_bau", 20), ("turm_parkhaus", 30), ("turm_mall", 34), ("turm_tank", 16),
+    ])
+
+BOEGEN["besonders"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("bau_bank", 24), ("bau_club", 22), ("bau_polizei", 26), ("bau_feuerwehr", 24),
+        ("bau_klinik", 30), ("bau_kirche", 20), ("bau_schule", 30), ("bau_laden", 22),
+        ("bau_markt", 30), ("bau_waffen", 14), ("bau_diner", 16), ("bau_lager", 30),
+    ])
 
 # Zu jedem Figurenbogen gibt es zwei weitere: von hinten und von der
 # Seite (nach links). Nach rechts wird im Spiel gespiegelt.
@@ -209,14 +264,22 @@ def objekt_ausschneiden(bild, marke, objekt):
     return zu
 
 
-def zelle_freistellen(bild, laenge_m, mindest=40):
-    """Inhalt zuschneiden und auf Spielmaßstab bringen."""
+def zelle_freistellen(bild, laenge_m, mindest=40, nach_laenge=False):
+    """Inhalt zuschneiden und auf Spielmaßstab bringen.
+       nach_laenge: an der längeren Kante messen (Häuser stehen quer)."""
     kasten = bild.getbbox()
     if not kasten:
         return None
     zu = bild.crop(kasten)
     if zu.width < mindest or zu.height < mindest:
         return None
+    if nach_laenge:
+        # Häuser werden nie gedreht: knapp beschneiden, keine Leinwand drumherum.
+        # Der Zeichner zieht das Bild auf die Grundfläche, dafür zählt nur das Seitenverhältnis.
+        lang = max(zu.width, zu.height)
+        faktor = (laenge_m * PX_HAUS) / lang
+        return zu.resize((max(1, int(round(zu.width * faktor))),
+                          max(1, int(round(zu.height * faktor)))), Image.LANCZOS)
     ziel_h = max(8, int(round(laenge_m * PX_PRO_METER)))
     faktor = ziel_h / zu.height
     zu = zu.resize((max(1, int(round(zu.width * faktor))), ziel_h), Image.LANCZOS)
@@ -239,7 +302,28 @@ def main():
     if plan["art"] == "richtung":
         plan = dict(plan, zellen=[(plan["figur"], plan["groesse"])] * 16)
     bild = Image.open(a.bild)
-    bild = gruen_weg(bild) if plan["hintergrund"] == "gruen" else weiss_weg(bild)
+    if plan["hintergrund"] == "gruen":
+        bild = gruen_weg(bild)
+    elif plan["hintergrund"] == "weiss":
+        bild = weiss_weg(bild)
+    else:
+        bild = bild.convert("RGBA")
+
+    # Bodenkacheln: strikt nach Raster schneiden, Steg abziehen
+    if plan["art"] == "boden":
+        os.makedirs(a.ziel, exist_ok=True)
+        zb = bild.width / plan["spalten"]
+        zh = bild.height / plan["zeilen"]
+        rand = max(4, int(min(zb, zh) * 0.02))
+        for i, (name, _) in enumerate(plan["zellen"]):
+            sx, sy = i % plan["spalten"], i // plan["spalten"]
+            zelle = bild.crop((int(sx * zb) + rand, int(sy * zh) + rand,
+                               int((sx + 1) * zb) - rand, int((sy + 1) * zh) - rand))
+            k = plan["kachel"]
+            zelle = zelle.convert("RGB").resize((k, k), Image.LANCZOS)
+            zelle.save(os.path.join(a.ziel, f"boden_{name}.png"), optimize=True)
+            print(f"  boden_{name}.png: {k}x{k}")
+        return
 
     os.makedirs(a.ziel, exist_ok=True)
     zb = bild.width / plan["spalten"]
@@ -261,13 +345,21 @@ def main():
         if not o:
             print(f"  leer: {name} (Zelle {i})")
             continue
-        frei = zelle_freistellen(objekt_ausschneiden(bild, marke, o), mass)
+        frei = zelle_freistellen(objekt_ausschneiden(bild, marke, o), mass,
+                                 nach_laenge=plan["art"] == "haus")
         if not frei:
             print(f"  zu klein: {name} (Zelle {i})")
             continue
-        fertig = mittig(kontur(frei))
+        fertig = frei if plan["art"] == "haus" else mittig(kontur(frei))
 
-        if plan["art"] == "ansicht":
+        if plan["art"] == "deko":
+            fertig.save(os.path.join(a.ziel, f"deko_{name}.png"), optimize=True)
+            print(f"  deko_{name}.png: {fertig.width}x{fertig.height}")
+        elif plan["art"] == "haus":
+            # WebP: Häuser sind großflächig, als PNG wären das zusammen ~60 MB
+            fertig.save(os.path.join(a.ziel, f"{name}.webp"), quality=82, method=6)
+            print(f"  {name}.webp: {fertig.width}x{fertig.height}")
+        elif plan["art"] == "ansicht":
             datei = f"{name}_{plan['ansicht']}.png"
             fertig.save(os.path.join(a.ziel, datei), optimize=True)
             print(f"  {datei}: {fertig.width}x{fertig.height}")

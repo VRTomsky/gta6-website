@@ -10,6 +10,10 @@ __pycache__/
 # Sicherungskopien vor groesseren Umbauten (nur lokal von Nutzen)
 _backup/
 
+# Rohbogen aus der Bilder-KI (je ~2 MB) - aus ihnen werden die Sprites
+# geschnitten, auf der Seite werden sie nicht gebraucht
+2d bilder/
+
 # Windows / OneDrive
 Thumbs.db
 desktop.ini

@@ -16,7 +16,9 @@ export function laden(namen) {
     const b = new Image();
     b.onload = () => { bilder.set(name, b); fertig(b); };
     b.onerror = () => { console.warn("[Spiel] Bild fehlt:", name); fertig(null); };
-    b.src = ORDNER + name + ".png";
+    /* Alle Sprites liegen als WebP: als PNG wären es zusammen 65 MB,
+       so sind es 4. Nach jedem Bogen tools/spiel-webp.py laufen lassen. */
+    b.src = ORDNER + name + ".webp";
   })));
 }
 

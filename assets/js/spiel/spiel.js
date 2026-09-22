@@ -1369,6 +1369,14 @@ async function starten() {
   start.classList.add("is-laden");
   const autos = Object.keys(TYPEN).map(t => "auto_" + t);
   const ampeln = ["ampel_rot", "ampel_gelb", "ampel_gruen"];
+  /* Bodenkacheln und Deko aus den Bögen */
+  const boden = ["asphalt", "asphalt_riss", "gehweg", "sand", "gras", "parkplatz",
+                 "erde", "platz", "wasser", "hafen", "kies", "nass"].map(n => "boden_" + n);
+  const deko = ["laterne", "bank", "palme", "baum", "hydrant", "muelleimer", "telefon",
+                "haltestelle", "zeitungsbox", "cafetisch", "marktstand",
+                "schirm", "liegen", "turm", "volleyball", "ruderboot",
+                "container", "muellcontainer", "steg", "promenade",
+                "jetski", "boot", "segler"].map(n => "deko_" + n);
   /* Hauptfiguren: vier Richtungen mal vier Posen. Alle anderen ein Bild. */
   const figuren = [];
   for (const art of ["lucia", "jason"]) {
@@ -1384,7 +1392,19 @@ async function starten() {
   }
   Tex.bauen();
   Waffenbilder.bauen();
-  await Bilder.laden([...autos, ...ampeln, ...figuren]);
+  /* Gebäude: ein Bild je Haus, auf die Grundfläche gezogen */
+  const haeuser = [
+    "haus_klein", "haus_bungalow", "haus_block2", "haus_block_lang", "haus_stuck",
+    "haus_villa", "haus_alt", "haus_motel", "haus_strand", "haus_reihe",
+    "haus_hof", "haus_modern",
+    "turm_buero", "turm_glas", "turm_pool", "turm_helipad", "turm_bar",
+    "turm_deco", "turm_antennen", "turm_bank", "turm_bau", "turm_parkhaus",
+    "turm_mall", "turm_tank",
+    "bau_bank", "bau_club", "bau_polizei", "bau_feuerwehr", "bau_klinik",
+    "bau_kirche", "bau_schule", "bau_laden", "bau_markt", "bau_waffen",
+    "bau_diner", "bau_lager"
+  ];
+  await Bilder.laden([...autos, ...ampeln, ...boden, ...deko, ...haeuser, ...figuren]);
 
   Ton.bereit();
   touchEinrichten();

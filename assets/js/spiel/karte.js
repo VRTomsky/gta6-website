@@ -125,6 +125,36 @@ export function ampelGruen(tx, ty, zeit, senkrecht) {
   return senkrecht ? p === "ns" : p === "ow";
 }
 
+/* ── Bodenkacheln und Deko aus den Bögen ──
+   Die Untergründe sind jetzt echte Kacheln (4 × 4 m, nahtlos), die Deko
+   sind freigestellte Sprites im Spielmaßstab (64 Bildpunkte je Meter).
+   Fällt ein Bild aus, bleibt die alte gemalte Fläche darunter stehen. */
+function bodenMalen(ctx, name, px, py, g) {
+  const b = sprite("boden_" + name);
+  if (!b) return false;
+  ctx.drawImage(b, px, py, g + 1, g + 1);
+  return true;
+}
+
+/* Deko mittig auf die Kachel, in ihrer echten Größe.
+   vx/vy verschieben innerhalb der Kachel (0…1), dreh in Radiant. */
+function dekoMalen(ctx, name, px, py, g, vx = 0.5, vy = 0.5, dreh = 0) {
+  const b = sprite("deko_" + name);
+  if (!b) return;
+  const skala = g / (KACHEL * 64);
+  const w = b.width * skala, h = b.height * skala;
+  const mx = px + g * vx, my = py + g * vy;
+  if (dreh) {
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(dreh);
+    ctx.drawImage(b, -w / 2, -h / 2, w, h);
+    ctx.restore();
+    return;
+  }
+  ctx.drawImage(b, mx - w / 2, my - h / 2, w, h);
+}
+
 /* ── Farben ─────────────────────────────────────────────── */
 const FARBE = {
   wasser: "#123a63",
@@ -158,6 +188,99 @@ const DACH = {
   [Plan.BAU.WAFFEN]: ["#3f5c46"]
 };
 
+/* ── Gebäudebilder ────────────────────────────────────────
+   Für jede Bauart gibt es mehrere gezeichnete Dächer. Welches
+   ein Haus bekommt, entscheidet seine Nummer — also immer dasselbe.
+   Das Bild wird auf die Grundfläche gezogen und quer gelegt, wenn
+   das Haus hochkant steht. Fehlt ein Bild, bleibt das alte gemalte
+   Dach stehen. */
+const HAUSBILD = {
+  [Plan.BAU.WOHNHAUS]: ["haus_klein", "haus_bungalow", "haus_stuck", "haus_strand",
+                        "haus_reihe", "haus_hof", "haus_modern", "haus_villa",
+                        "haus_block2", "haus_alt"],
+  [Plan.BAU.HOCHHAUS]: ["turm_buero", "turm_glas", "turm_deco", "turm_antennen",
+                        "turm_bau", "turm_pool", "turm_helipad", "haus_block_lang"],
+  [Plan.BAU.HOTEL]: ["turm_pool", "turm_bar", "haus_motel", "turm_helipad"],
+  [Plan.BAU.LAGER]: ["bau_lager", "turm_tank"],
+  [Plan.BAU.LADEN]: ["bau_laden", "bau_diner", "bau_club", "haus_block2"],
+  [Plan.BAU.BANK]: ["bau_bank", "turm_bank"],
+  [Plan.BAU.POLIZEI]: ["bau_polizei"],
+  [Plan.BAU.FEUERWEHR]: ["bau_feuerwehr"],
+  [Plan.BAU.KRANKENHAUS]: ["bau_klinik"],
+  [Plan.BAU.KIRCHE]: ["bau_kirche"],
+  [Plan.BAU.SCHULE]: ["bau_schule"],
+  [Plan.BAU.STADION]: ["bau_schule"],
+  [Plan.BAU.KAUFHAUS]: ["turm_mall", "bau_markt", "turm_parkhaus"],
+  [Plan.BAU.WERK]: ["bau_lager", "turm_tank"],
+  [Plan.BAU.WAFFEN]: ["bau_waffen"]
+};
+
+/* Bild eines Hauses — einmal ausgewürfelt und am Haus gemerkt */
+function hausBild(h) {
+  if (!h) return null;
+  if (h.bild === undefined) {
+    const liste = HAUSBILD[h.bau];
+    h.bild = liste
+      ? liste[Math.floor(streu(h.nr, 3, 29) * liste.length) % liste.length]
+      : null;
+  }
+  return h.bild ? sprite(h.bild) : null;
+}
+
+const hausVon = (tx, ty) => Plan.haeuser[hausNr(tx, ty)] || null;
+
+/* Hat diese Kachel ein Gebäudebild über sich? Dann malt der
+   Kachelzeichner kein Dach und der Wandzeichner keine Wand. */
+const bildHaus = (tx, ty) => !!hausBild(hausVon(tx, ty));
+
+/* Umriss eines Hauses, das kein volles Rechteck ist — zeilenweise
+   die zusammenhängenden Kachelstücke. Darauf wird das Bild beschnitten,
+   sonst ragte es über die Straße. */
+function hausPfad(h, linksM, obenM, zoom) {
+  const p = new Path2D();
+  const g = KACHEL * zoom;
+  for (let ty = h.y0; ty <= h.y1; ty++) {
+    let von = -1;
+    for (let tx = h.x0; tx <= h.x1 + 1; tx++) {
+      const drin = tx <= h.x1 && hausNr(tx, ty) === h.nr;
+      if (drin && von < 0) von = tx;
+      else if (!drin && von >= 0) {
+        p.rect((inMeter(von) - linksM) * zoom, (inMeter(ty) - obenM) * zoom,
+               (tx - von) * g + 1, g + 1);
+        von = -1;
+      }
+    }
+  }
+  return p;
+}
+
+function hausMalen(ctx, h, linksM, obenM, zoom) {
+  const b = hausBild(h);
+  if (!b) return;
+  const x = (inMeter(h.x0) - linksM) * zoom;
+  const y = (inMeter(h.y0) - obenM) * zoom;
+  const w = (h.x1 - h.x0 + 1) * KACHEL * zoom;
+  const t = (h.y1 - h.y0 + 1) * KACHEL * zoom;
+
+  /* Schatten nach unten rechts, so hoch wie das Haus */
+  const hoch = Plan.hoeheVon(h.x0, h.y0);
+  const weg = KACHEL * zoom * 0.42 * hoch;
+  ctx.fillStyle = "rgba(6,10,24,.3)";
+  ctx.fillRect(x + weg, y + weg, w, t);
+
+  ctx.save();
+  if (!h.voll) ctx.clip(hausPfad(h, linksM, obenM, zoom));
+  if ((b.width >= b.height) !== (w >= t)) {
+    /* Bild liegt quer zur Grundfläche — eine Vierteldrehung */
+    ctx.translate(x + w / 2, y + t / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(b, -t / 2, -w / 2, t, w);
+  } else {
+    ctx.drawImage(b, x, y, w, t);
+  }
+  ctx.restore();
+}
+
 function dachFarbe(tx, ty) {
   const liste = DACH[bauArt(tx, ty)] || DACH[Plan.BAU.WOHNHAUS];
   return liste[Math.floor(streu(hausNr(tx, ty), 7, 11) * liste.length) % liste.length];
@@ -172,7 +295,13 @@ function dunkler(farbe, faktor) {
 function strasseMalen(ctx, tx, ty, px, py, g, a) {
   ctx.fillStyle = a === ART.AUTOBAHN ? FARBE.autobahn : a === ART.BRUECKE ? FARBE.bruecke : FARBE.strasse;
   ctx.fillRect(px, py, g + 1, g + 1);
-  Tex.malen(ctx, "asphalt", streu(tx, ty, 101), px, py, g);
+  /* Zwei Asphaltsorten im Wechsel, damit die Straße nicht wie Linoleum
+     aussieht; Brücken bleiben beim alten Belag. */
+  const kachel = a === ART.BRUECKE ? null
+    : streu(tx, ty, 131) > 0.78 ? "asphalt_riss" : "asphalt";
+  if (!kachel || !bodenMalen(ctx, kachel, px, py, g)) {
+    Tex.malen(ctx, "asphalt", streu(tx, ty, 101), px, py, g);
+  }
 
   if (a === ART.KREUZUNG) {
     ctx.fillStyle = "rgba(236,232,220,.38)";
@@ -235,7 +364,16 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
 function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
   ctx.fillStyle = FARBE.gehweg;
   ctx.fillRect(px, py, g + 1, g + 1);
-  Tex.malen(ctx, "gehweg", streu(tx, ty, 103), px, py, g);
+  const belag = bez === Plan.BEZIRK.INNENSTADT && streu(tx, ty, 147) > 0.6 ? "platz" : "gehweg";
+  if (!bodenMalen(ctx, belag, px, py, g)) {
+    Tex.malen(ctx, "gehweg", streu(tx, ty, 103), px, py, g);
+  }
+  /* Strandpromenade: Holzdielen entlang des Sandes */
+  if (bez === Plan.BEZIRK.STRAND && (art(tx - 1, ty) === ART.STRAND || art(tx + 1, ty) === ART.STRAND ||
+                                     art(tx, ty - 1) === ART.STRAND || art(tx, ty + 1) === ART.STRAND)) {
+    dekoMalen(ctx, "promenade", px, py, g, 0.5, 0.5,
+              art(tx, ty - 1) === ART.STRAND || art(tx, ty + 1) === ART.STRAND ? Math.PI / 2 : 0);
+  }
 
   /* Bordsteinkante zur Straße */
   ctx.fillStyle = "rgba(226,206,120,.35)";
@@ -244,24 +382,31 @@ function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
   if (befahrbar(art(tx - 1, ty))) ctx.fillRect(px, py, g * 0.1, g + 1);
   if (befahrbar(art(tx + 1, ty))) ctx.fillRect(px + g * 0.9, py, g * 0.1, g + 1);
 
+  /* Straßenmöbel: was hier steht, entscheidet der feste Zufall des Ortes.
+     Dadurch steht jede Bank immer an derselben Stelle. */
   const l = streu(tx, ty, 13);
+  const dreh = streu(tx, ty, 133) * Math.PI * 2;
   const palmen = bez === Plan.BEZIRK.STRAND ? 0.7 : 0.9;
   if (l > palmen) {
-    const b = Tex.tex(bez === Plan.BEZIRK.STRAND ? "palme" : "baum", streu(tx, ty, 107));
-    if (b) ctx.drawImage(b, px - g * 0.16, py - g * 0.16, g * 1.32, g * 1.32);
+    dekoMalen(ctx, bez === Plan.BEZIRK.STRAND ? "palme" : "baum", px, py, g);
   } else if (l > 0.84) {
-    ctx.fillStyle = "#23252c";                               // Laterne
-    ctx.fillRect(px + g * 0.44, py + g * 0.44, g * 0.12, g * 0.12);
-    ctx.fillStyle = "rgba(255,240,190,.25)";
-    ctx.beginPath();
-    ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.3, 0, Math.PI * 2);
-    ctx.fill();
+    dekoMalen(ctx, "laterne", px, py, g, 0.5, 0.5, dreh);
+  } else if (l > 0.815) {
+    dekoMalen(ctx, "bank", px, py, g, 0.5, 0.5, Math.round(dreh / (Math.PI / 2)) * (Math.PI / 2));
+  } else if (l > 0.795) {
+    dekoMalen(ctx, "muelleimer", px, py, g);
+  } else if (l > 0.785) {
+    dekoMalen(ctx, "haltestelle", px, py, g);
+  } else if (l > 0.775) {
+    dekoMalen(ctx, "telefon", px, py, g);
+  } else if (l > 0.765 && bez === Plan.BEZIRK.INNENSTADT) {
+    dekoMalen(ctx, "zeitungsbox", px, py, g);
+  } else if (l > 0.755 && bez === Plan.BEZIRK.INNENSTADT) {
+    dekoMalen(ctx, "cafetisch", px, py, g);
+  } else if (l > 0.745 && bez === Plan.BEZIRK.STRAND) {
+    dekoMalen(ctx, "marktstand", px, py, g);
   } else if (l < 0.04) {
-    ctx.fillStyle = "#c0433c";                               // Hydrant
-    ctx.fillRect(px + g * 0.44, py + g * 0.42, g * 0.14, g * 0.2);
-  } else if (l > 0.79 && l < 0.82) {
-    ctx.fillStyle = "#2e3440";                               // Mülleimer
-    ctx.fillRect(px + g * 0.4, py + g * 0.4, g * 0.2, g * 0.22);
+    dekoMalen(ctx, "hydrant", px, py, g, 0.5, 0.5);
   }
 }
 
@@ -431,22 +576,31 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
       ctx.fillStyle = "#bfe4ff";
       ctx.fillRect(px, py + g * (0.28 + w * 0.2), g + 1, g * 0.1);
       ctx.globalAlpha = 1;
+      /* Ein paar Boote draußen — nur, wo kein Ufer angrenzt */
+      const f = streu(tx, ty, 151);
+      if (f > 0.985) dekoMalen(ctx, "segler", px, py, g, 0.5, 0.5, streu(tx, ty, 153) * 6.28);
+      else if (f > 0.97) dekoMalen(ctx, "boot", px, py, g, 0.5, 0.5, streu(tx, ty, 155) * 6.28);
+      else if (f > 0.96) dekoMalen(ctx, "jetski", px, py, g, 0.5, 0.5, streu(tx, ty, 157) * 6.28);
       break;
     }
     case ART.STRAND: {
       ctx.fillStyle = FARBE.strand;
       ctx.fillRect(px, py, g + 1, g + 1);
-      Tex.malen(ctx, "sand", streu(tx, ty, 111), px, py, g);
-      const s = streu(tx, ty, 5);
-      if (s > 0.93) {
-        ctx.fillStyle = "rgba(240,120,140,.8)";
-        ctx.beginPath();
-        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.17, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (s > 0.88) {
-        ctx.fillStyle = "rgba(255,255,255,.5)";              // Liege
-        ctx.fillRect(px + g * 0.36, py + g * 0.38, g * 0.28, g * 0.2);
+      const amWasser = art(tx - 1, ty) === ART.WASSER || art(tx + 1, ty) === ART.WASSER ||
+                       art(tx, ty - 1) === ART.WASSER || art(tx, ty + 1) === ART.WASSER;
+      if (!bodenMalen(ctx, "sand", px, py, g)) {
+        Tex.malen(ctx, "sand", streu(tx, ty, 111), px, py, g);
       }
+      if (amWasser && streu(tx, ty, 149) > 0.88) {
+        dekoMalen(ctx, "steg", px, py, g, 0.5, 0.5,
+                  art(tx, ty - 1) === ART.WASSER || art(tx, ty + 1) === ART.WASSER ? 0 : Math.PI / 2);
+      }
+      const s = streu(tx, ty, 5);
+      if (s > 0.955) dekoMalen(ctx, "schirm", px, py, g);
+      else if (s > 0.925) dekoMalen(ctx, "liegen", px, py, g, 0.5, 0.5, streu(tx, ty, 137) * 1.2);
+      else if (s > 0.915) dekoMalen(ctx, "turm", px, py, g);
+      else if (s > 0.908) dekoMalen(ctx, "volleyball", px, py, g);
+      else if (s > 0.9) dekoMalen(ctx, "ruderboot", px, py, g, 0.5, 0.5, streu(tx, ty, 139) * 0.8);
       break;
     }
     case ART.STRASSE:
@@ -461,29 +615,34 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.PARK: {
       ctx.fillStyle = FARBE.park;
       ctx.fillRect(px, py, g + 1, g + 1);
-      Tex.malen(ctx, "gras", streu(tx, ty, 113), px, py, g);
+      if (!bodenMalen(ctx, "gras", px, py, g)) {
+        Tex.malen(ctx, "gras", streu(tx, ty, 113), px, py, g);
+      }
       const b = streu(tx, ty, 17);
       if (b < 0.1) {
-        ctx.fillStyle = "rgba(200,180,140,.45)";             // Weg
-        ctx.fillRect(px, py + g * 0.4, g + 1, g * 0.2);
+        bodenMalen(ctx, streu(tx, ty, 145) > 0.5 ? "kies" : "erde", px, py, g);   // Weg
       } else if (b > 0.66) {
-        const baum = Tex.tex("baum", streu(tx, ty, 117));
-        if (baum) ctx.drawImage(baum, px - g * 0.2, py - g * 0.2, g * 1.4, g * 1.4);
-      } else if (b > 0.46) {
+        dekoMalen(ctx, "baum", px, py, g);
+      } else if (b > 0.52) {
         const busch = Tex.tex("busch", streu(tx, ty, 119));
         if (busch) ctx.drawImage(busch, px, py, g, g);
-      } else if (b > 0.42) {
-        ctx.fillStyle = "#2f8fd0";                           // Teich
-        ctx.beginPath();
-        ctx.arc(px + g * 0.5, py + g * 0.5, g * 0.42, 0, Math.PI * 2);
-        ctx.fill();
+      } else if (b > 0.5) {
+        dekoMalen(ctx, "bank", px, py, g, 0.5, 0.5,
+                  Math.round(streu(tx, ty, 141) * 4) * (Math.PI / 2));
+      } else if (b > 0.46) {
+        if (bodenMalen(ctx, "wasser", px, py, g)) {          // Teich
+          ctx.fillStyle = "rgba(18,58,60,.45)";              // im Park dunkler als ein Pool
+          ctx.fillRect(px, py, g + 1, g + 1);
+        }
       }
       break;
     }
     case ART.PARKPLATZ:
       ctx.fillStyle = FARBE.parkplatz;
       ctx.fillRect(px, py, g + 1, g + 1);
-      Tex.malen(ctx, "beton", streu(tx, ty, 121), px, py, g);
+      if (!bodenMalen(ctx, "parkplatz", px, py, g)) {
+        Tex.malen(ctx, "beton", streu(tx, ty, 121), px, py, g);
+      }
       ctx.strokeStyle = "rgba(230,230,210,.22)";
       ctx.lineWidth = Math.max(1, g * 0.03);
       ctx.beginPath();
@@ -494,17 +653,25 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     case ART.HAFEN: {
       ctx.fillStyle = FARBE.hafen;
       ctx.fillRect(px, py, g + 1, g + 1);
-      Tex.malen(ctx, "beton", streu(tx, ty, 123), px, py, g);
-      const c = streu(tx, ty, 61);
-      if (c > 0.78) {
-        ctx.fillStyle = ["#c0533f", "#2f6f8f", "#c9a23a", "#4a7d52"][Math.floor(c * 100) % 4];
-        ctx.fillRect(px + g * 0.1, py + g * 0.18, g * 0.8, g * 0.54);
-        ctx.fillStyle = "rgba(255,255,255,.12)";
-        ctx.fillRect(px + g * 0.1, py + g * 0.18, g * 0.8, g * 0.12);
+      if (!bodenMalen(ctx, "hafen", px, py, g)) {
+        Tex.malen(ctx, "beton", streu(tx, ty, 123), px, py, g);
       }
+      if (streu(tx, ty, 147) > 0.85) bodenMalen(ctx, "nass", px, py, g);   // Pfütze
+      const h2 = streu(tx, ty, 143);
+      if (h2 > 0.78) dekoMalen(ctx, "container", px, py, g, 0.5, 0.5,
+                               Math.round(h2 * 4) * (Math.PI / 2));
+      else if (h2 > 0.72) dekoMalen(ctx, "muellcontainer", px, py, g);
       break;
     }
     default:
+      if (bildHaus(tx, ty)) {
+        /* Unter dem Gebäudebild liegt Boden — an den Rändern ist es
+           durchsichtig, dort soll Gehweg durchscheinen, kein Dach. */
+        ctx.fillStyle = FARBE.gehweg;
+        ctx.fillRect(px, py, g + 1, g + 1);
+        bodenMalen(ctx, "gehweg", px, py, g);
+        break;
+      }
       gebaeudeMalen(ctx, tx, ty, px, py, g);
   }
 }
@@ -512,6 +679,7 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
 /* ── Wände und Schatten ─────────────────────────────────── */
 function wandMalen(ctx, tx, ty, px, py, g) {
   if (art(tx, ty) !== ART.GEBAEUDE) return;
+  if (bildHaus(tx, ty)) return;             // Bild bringt Wand und Schatten mit
   const rechtsFrei = art(tx + 1, ty) !== ART.GEBAEUDE;
   const untenFrei = art(tx, ty + 1) !== ART.GEBAEUDE;
   if (!rechtsFrei && !untenFrei) return;
@@ -603,6 +771,19 @@ export function zeichnen(ctx, kamera, zeit) {
                   (inMeter(ty) - obenM) * kamera.zoom, g, zeit);
     }
   }
+  /* Gebäudebilder: jedes Haus einmal, egal wie viele Kacheln es hat */
+  const gemalt = new Set();
+  for (let j = 0; j < zeilen; j++) {
+    for (let k = 0; k < spalten; k++) {
+      const tx = tx0 + k, ty = ty0 + j;
+      if (art(tx, ty) !== ART.GEBAEUDE) continue;
+      const nr = hausNr(tx, ty);
+      if (!nr || gemalt.has(nr)) continue;
+      gemalt.add(nr);
+      hausMalen(ctx, Plan.haeuser[nr], linksM, obenM, kamera.zoom);
+    }
+  }
+
   for (let j = 0; j < zeilen; j++) {
     for (let k = 0; k < spalten; k++) {
       const tx = tx0 + k, ty = ty0 + j;

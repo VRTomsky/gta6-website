@@ -341,6 +341,22 @@ WAS BISHER GEMACHT WURDE
      automatisch zu: Hintergrund weg, Objekte erkennen, auf
      Spielmassstab bringen, Kontur dazu.
 
+22. Spiel, zehnter Schritt (22.09.2026) - die ganze Stadt neu:
+   - Sechs weitere Bogen aus der Bilder-KI: 12 Bodenkacheln
+     (Asphalt, Gehweg, Sand, Gras, Parkplatz, Erde, Platten,
+     Wasser, Hafen, Kies), 24 Strassen- und Stranddinge (Baum,
+     Palme, Laterne, Bank, Haltestelle, Telefon, Marktstand,
+     Sonnenschirm, Liegen, Rettungsturm, Steg, Boote, Container)
+     und 36 Gebaeude (12 Wohnhaeuser, 12 Hochhaeuser, 12 be-
+     sondere Bauten wie Bank, Klinik, Kirche, Polizei, Diner).
+   - Die Strassen, Gehwege, Parks, der Strand und der Hafen sind
+     jetzt echte Bilder statt gemalter Flaechen.
+   - Jedes Haus bekommt ein eigenes Dachbild, auf seine Grund-
+     flaeche gezogen. Welches, entscheidet Bauart plus Haus-
+     nummer - dieselbe Stadt sieht also immer gleich aus.
+   - Alle 204 Sprites liegen jetzt als WebP: 65 MB waeren es als
+     PNG, so sind es 4 MB. Werkzeug dafuer: tools/spiel-webp.py.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

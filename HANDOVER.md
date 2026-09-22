@@ -823,6 +823,38 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   Aufruf: `python tools/spiel-bogen.py --bogen autos2 --bild "pfad/2.webp"`.
   Bögen: `autos1`, `autos2` (je 12 Fahrzeuge), `leute`, `dienst` (je 12
   Figuren), `helden` (Jason und Lucia mit vier Posen).
+- **Stadt aus Bögen (22.09.2026):** Sechs weitere Bögen bringen die Stadt
+  selbst ins Bild — `boden` (12 Untergründe), `zubehoer` und `strand`
+  (24 Straßen- und Stranddinge), `wohnen`, `tuerme`, `besonders`
+  (36 Gebäude). Drei Zuschnittarten in `spiel-bogen.py`:
+
+  | Art | Schnitt | Ergebnis |
+  |---|---|---|
+  | `boden` | strikt nach Raster, Steg abziehen | `boden_*.webp`, 128 × 128, nahtlos wiederholbar |
+  | `deko` | Objekterkennung, 64 px je Meter | `deko_*.webp`, freigestellt mit Kontur |
+  | `haus` | Objekterkennung, **32 px je Meter**, knapp beschnitten | `haus_*`, `turm_*`, `bau_*` |
+
+  Häuser laufen im halben Maßstab und ohne Kontur: Sie werden nie gedreht,
+  nur auf ihre Grundfläche gezogen — 64 px je Meter wären bei einem 30-Meter-
+  Bau fast 2000 Bildpunkte gewesen.
+- **Ein Bild je Haus:** `stadtplan.js` legt beim Bauen für jede Hausnummer
+  die umschließende Kachel-Schachtel ab (`export const haeuser`, dazu
+  `voll` = Grundfläche ist ein volles Rechteck). `karte.js` malt daraus in
+  `zeichnen` einen eigenen Durchgang zwischen Kacheln und Wänden: je
+  sichtbarem Haus **ein** `drawImage`, auf die Grundfläche gezogen, um 90°
+  gedreht, wenn das Bild quer zum Grundriss liegt. Welches Bild ein Haus
+  bekommt, entscheidet `HAUSBILD[bauArt]` plus die Hausnummer — also immer
+  dasselbe. Ist der Grundriss kein Rechteck (etwa eine L-Form an einer
+  Kreuzung), wird das Bild auf den echten Umriss beschnitten (`hausPfad`,
+  zeilenweise Kachelstücke). Unter dem Bild liegt Gehwegboden, damit an
+  durchsichtigen Rändern kein buntes Dach durchblitzt. Häuser mit Bild
+  bekommen keine gemalte Wand mehr, nur einen Schatten nach unten rechts.
+  Fehlt ein Bild (`BAU.TANKSTELLE` hat keines), malt weiter `gebaeudeMalen`
+  das alte Dach — beide Wege laufen nebeneinander.
+- **Alles als WebP (22.09.2026):** Die 204 Sprites wären als PNG rund 65 MB,
+  als WebP sind es 4,2 MB. `bilder.js` lädt nur noch `.webp`.
+  **Nach jedem Bogenlauf `python tools/spiel-webp.py --ordner assets/img/spiel`
+  hinterherschicken**, sonst fehlen die frischen Bilder im Spiel.
 - **24 Fahrzeuge, 26 Figuren.** Jason und Lucia liegen in **vier Ansichten
   mal vier Posen** vor (`jason_vorn0` … `lucia_rechts3`, Bögen `jason4`
   und `lucia4`): `Figur.richtung` wählt aus dem Laufwinkel die Ansicht,

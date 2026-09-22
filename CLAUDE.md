@@ -42,6 +42,7 @@ Geregelt in `.gitignore` und den `robocopy`-Ausschlüssen:
 | `server.log` | enthält die WLAN-IP dieses Rechners |
 | `_backup/` | lokale Sicherungen vor Umbauten |
 | `__pycache__/` | Python-Bytecode |
+| `2d bilder/` | Rohbögen aus der Bilder-KI, aus denen die Sprites geschnitten werden |
 
 ## Zum Rest des Projekts
 

@@ -76,7 +76,7 @@ rem /XF newswire.json  gehoert der GitHub Action - /MIR laesst
 rem   ausgeschlossene Dateien im Ziel stehen.
 echo   [2/4] Dateien spiegeln...
 robocopy "%QUELLE%." "%REPO%" /MIR /NFL /NDL /NJH /NJS /NP ^
-  /XD ".git" "_backup" "__pycache__" ^
+  /XD ".git" "_backup" "__pycache__" "2d bilder" ^
   /XF "server.log" "newswire.json" >nul
 if errorlevel 8 (
   echo   [FEHLER] Kopieren fehlgeschlagen.

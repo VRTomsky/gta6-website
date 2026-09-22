@@ -714,6 +714,34 @@ export function bauen() {
 
 bauen();
 
+/* ── Grundflächen der Häuser ──────────────────────────────
+   Ein Durchgang über die Karte: je Hausnummer die umschließende
+   Schachtel aus Kacheln. Der Zeichner setzt darauf ein einzelnes
+   Gebäudebild, statt Kachel für Kachel ein Dach zu malen.
+   Nur volle Rechtecke bekommen eines — bei L-Formen ragte das
+   Bild sonst über die Straße. */
+export const haeuser = [];
+for (let ty = 0; ty < HOEHE; ty++) {
+  for (let tx = 0; tx < BREITE; tx++) {
+    const p = i(tx, ty);
+    const nr = felder.haus[p];
+    if (!nr || felder.art[p] !== ART.GEBAEUDE) continue;
+    const h = haeuser[nr];
+    if (!h) {
+      haeuser[nr] = { nr, bau: felder.bau[p], x0: tx, y0: ty, x1: tx, y1: ty, zahl: 1 };
+      continue;
+    }
+    if (tx < h.x0) h.x0 = tx;
+    if (tx > h.x1) h.x1 = tx;
+    if (ty > h.y1) h.y1 = ty;
+    h.zahl++;
+  }
+}
+for (const h of haeuser) {
+  if (!h) continue;
+  h.voll = h.zahl === (h.x1 - h.x0 + 1) * (h.y1 - h.y0 + 1);
+}
+
 /* ═══ Abfragen ═══════════════════════════════════════════ */
 export function art(tx, ty) {
   if (!drin(tx, ty)) return ART.WASSER;
