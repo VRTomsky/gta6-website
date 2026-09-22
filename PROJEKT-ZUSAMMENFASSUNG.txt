@@ -324,6 +324,23 @@ WAS BISHER GEMACHT WURDE
    - Das Spiel laeuft nur noch mit Konto. Ohne Anmeldung erscheint ein
      Hinweis mit Knoepfen zum Anmelden oder Registrieren.
 
+21. Spiel, neunter Schritt (22.09.2026) - neue Grafik:
+   - Alle Fahrzeuge und Figuren kommen jetzt aus Bildern, die der
+     Nutzer mit einer Bild-KI erzeugt hat. Die Blender- und
+     Pillow-Sprites sind ersetzt.
+   - 24 Fahrzeuge statt 12: dazu Stretchlimousine, Luxuscabrio,
+     Lowrider, Muscle Car, Keilsportwagen, Surfbus, Rostlaube,
+     Gelaendewagen, Abschleppwagen, Muellwagen, Nachrichtenwagen und
+     Kipper. Alle fahren im normalen Verkehr mit.
+   - 26 Figuren statt 18: zwoelf Zivilisten, zwoelf Uniformierte
+     (Polizei, Spezialeinheit, Sanitaeter, Feuerwehr, Wachmann,
+     Rettungsschwimmerin, Taxifahrer, Verkaeufer) sowie Jason und
+     Lucia mit eigenen Laufbildern.
+   - Ab vier Sternen steigt die Spezialeinheit aus.
+   - Neues Werkzeug tools/spiel-bogen.py schneidet solche Bogen
+     automatisch zu: Hintergrund weg, Objekte erkennen, auf
+     Spielmassstab bringen, Kontur dazu.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

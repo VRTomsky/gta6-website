@@ -137,8 +137,10 @@ export class Streife extends VerkehrsAuto {
 }
 
 export class Polizist extends Figur {
-  constructor(x, y, weiblich = false) {
-    super(weiblich ? "polizistin" : "polizist", x, y);
+  /* Ab vier Sternen kommt die Spezialeinheit — anderes Sprite, mehr Leben */
+  constructor(x, y, art = "polizist") {
+    super(art, x, y);
+    if (art === "swat") this.leben = 160;
     this.aus = 0;                     // Zeit seit dem Aussteigen
     this.nachladen = 1.2;             // bis zum ersten Schuss
     this.griff = 0;                   // wie lange er den Spieler schon hält
@@ -199,6 +201,13 @@ export class Fahndung {
     return [0, 1, 2, 3, 4, 6][this.stufe] || 0;
   }
 
+  /* Wer aussteigt: ab vier Sternen die Spezialeinheit, sonst Streife */
+  beamtenArt() {
+    if (this.stufe >= 4) return Math.random() < 0.7 ? "swat" : "polizist";
+    if (Math.random() < 0.35) return "polizistin";
+    return Math.random() < 0.3 ? "polizist_sommer" : "polizist";
+  }
+
   /* Ab vier Sternen wird gerammt, ab zwei geschossen */
   get hart() { return this.stufe >= 4; }
   get bewaffnet() { return this.stufe >= 2; }
@@ -240,7 +249,7 @@ export class Fahndung {
       const raus = (!spieler.imAuto && d < 24) || (zielSteht && d < 18);
       if (raus && this.polizisten.length < this.stufe + 1 && Math.abs(s.tempo) < 7) {
         const seite = { x: -Math.sin(s.winkel), y: Math.cos(s.winkel) };
-        const p = new Polizist(s.x + seite.x * 1.6, s.y + seite.y * 1.6, Math.random() < 0.4);
+        const p = new Polizist(s.x + seite.x * 1.6, s.y + seite.y * 1.6, this.beamtenArt());
         p.schiesst = this.bewaffnet;
         this.polizisten.push(p);
       }
@@ -282,7 +291,7 @@ export class Fahndung {
       const s = this.streifen[k];
       if (s.schaden <= 118) continue;
       if (this.polizisten.length < this.stufe + 1) {
-        const p = new Polizist(s.x + 1.4, s.y + 1.4, Math.random() < 0.4);
+        const p = new Polizist(s.x + 1.4, s.y + 1.4, this.beamtenArt());
         p.schiesst = this.bewaffnet;
         this.polizisten.push(p);
       }

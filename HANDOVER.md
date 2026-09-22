@@ -806,6 +806,29 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Fahrmodell:** Geschwindigkeitsvektor, der anteilig in Blickrichtung gezogen
   wird. Der Anteil ist der Grip — mit Handbremse rutscht der Wagen. Gelenkt wird
   nur bei Fahrt und mit steigendem Tempo weniger.
+- **Sprites aus Bögen (22.09.2026):** Fahrzeuge und Figuren kommen jetzt aus
+  fünf großen Rasterbildern, die der Nutzer mit einer Bild-KI erzeugt hat
+  (Blick von oben, Nase/Blick nach oben, Chroma-Grün als Hintergrund).
+  `tools/spiel-bogen.py` zerlegt sie:
+
+  1. Hintergrund weg — Grün über den Farbabstand, Weiß per Flutfüllung vom
+     Rand (sonst verschwindet der weiße Krankenwagen mit).
+  2. **Objekte statt Raster:** Erst werden zusammenhängende Flächen gesucht
+     und danach der Rasterzelle zugeordnet, in der ihr Schwerpunkt liegt.
+     Ein fester Rasterschnitt hatte an jedem Sprite einen Schnipsel vom
+     Nachbarwagen kleben.
+  3. Auf Spielmaßstab bringen (64 px je Meter, Längen stehen in `BOEGEN`),
+     dunkle Kontur, mittig auf die Leinwand.
+
+  Aufruf: `python tools/spiel-bogen.py --bogen autos2 --bild "pfad/2.webp"`.
+  Bögen: `autos1`, `autos2` (je 12 Fahrzeuge), `leute`, `dienst` (je 12
+  Figuren), `helden` (Jason und Lucia mit vier Posen).
+- **24 Fahrzeuge, 26 Figuren.** Nur Jason und Lucia haben echte Laufbilder
+  (aus den vier Posen wird der Zyklus `[1,1,2,2,3,3,0,0]`), alle anderen
+  haben ein Standbild — die Schrittbewegung entsteht im Spiel über
+  `Figur.wiegen` (leichtes Wiegen um die Hochachse plus Auf und Ab). Bei
+  50 Bildpunkten Körpergröße reicht das und spart 200 erzeugte Bilder.
+  Ab vier Sternen steigt die Spezialeinheit aus (`swat`, mehr Leben).
 - **Vorn und hinten am Auto (21.09.2026):** Die Kamera schaut von schräg hinten
   oben, man sieht also vor allem Dach und Heck. Deshalb tragen alle Fahrzeuge
   jetzt **zwei weiße Scheinwerferflächen auf der Haube** und **zwei rote

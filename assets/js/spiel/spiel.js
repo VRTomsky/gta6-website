@@ -1369,10 +1369,15 @@ async function starten() {
   start.classList.add("is-laden");
   const autos = Object.keys(TYPEN).map(t => "auto_" + t);
   const ampeln = ["ampel_rot", "ampel_gelb", "ampel_gruen"];
+  /* Hauptfiguren haben acht Laufbilder, alle anderen nur ein Standbild */
   const figuren = [];
-  for (const art of ["lucia", "jason", "polizist", "polizistin", ...PASSANT_ARTEN]) {
+  for (const art of ["lucia", "jason"]) {
     figuren.push(`${art}_steht`);
     for (let i = 0; i < 8; i++) figuren.push(`${art}_lauf${i}`);
+  }
+  for (const art of [...PASSANT_ARTEN, "polizist", "polizistin", "swat",
+                     "polizist_sommer", "sanitaeterin", "feuerwehr_mann"]) {
+    figuren.push(`${art}_steht`);
   }
   Tex.bauen();
   Waffenbilder.bauen();

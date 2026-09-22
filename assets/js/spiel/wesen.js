@@ -39,8 +39,9 @@ export class Figur {
     this.waffenBild = null;             // Sprite der getragenen Waffe
     this.waffenBreite = 0.5;
     /* Jason und Lucia sind etwas größer gezeichnet als die Passanten —
-       zusammen mit Ring und Namensschild erkennt man sie sofort. */
-    this.faktor = art === "lucia" || art === "jason" ? 1.16 : 1;
+       zusammen mit Ring und Namensschild erkennt man sie sofort. Seit die
+       Sprites aus den Bögen kommen, reicht ein kleiner Zuschlag. */
+    this.faktor = art === "lucia" || art === "jason" ? 1.06 : 1;
   }
 
   get daten() { return FIGUREN[this.art] || FIGUREN.lucia; }
@@ -149,9 +150,17 @@ export class Figur {
   get tempo() { return Math.hypot(this.vx, this.vy); }
 
   bildname() {
-    if (this.tempo < 0.35) return `${this.art}_steht`;
+    if (!MIT_LAUF.has(this.art) || this.tempo < 0.35) return `${this.art}_steht`;
     const i = Math.floor((this.strecke / 0.9) % BILDER_LAUF);
     return `${this.art}_lauf${i}`;
+  }
+
+  /* Wer kein Laufbild hat, bekommt die Bewegung angedeutet: ein leichtes
+     Wiegen um die Hochachse und ein kleines Auf und Ab. Bei 50 Bildpunkten
+     Körpergröße liest sich das wie ein Schritt. */
+  get wiegen() {
+    if (MIT_LAUF.has(this.art) || this.tempo < 0.35) return 0;
+    return Math.sin(this.strecke * 4.4) * 0.09;
   }
 
   zeichnen(ctx, kamera) {
@@ -184,7 +193,8 @@ export class Figur {
     const zx = this.x + vx * schwung * 0.22;
     const zy = this.y + vy * schwung * 0.22 - h;
 
-    malen(ctx, this.bildname(), kamera, zx, zy, this.winkel, 0, this.faktor * (1 + h * 0.14));
+    malen(ctx, this.bildname(), kamera, zx, zy - Math.abs(this.wiegen) * 0.12,
+          this.winkel + this.wiegen, 0, this.faktor * (1 + h * 0.14));
 
     /* Waffe in der Hand — seitlich neben der Figur, in Blickrichtung */
     if (this.waffenBild) {
@@ -225,11 +235,19 @@ export class Figur {
    Richtung. Bei 60 Leuten im Bild kostet das kaum Rechenzeit.
    ═══════════════════════════════════════════════════════════ */
 
+/* Alle Passantenarten. Seit dem 22.09.2026 kommen sie aus gezeichneten
+   Bögen (tools/spiel-bogen.py) und haben nur ein Standbild — die
+   Schrittbewegung entsteht im Spiel. */
 export const PASSANT_ARTEN = [
-  "mann_hemd", "mann_tank", "mann_anzug", "mann_jacke", "mann_arbeiter", "mann_jung",
-  "frau_kleid", "frau_top", "frau_sport", "frau_business", "frau_lang", "frau_sommer",
-  "tourist", "tourist2", "rentner", "rentnerin"
+  "mann_hemd", "mann_tank", "mann_anzug", "mann_jung", "mann_arbeiter",
+  "frau_kleid", "frau_top", "frau_sport", "frau_business",
+  "tourist", "rentner", "rentnerin",
+  "wachmann", "taxifahrer", "verkaeufer", "rettungsschwimmerin",
+  "sanitaeter", "feuerwehr_dienst"
 ];
+
+/* Nur die Hauptfiguren haben echte Laufbilder */
+const MIT_LAUF = new Set(["jason", "lucia"]);
 
 const GEHBAR = [Karte.ART.GEHWEG, Karte.ART.PARK, Karte.ART.STRAND, Karte.ART.PARKPLATZ];
 

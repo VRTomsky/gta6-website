@@ -125,7 +125,11 @@ const TYPEN_LISTE = Object.keys(TYPEN).filter(t => t !== "streife");
 /* Manche Wagen sind seltener als andere */
 const HAEUFIG = {
   limo: 3, kombi: 3, taxi: 2, cabrio: 2, sport: 1, pickup: 2,
-  transporter: 2, bus: 1, oldtimer: 1, krankenwagen: 1, feuerwehr: 1
+  transporter: 2, bus: 1, oldtimer: 1, krankenwagen: 1, feuerwehr: 1,
+  /* Alltagswagen oft, Arbeitsfahrzeuge selten */
+  schrottkarre: 3, gelaende: 2, luxuscabrio: 2, muscle: 2, lowrider: 2,
+  surfbus: 2, supersport: 1, limousine: 1, nachrichten: 1,
+  abschlepper: 1, muellwagen: 1, kipper: 1
 };
 function typWaehlen() {
   const liste = [];

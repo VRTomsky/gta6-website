@@ -25,7 +25,23 @@ export const TYPEN = {
   bus:     { name: "Vice Transit",  lang: 9.20, breit: 2.45, kraft: 8.5,  spitze: 26, griff: 0.97 },
   oldtimer:{ name: "Ocean Classic", lang: 5.20, breit: 2.05, kraft: 11.5, spitze: 32, griff: 0.90 },
   krankenwagen: { name: "VC Rettung", lang: 5.60, breit: 2.20, kraft: 13.0, spitze: 34, griff: 0.94 },
-  feuerwehr: { name: "VCFD Löschzug", lang: 7.80, breit: 2.50, kraft: 10.0, spitze: 28, griff: 0.96 }
+  feuerwehr: { name: "VCFD Löschzug", lang: 7.80, breit: 2.50, kraft: 10.0, spitze: 28, griff: 0.96 },
+  /* ── zweiter Bogen (22.09.2026) ──
+     Zwölf weitere Modelle: Luxus, Straße, Gelände, Arbeit. Die Werte
+     folgen der Bauart — ein Müllwagen zieht schlecht und hält die Spur,
+     ein Keilsportwagen zieht hart und bricht eher aus. */
+  limousine:   { name: "Vice Stretch",     lang: 7.00, breit: 2.10, kraft: 10.0, spitze: 30, griff: 0.94 },
+  luxuscabrio: { name: "Ocean Drophead",   lang: 4.90, breit: 1.98, kraft: 13.5, spitze: 38, griff: 0.91 },
+  lowrider:    { name: "Boulevard Low",    lang: 5.30, breit: 2.05, kraft: 11.5, spitze: 32, griff: 0.89 },
+  muscle:      { name: "Leonida Muscle",   lang: 4.90, breit: 2.00, kraft: 18.0, spitze: 46, griff: 0.87 },
+  supersport:  { name: "Sunset Wedge",     lang: 4.40, breit: 1.95, kraft: 20.0, spitze: 52, griff: 0.88 },
+  surfbus:     { name: "Surf Bus",         lang: 4.70, breit: 2.05, kraft: 11.5, spitze: 31, griff: 0.93 },
+  schrottkarre:{ name: "Rostlaube",        lang: 4.80, breit: 1.95, kraft: 9.5,  spitze: 27, griff: 0.88 },
+  gelaende:    { name: "Glades 4x4",       lang: 4.70, breit: 2.10, kraft: 13.0, spitze: 33, griff: 0.95 },
+  abschlepper: { name: "VC Abschlepp",     lang: 6.20, breit: 2.25, kraft: 11.0, spitze: 29, griff: 0.95 },
+  muellwagen:  { name: "Vice Sanitation",  lang: 8.00, breit: 2.50, kraft: 8.5,  spitze: 24, griff: 0.96 },
+  nachrichten: { name: "Newswire Van",     lang: 5.50, breit: 2.15, kraft: 12.0, spitze: 32, griff: 0.94 },
+  kipper:      { name: "Leonida Kipper",   lang: 7.50, breit: 2.45, kraft: 9.0,  spitze: 26, griff: 0.96 }
 };
 
 export class Fahrzeug {
