@@ -44,6 +44,30 @@ export function malen(ctx, name, kamera, x, y, winkel, breiteM = 0, faktor = 1) 
   ctx.restore();
 }
 
+/* ── Aufrechte Sprites ──
+   Die Figuren sind von schräg vorn gezeichnet, nicht streng von oben.
+   Dreht man sie mit der Laufrichtung, liegen sie quer auf der Straße.
+   Deshalb bleiben sie aufrecht: gekippt wird nur ein wenig, und wer nach
+   links geht, wird gespiegelt.
+
+   neigung in Radiant, spiegeln = Blick nach links. */
+export function aufrecht(ctx, name, kamera, x, y, neigung = 0, faktor = 1, spiegeln = false) {
+  const bild = bilder.get(name);
+  if (!bild) return;
+  const z = kamera.zoom;
+  const px = (x - kamera.x) * z + kamera.breite / 2;
+  const py = (y - kamera.y) * z + kamera.hoehe / 2;
+  const skala = (z / SPRITE_PX) * faktor;
+  const w = bild.width * skala, h = bild.height * skala;
+
+  ctx.save();
+  ctx.translate(px, py);
+  if (neigung) ctx.rotate(neigung);
+  if (spiegeln) ctx.scale(-1, 1);
+  ctx.drawImage(bild, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
 /* Weicher Schatten unter Figuren und Autos */
 export function schatten(ctx, kamera, x, y, rx, ry) {
   const z = kamera.zoom;

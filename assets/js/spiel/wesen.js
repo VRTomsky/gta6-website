@@ -7,7 +7,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
-import { malen, schatten } from "./bilder.js";
+import { malen, aufrecht, schatten } from "./bilder.js";
 
 export const FIGUREN = {
   lucia: { name: "Lucia", tempo: 4.6, rennen: 7.4, breite: 0.62 },
@@ -163,6 +163,14 @@ export class Figur {
     return Math.sin(this.strecke * 4.4) * 0.09;
   }
 
+  /* Wie stark die Figur sich in Laufrichtung legt. Voll gedreht sähe sie
+     aus, als läge sie auf dem Asphalt — die Bögen zeigen sie von schräg
+     vorn. Also: aufrecht bleiben, nach links spiegeln, leicht kippen. */
+  get blick() {
+    const quer = Math.cos(this.winkel);        // +1 nach rechts, −1 nach links
+    return { spiegeln: quer < -0.12, neigung: quer * 0.3 + this.wiegen };
+  }
+
   zeichnen(ctx, kamera) {
     if (this.imAuto) return;
     const px = (this.x - kamera.x) * kamera.zoom + kamera.breite / 2;
@@ -178,8 +186,9 @@ export class Figur {
         ctx.fill();
       }
       ctx.globalAlpha = this.tot ? 0.8 : 0.9;
-      malen(ctx, `${this.art}_steht`, kamera, this.x, this.y, this.winkel + Math.PI / 2,
-            0, this.faktor * 0.9);
+      /* Liegend: einmal um 90° gekippt, dann liegt die Figur wirklich */
+      aufrecht(ctx, `${this.art}_steht`, kamera, this.x, this.y,
+               Math.PI / 2, this.faktor * 0.9);
       ctx.restore();
       return;
     }
@@ -193,8 +202,9 @@ export class Figur {
     const zx = this.x + vx * schwung * 0.22;
     const zy = this.y + vy * schwung * 0.22 - h;
 
-    malen(ctx, this.bildname(), kamera, zx, zy - Math.abs(this.wiegen) * 0.12,
-          this.winkel + this.wiegen, 0, this.faktor * (1 + h * 0.14));
+    const blick = this.blick;
+    aufrecht(ctx, this.bildname(), kamera, zx, zy - Math.abs(this.wiegen) * 0.12,
+             blick.neigung, this.faktor * (1 + h * 0.14), blick.spiegeln);
 
     /* Waffe in der Hand — seitlich neben der Figur, in Blickrichtung */
     if (this.waffenBild) {
