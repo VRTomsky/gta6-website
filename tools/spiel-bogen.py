@@ -63,7 +63,17 @@ BOEGEN = {
             ("jason", 1.86), ("jason", 1.86), ("jason", 1.86), ("jason", 1.86),
             ("lucia", 1.74), ("lucia", 1.74), ("lucia", 1.74), ("lucia", 1.74),
         ]),
+    # Vier Richtungen mal vier Posen: Zeile 1 von vorn, 2 von hinten,
+    # 3 nach links, 4 nach rechts. Spalte 1 steht, 2 bis 4 laufen.
+    "jason4": dict(
+        spalten=4, zeilen=4, hintergrund="gruen", art="richtung",
+        figur="jason", groesse=1.86),
+    "lucia4": dict(
+        spalten=4, zeilen=4, hintergrund="gruen", art="richtung",
+        figur="lucia", groesse=1.74),
 }
+
+RICHTUNGEN = ["vorn", "hinten", "links", "rechts"]
 
 
 # ── Hintergrund entfernen ──────────────────────────────────
@@ -219,6 +229,8 @@ def main():
     a = p.parse_args()
 
     plan = BOEGEN[a.bogen]
+    if plan["art"] == "richtung":
+        plan = dict(plan, zellen=[(plan["figur"], plan["groesse"])] * 16)
     bild = Image.open(a.bild)
     bild = gruen_weg(bild) if plan["hintergrund"] == "gruen" else weiss_weg(bild)
 
@@ -248,7 +260,13 @@ def main():
             continue
         fertig = mittig(kontur(frei))
 
-        if plan["art"] == "auto":
+        if plan["art"] == "richtung":
+            datei = f"{name}_{RICHTUNGEN[i // 4]}{i % 4}.png"
+            fertig.save(os.path.join(a.ziel, datei), optimize=True)
+            if i == 0:
+                fertig.save(os.path.join(a.ziel, f"{name}_steht.png"), optimize=True)
+            print(f"  {datei}: {fertig.width}x{fertig.height}")
+        elif plan["art"] == "auto":
             fertig.save(os.path.join(a.ziel, f"auto_{name}.png"), optimize=True)
             print(f"  auto_{name}.png: {fertig.width}x{fertig.height}")
         elif plan["art"] == "held":

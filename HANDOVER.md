@@ -823,11 +823,15 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   Aufruf: `python tools/spiel-bogen.py --bogen autos2 --bild "pfad/2.webp"`.
   Bögen: `autos1`, `autos2` (je 12 Fahrzeuge), `leute`, `dienst` (je 12
   Figuren), `helden` (Jason und Lucia mit vier Posen).
-- **24 Fahrzeuge, 26 Figuren.** Nur Jason und Lucia haben echte Laufbilder
-  (aus den vier Posen wird der Zyklus `[1,1,2,2,3,3,0,0]`), alle anderen
-  haben ein Standbild — die Schrittbewegung entsteht im Spiel über
-  `Figur.wiegen` (leichtes Wiegen um die Hochachse plus Auf und Ab). Bei
-  50 Bildpunkten Körpergröße reicht das und spart 200 erzeugte Bilder.
+- **24 Fahrzeuge, 26 Figuren.** Jason und Lucia liegen in **vier Ansichten
+  mal vier Posen** vor (`jason_vorn0` … `lucia_rechts3`, Bögen `jason4`
+  und `lucia4`): `Figur.richtung` wählt aus dem Laufwinkel die Ansicht,
+  `LAUF_POSEN = [1,2,3,2]` den Schritt. Alle anderen haben ein Standbild;
+  sie bleiben aufrecht, werden nach links gespiegelt und leicht geneigt
+  (`Figur.blick`, `bilder.aufrecht`). **Wichtig:** Die Bögen zeigen die
+  Figuren von schräg vorn, nicht streng von oben — deshalb dürfen sie
+  nicht mit der Laufrichtung gedreht werden, sonst liegen sie quer auf
+  der Straße. Genau das war der erste Fehler nach dem Umstieg.
   Ab vier Sternen steigt die Spezialeinheit aus (`swat`, mehr Leben).
 - **Vorn und hinten am Auto (21.09.2026):** Die Kamera schaut von schräg hinten
   oben, man sieht also vor allem Dach und Heck. Deshalb tragen alle Fahrzeuge

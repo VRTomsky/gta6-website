@@ -149,17 +149,27 @@ export class Figur {
 
   get tempo() { return Math.hypot(this.vx, this.vy); }
 
+  /* Welche der vier Ansichten passt zur Laufrichtung? */
+  get richtung() {
+    const s = Math.sin(this.winkel);          // > 0: nach unten, zum Betrachter
+    const c = Math.cos(this.winkel);
+    if (Math.abs(s) >= Math.abs(c)) return s > 0 ? "vorn" : "hinten";
+    return c > 0 ? "rechts" : "links";
+  }
+
   bildname() {
-    if (!MIT_LAUF.has(this.art) || this.tempo < 0.35) return `${this.art}_steht`;
-    const i = Math.floor((this.strecke / 0.9) % BILDER_LAUF);
-    return `${this.art}_lauf${i}`;
+    if (!VIER_RICHTUNGEN.has(this.art)) return `${this.art}_steht`;
+    const r = this.richtung;
+    if (this.tempo < 0.35) return `${this.art}_${r}0`;
+    const k = LAUF_POSEN[Math.floor(this.strecke / 0.55) % LAUF_POSEN.length];
+    return `${this.art}_${r}${k}`;
   }
 
   /* Wer kein Laufbild hat, bekommt die Bewegung angedeutet: ein leichtes
      Wiegen um die Hochachse und ein kleines Auf und Ab. Bei 50 Bildpunkten
      Körpergröße liest sich das wie ein Schritt. */
   get wiegen() {
-    if (MIT_LAUF.has(this.art) || this.tempo < 0.35) return 0;
+    if (VIER_RICHTUNGEN.has(this.art) || this.tempo < 0.35) return 0;
     return Math.sin(this.strecke * 4.4) * 0.09;
   }
 
@@ -167,6 +177,8 @@ export class Figur {
      aus, als läge sie auf dem Asphalt — die Bögen zeigen sie von schräg
      vorn. Also: aufrecht bleiben, nach links spiegeln, leicht kippen. */
   get blick() {
+    /* Wer vier Ansichten hat, braucht weder Spiegelung noch Neigung */
+    if (VIER_RICHTUNGEN.has(this.art)) return { spiegeln: false, neigung: 0 };
     const quer = Math.cos(this.winkel);        // +1 nach rechts, −1 nach links
     return { spiegeln: quer < -0.12, neigung: quer * 0.3 + this.wiegen };
   }
@@ -256,8 +268,12 @@ export const PASSANT_ARTEN = [
   "sanitaeter", "feuerwehr_dienst"
 ];
 
-/* Nur die Hauptfiguren haben echte Laufbilder */
-const MIT_LAUF = new Set(["jason", "lucia"]);
+/* Jason und Lucia gibt es in vier Richtungen mal vier Posen
+   (`jason_vorn0` … `lucia_rechts3`). Alle anderen haben ein Standbild. */
+const VIER_RICHTUNGEN = new Set(["jason", "lucia"]);
+const RICHTUNGEN = ["vorn", "hinten", "links", "rechts"];
+/* Spalte 0 steht, 1–3 laufen: Schritt links, Mitte, Schritt rechts, Mitte */
+const LAUF_POSEN = [1, 2, 3, 2];
 
 const GEHBAR = [Karte.ART.GEHWEG, Karte.ART.PARK, Karte.ART.STRAND, Karte.ART.PARKPLATZ];
 
