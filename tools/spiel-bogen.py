@@ -74,6 +74,13 @@ BOEGEN = {
         figur="lucia", groesse=1.74),
 }
 
+# Taenzerinnen des Pink Flamingo: derselbe Bogen wie bei den Helden,
+# vier Ansichten mal vier Posen, ein Bild je Maedel.
+for _nr in range(1, 9):
+    BOEGEN[f"tanz{_nr}"] = dict(
+        spalten=4, zeilen=4, hintergrund="gruen", art="richtung",
+        figur=f"tanz{_nr}", groesse=1.72)
+
 RICHTUNGEN = ["vorn", "hinten", "links", "rechts"]
 
 # ── Bodenkacheln ──

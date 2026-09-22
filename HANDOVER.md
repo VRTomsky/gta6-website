@@ -870,6 +870,21 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Nachtclubs:** eigene Bauart `BAU.CLUB` mit drei Wahrzeichen (Pink
   Flamingo, Neon Kitty, Club Sunset). Vorher war `bau_club` nur eine von
   mehreren Ladenfassaden und tauchte auf der Karte nicht auf.
+- **Tänzerinnen (in Arbeit):** Für den Pink Flamingo sind acht Figuren
+  geplant. Die Bögen `tanz1` … `tanz8` stehen schon in `spiel-bogen.py` —
+  je ein Bild pro Figur, **vier Ansichten mal vier Posen wie bei Jason und
+  Lucia**, Größe 1,72 m. Erst dadurch laufen sie; ein Bogen mit nur drei
+  Standbildern reicht nicht. Die Prompts dafür liegen in
+  `2d bilder/PROMPT-taenzerinnen-laufen.txt` (der Ordner geht nicht ins
+  Repository). Sobald die Bilder da sind: zuschneiden, in `wesen.js` zu
+  `VIER_RICHTUNGEN` dazu, in `spiel.js` vorladen.
+- **Innenraum des Clubs (geplant):** Sechs Räume als je ein Bild von
+  oben, Prompts in `2d bilder/PROMPT-stripclub-innen.txt`. Maßstab steht
+  im Seitenverhältnis (3:2 = 24 × 16 m, 4:3 = 16 × 12 m), Türöffnungen
+  sind in den Wänden markiert. Der Spieler läuft im Raumbild, Wände und
+  Möbel blockieren über von Hand gesetzte Kästen, an den Türen wird der
+  Raum gewechselt. Das ist etwas anderes als `zustand.drinnen` beim
+  Ladenraub — das ist nur ein Bildschirm ohne Bewegung.
 - **Alles als WebP (22.09.2026):** Die 204 Sprites wären als PNG rund 65 MB,
   als WebP sind es 4,2 MB. `bilder.js` lädt nur noch `.webp`.
   **Nach jedem Bogenlauf `python tools/spiel-webp.py --ordner assets/img/spiel`
