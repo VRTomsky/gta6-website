@@ -826,9 +826,11 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **24 Fahrzeuge, 26 Figuren.** Jason und Lucia liegen in **vier Ansichten
   mal vier Posen** vor (`jason_vorn0` … `lucia_rechts3`, Bögen `jason4`
   und `lucia4`): `Figur.richtung` wählt aus dem Laufwinkel die Ansicht,
-  `LAUF_POSEN = [1,2,3,2]` den Schritt. Alle anderen haben ein Standbild;
-  sie bleiben aufrecht, werden nach links gespiegelt und leicht geneigt
-  (`Figur.blick`, `bilder.aufrecht`). **Wichtig:** Die Bögen zeigen die
+  `LAUF_POSEN = [1,2,3,2]` den Schritt. Alle anderen haben **drei
+  Ansichten**: `_steht` von vorn, `_hinten` und `_links` — nach rechts wird
+  das linke Bild gespiegelt (Bögen `leute_hinten`, `leute_links`,
+  `dienst_hinten`, `dienst_links`). Gezeichnet wird über `bilder.aufrecht`,
+  die Schrittbewegung kommt aus `Figur.wiegen`. **Wichtig:** Die Bögen zeigen die
   Figuren von schräg vorn, nicht streng von oben — deshalb dürfen sie
   nicht mit der Laufrichtung gedreht werden, sonst liegen sie quer auf
   der Straße. Genau das war der erste Fehler nach dem Umstieg.

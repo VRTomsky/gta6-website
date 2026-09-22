@@ -158,11 +158,16 @@ export class Figur {
   }
 
   bildname() {
-    if (!VIER_RICHTUNGEN.has(this.art)) return `${this.art}_steht`;
     const r = this.richtung;
-    if (this.tempo < 0.35) return `${this.art}_${r}0`;
-    const k = LAUF_POSEN[Math.floor(this.strecke / 0.55) % LAUF_POSEN.length];
-    return `${this.art}_${r}${k}`;
+    if (VIER_RICHTUNGEN.has(this.art)) {
+      if (this.tempo < 0.35) return `${this.art}_${r}0`;
+      const k = LAUF_POSEN[Math.floor(this.strecke / 0.55) % LAUF_POSEN.length];
+      return `${this.art}_${r}${k}`;
+    }
+    /* Passanten: drei Bilder, nach rechts wird das linke gespiegelt */
+    if (r === "hinten") return `${this.art}_hinten`;
+    if (r === "links" || r === "rechts") return `${this.art}_links`;
+    return `${this.art}_steht`;
   }
 
   /* Wer kein Laufbild hat, bekommt die Bewegung angedeutet: ein leichtes
@@ -179,8 +184,9 @@ export class Figur {
   get blick() {
     /* Wer vier Ansichten hat, braucht weder Spiegelung noch Neigung */
     if (VIER_RICHTUNGEN.has(this.art)) return { spiegeln: false, neigung: 0 };
-    const quer = Math.cos(this.winkel);        // +1 nach rechts, −1 nach links
-    return { spiegeln: quer < -0.12, neigung: quer * 0.3 + this.wiegen };
+    /* Die Seitenansicht der Passanten schaut nach links — nach rechts
+       wird sie gespiegelt. Dazu das Wiegen, weil es keine Laufbilder gibt. */
+    return { spiegeln: this.richtung === "rechts", neigung: this.wiegen };
   }
 
   zeichnen(ctx, kamera) {
@@ -342,7 +348,11 @@ export function passantenVerteilen(anzahl, umX, umY, radius = 110) {
     const p = Karte.freierPunkt(umX + (Math.random() - 0.5) * radius,
                                 umY + (Math.random() - 0.5) * radius, GEHBAR, 40);
     const art = PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
-    liste.push(new Passant(art, p.x, p.y));
+    const passant = new Passant(art, p.x, p.y);
+    /* Blickrichtung streuen — sonst schaut beim Start die halbe Stadt
+       gleichzeitig nach Norden */
+    passant.winkel = Math.random() * Math.PI * 2;
+    liste.push(passant);
   }
   return liste;
 }
@@ -372,6 +382,7 @@ export function passantenNachziehen(liste, x, y, weite = 150) {
     p.x = ziel.x;
     p.y = ziel.y;
     p.vx = p.vy = 0;
+    p.winkel = Math.random() * Math.PI * 2;
     p.tot = false;
     p.totZeit = 0;
     p.leben = 100;

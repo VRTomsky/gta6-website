@@ -75,6 +75,13 @@ BOEGEN = {
 
 RICHTUNGEN = ["vorn", "hinten", "links", "rechts"]
 
+# Zu jedem Figurenbogen gibt es zwei weitere: von hinten und von der
+# Seite (nach links). Nach rechts wird im Spiel gespiegelt.
+for _basis in ("leute", "dienst"):
+    for _ansicht in ("hinten", "links"):
+        BOEGEN[f"{_basis}_{_ansicht}"] = dict(BOEGEN[_basis], art="ansicht",
+                                              ansicht=_ansicht)
+
 
 # ── Hintergrund entfernen ──────────────────────────────────
 def gruen_weg(bild):
@@ -260,7 +267,11 @@ def main():
             continue
         fertig = mittig(kontur(frei))
 
-        if plan["art"] == "richtung":
+        if plan["art"] == "ansicht":
+            datei = f"{name}_{plan['ansicht']}.png"
+            fertig.save(os.path.join(a.ziel, datei), optimize=True)
+            print(f"  {datei}: {fertig.width}x{fertig.height}")
+        elif plan["art"] == "richtung":
             datei = f"{name}_{RICHTUNGEN[i // 4]}{i % 4}.png"
             fertig.save(os.path.join(a.ziel, datei), optimize=True)
             if i == 0:

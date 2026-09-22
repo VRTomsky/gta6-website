@@ -1377,9 +1377,10 @@ async function starten() {
       for (let i = 0; i < 4; i++) figuren.push(`${art}_${r}${i}`);
     }
   }
+  /* Passanten und Uniformen: von vorn, von hinten und von der Seite */
   for (const art of [...PASSANT_ARTEN, "polizist", "polizistin", "swat",
                      "polizist_sommer", "sanitaeterin", "feuerwehr_mann"]) {
-    figuren.push(`${art}_steht`);
+    figuren.push(`${art}_steht`, `${art}_hinten`, `${art}_links`);
   }
   Tex.bauen();
   Waffenbilder.bauen();
