@@ -76,7 +76,7 @@
   <header class="sseite__kopf">
     <p class="kicker" data-en="Fan-made mini game">Kleines Fan-Spiel</p>
     <h1 class="h-display">Vice City Run</h1>
-    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel, with traffic, pedestrians, cops and four jobs. Hold Alt to switch between Jason and Lucia. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer, mit Verkehr, Passanten, Polizei und vier Aufträgen. Mit gehaltener Alt-Taste wechselst du zwischen Jason und Lucia. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
+    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel, with traffic, pedestrians, cops and ten jobs. Hold Alt to switch between Jason and Lucia. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer, mit Verkehr, Passanten, Polizei und zehn Aufträgen. Mit gehaltener Alt-Taste wechselst du zwischen Jason und Lucia. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
   </header>
 
   <div class="sbuehne">
@@ -158,13 +158,28 @@
       <canvas class="skarte" id="spielKarte" width="288" height="180"></canvas>
     </div>
 
-    <div class="sstart" id="spielStart">
+    <div class="sstart" id="spielStart" hidden>
       <div class="sstart__karte">
         <p class="kicker" data-en="Vice City, 1986-ish">Vice City, irgendwann in den Achtzigern</p>
         <h2 class="h-display">Vice City Run</h2>
-        <p data-en="Drive, walk, explore. Traffic, pedestrians, police with a wanted level, four jobs and a leaderboard are in.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei mit Fahndungsstufe, vier Aufträge und eine Bestenliste sind drin.</p>
+        <p data-en="Drive, walk, explore. Traffic, pedestrians, police with a wanted level, ten jobs from courier runs to a bank heist, and a leaderboard.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei mit Fahndungsstufe, zehn Aufträge von der Kurierfahrt bis zum Bankraub und eine Bestenliste.</p>
         <button type="button" class="btn btn--pink btn--lg" id="spielStartKnopf" data-en="Start game">Spiel starten</button>
         <p class="sstart__klein" data-en="Loads about 1 MB of graphics.">Lädt rund 1 MB Grafik.</p>
+      </div>
+    </div>
+
+    <!-- Tor: ohne Konto kein Spiel. Geld, erledigte Auftraege und der
+         Bestwert haengen am Konto. -->
+    <div class="stor" id="spielTor" hidden>
+      <div class="stor__karte">
+        <p class="kicker" data-en="Account needed">Nur mit Konto</p>
+        <h2 class="h-display" data-en="Sign in to play">Zum Spielen anmelden</h2>
+        <p data-en="Vice City Run keeps your money, your finished jobs and your best run in your account — that only works when you are signed in. It is free and takes a minute.">Vice City Run merkt sich dein Geld, deine erledigten Aufträge und deinen besten Lauf im Konto — das geht nur angemeldet. Kostet nichts und dauert eine Minute.</p>
+        <div class="stor__knoepfe">
+          <button type="button" class="btn btn--pink btn--lg" data-tor="neu" data-en="Create account">Konto erstellen</button>
+          <button type="button" class="btn btn--ghost" data-tor="anmelden" data-en="Sign in">Anmelden</button>
+        </div>
+        <p class="stor__klein" data-en="Your best run then shows up in the leaderboard below.">Dein bester Lauf steht danach in der Bestenliste unter dem Spiel.</p>
       </div>
     </div>
 
@@ -200,13 +215,14 @@
       <canvas id="spielGrossKarte" width="900" height="760"></canvas>
       <div class="sgross__seite">
         <ul class="sgross__legende">
-          <li><i style="background:#ffd24a"></i><span data-en="Job available">Auftrag frei</span></li>
-          <li><i style="background:#7dfba7"></i><span data-en="Current target">Aktuelles Ziel</span></li>
-          <li><i style="background:#6ee7a0"></i><span data-en="Ammu-Vice (gun shop)">Ammu-Vice (Waffen)</span></li>
-          <li><i style="background:#ff4aa0"></i><span data-en="Your waypoint">Dein Wegpunkt</span></li>
-          <li><i style="background:#ff8ab4"></i><span data-en="You">Du</span></li>
-          <li><i style="background:#7ab8ff"></i><span data-en="Second character">Zweite Figur</span></li>
-          <li><i style="background:#ff5566"></i><span data-en="Police">Polizei</span></li>
+          <li><i class="sm sm--stern" style="background:#ffd24a"></i><span data-en="Job available">Auftrag frei</span></li>
+          <li><i class="sm sm--raute" style="background:#39d4ff"></i><span data-en="Current target">Aktuelles Ziel</span></li>
+          <li><i class="sm sm--kreuz" style="background:#4bd07f"></i><span data-en="Ammu-Vice (gun shop)">Ammu-Vice (Waffen)</span></li>
+          <li><i class="sm sm--fahne" style="background:#ff4aa0"></i><span data-en="Your waypoint">Dein Wegpunkt</span></li>
+          <li><i class="sm sm--pfeil" style="background:#ff8ab4"></i><span data-en="You">Du</span></li>
+          <li><i class="sm" style="background:#7ab8ff"></i><span data-en="Second character">Zweite Figur</span></li>
+          <li><i class="sm" style="background:#ff5566"></i><span data-en="Police">Polizei</span></li>
+          <li><i class="sm sm--punkt" style="background:#e6ecff"></i><span data-en="Landmarks">Orte der Stadt</span></li>
         </ul>
         <div class="sgross__knoepfe">
           <button type="button" class="btn btn--ghost" data-gross="wegpunkt" data-en="Clear waypoint">Wegpunkt löschen</button>
@@ -214,7 +230,7 @@
           <button type="button" class="btn btn--ghost" data-gross="vollbild" data-en="Fullscreen">Vollbild</button>
           <button type="button" class="btn btn--pink" data-gross="zu" data-en="Back to the game">Zurück ins Spiel</button>
         </div>
-        <p class="sgross__hinweis" data-en="Click the map to set a waypoint, mouse wheel to zoom, drag to move. M closes the map.">Klick auf die Karte setzt einen Wegpunkt, Mausrad zoomt, Ziehen verschiebt. Mit M schließt du die Karte.</p>
+        <p class="sgross__hinweis" data-en="Click the map to set a waypoint, mouse wheel to zoom, drag to move — hover a marker to see what it is. M closes the map.">Klick auf die Karte setzt einen Wegpunkt, Mausrad zoomt, Ziehen verschiebt — fährst du über eine Marke, steht dabei, was sie bedeutet. Mit M schließt du die Karte.</p>
       </div>
     </div>
 

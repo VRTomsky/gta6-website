@@ -784,7 +784,8 @@ spiel/wesen.js      Figuren zu Fuß und Passanten (Laufanimation über die Strec
 spiel/fahrzeug.js   Fahrmodell und Fahrzeugdaten
 spiel/verkehr.js    Verkehr: Spuren, Abbiegen, Ampeln, Auffahren vermeiden
 spiel/polizei.js    Streifen, Polizisten, Fahndungsstufe 0–5
-spiel/missionen.js  vier Aufträge als Schrittfolgen mit Fristen
+spiel/missionen.js  zehn Aufträge als Schrittfolgen (fahren, warten,
+                    drinnen, sammeln, jagen, abhaengen)
 spiel/waffen.js     Fäuste, Pistole, Micro-MP, Pumpgun, AK, Waffenläden
 spiel/waffenbilder.js  Waffen als Leinwand gezeichnet: von oben für die
                     Hand, von der Seite für Laden und Anzeige
@@ -875,6 +876,31 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Springen** mit der Leertaste (zu Fuß; im Auto bleibt sie die Handbremse).
   Der Sprung ist nur Zeichnung: `Figur.hoch` hebt das Sprite an, der Schatten
   schrumpft, das Tempo steigt kurz um ein Drittel.
+- **Aufträge (22.09.2026 neu):** zehn statt vier, und sie liegen an den
+  Wahrzeichen statt auf irgendeinem Parkplatz. Sechs Schrittarten:
+  `fahren`, `warten`, `drinnen`, `sammeln`, `jagen`, `abhaengen`.
+  Beim **Ladenraub** (`drinnen`) verschwindet die Figur im Gebäude
+  (`zustand.drinnen`), die Uhr läuft, danach steht man mit Beute und zwei
+  Sternen wieder draußen und muss flüchten — vorher stand man nur in einem
+  Kreis auf einem Parkplatz herum, was niemand verstanden hat.
+  Beim **Abhängen** zählt jetzt auch der Abstand: die Fahndung kühlt
+  doppelt so schnell ab, wenn der nächste Streifenwagen weiter als 150 m
+  weg ist.
+- **Drei Einblendungen, drei Farben** (`endeZeigen(text, art)`):
+  `verhaftet` blau, `tot` rot, `gut` grün für „Auftrag geschafft". Vorher
+  hieß beides „ERLEDIGT" und man wusste nie, was gerade passiert war.
+  Nach dem Tod startet man **an der Klinik**, nach einer Festnahme **vor
+  der Wache** — nicht mehr irgendwo auf der Straße.
+- **Zugang nur mit Konto:** `spielTor` liegt über der Bühne, solange
+  `konto.nutzer` fehlt; die Knöpfe öffnen den Anmelde- oder
+  Registrierdialog (`dialogOeffnen`). Ohne eingerichtetes Backend bleibt
+  die Tür offen, sonst könnte lokal niemand spielen.
+- **Marken auf der Karte** haben eigene Formen (`MARKEN` in
+  `minikarte.js`): Stern = Auftrag, Raute = aktuelles Ziel, Kreuz =
+  Ammu-Vice, Fahne = Wegpunkt, Kreise für Figur und Polizei. Vorher waren
+  alles Kreise, und Ziel wie Waffenladen waren beide grün. Auf der großen
+  Karte zeigt ein Schild unter dem Zeiger, was die Marke bedeutet.
+- **Wegpunkt** verschwindet von selbst, sobald man näher als 9 m dran ist.
 - **Punkte** = Geld + 750 je erledigtem Auftrag. Mit Konto landet der Bestwert
   in Firestore (`bestenliste/{uid}`, öffentlich lesbar) und auf der Spielseite;
   ohne Konto nur im `localStorage`.

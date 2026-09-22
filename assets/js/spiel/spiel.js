@@ -32,7 +32,8 @@ import * as Waffenbilder from "./waffenbilder.js";
 import { Route } from "./wege.js";
 import * as Minikarte from "./minikarte.js";
 import * as Ton from "./ton.js";
-import { zustand as konto } from "../konto/konto.js";
+import { zustand as konto, abonnieren as kontoAbo, dialogOeffnen, bereit as kontoBereit }
+  from "../konto/konto.js";
 
 const EN = (window.LANG || document.documentElement.lang || "de").startsWith("en");
 const L = (de, en) => (EN ? en : de);
@@ -72,6 +73,7 @@ const wechselFeld = document.getElementById("spielWechsel");
 const buehne = document.querySelector(".sbuehne");
 const vollKnopf = document.getElementById("spielVollbild");
 const karteKnopf = document.getElementById("spielKarteKnopf");
+const torFeld = document.getElementById("spielTor");
 const ruhig = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const kamera = { x: Karte.START.x, y: Karte.START.y, zoom: 30, breite: 0, hoehe: 0 };
@@ -101,6 +103,7 @@ const zustand = {
   arsenal: new Arsenal(),
   laeden: [],
   strahlen: [],               // kurze Schusslinien zum Zeichnen
+  drinnen: null,              // { rest, text } während eines Überfalls
   wegpunkt: null,             // selbst gesetztes Ziel auf der Karte
   route: new Route(),
   schonung: 0,                // kurz nach einem Neustart keine Festnahme
@@ -657,27 +660,49 @@ function neustartAn(x, y) {
   zustand.fahndung.loeschen();
 }
 
+/* Ort eines Wahrzeichens, sonst der Notfallpunkt */
+function wahrzeichenPunkt(bau, ersatzX, ersatzY) {
+  const w = Karte.wahrzeichen.find(x => x.bau === bau);
+  return w ? { x: w.x, y: w.y } : { x: ersatzX, y: ersatzY };
+}
+
 function verhaftet() {
   bestwertSichern();
   const f = spieler();
   zustand.geld = Math.round(zustand.geld * 0.7);
-  endeZeigen(L("VERHAFTET", "BUSTED"), false);
-  neustartAn(f.x + 60, f.y + 40);
+  zustand.missionen.abbrechen(L("Auftrag geplatzt", "Job blown"));
+  endeZeigen(L("VERHAFTET", "BUSTED"), "verhaftet");
+  /* Aus der Zelle kommt man vor der Wache heraus */
+  const wache = wahrzeichenPunkt(Karte.BAU.POLIZEI, f.x + 60, f.y + 40);
+  neustartAn(wache.x, wache.y);
+  hinweis(L("Die Wache spuckt dich wieder aus", "The station spits you back out"));
 }
 
 function erledigt() {
   bestwertSichern();
   const f = spieler();
-  endeZeigen(L("ERLEDIGT", "WASTED"), true);
   zustand.geld = Math.round(zustand.geld * 0.85);
-  neustartAn(f.x - 50, f.y - 30);
+  zustand.missionen.abbrechen(L("Auftrag geplatzt", "Job blown"));
+  endeZeigen(L("TOT", "WASTED"), "tot");
+  /* Wer stirbt, wacht in der Klinik auf — nicht irgendwo auf der Straße */
+  const klinik = wahrzeichenPunkt(Karte.BAU.KRANKENHAUS, f.x - 50, f.y - 30);
+  neustartAn(klinik.x, klinik.y);
+  hinweis(L("Du wachst in der Klinik auf", "You wake up at the hospital"));
 }
 
-function endeZeigen(text, tot) {
+/* art: "tot" (rot), "verhaftet" (blau), "gut" (grün) */
+function endeZeigen(text, art) {
   hud.endeText.textContent = text;
-  endeFeld.classList.toggle("sende--tot", tot);
+  endeFeld.classList.remove("sende--tot", "sende--verhaftet", "sende--gut");
+  endeFeld.classList.add("sende--" + art);
   endeFeld.hidden = false;
-  zustand.ende = 2.2;
+  zustand.ende = art === "gut" ? 1.8 : 2.2;
+}
+
+function auftragAnzeigen() {
+  const text = zustand.missionen.anzeige(zustand);
+  hud.auftrag.textContent = text;
+  hud.auftrag.classList.toggle("is-an", !!text);
 }
 
 /* ── Kamera und Größe ───────────────────────────────────── */
@@ -746,6 +771,20 @@ function rechnen(dt) {
   if (zustand.wahl) return;                        // Auswahl offen: Spiel wartet
 
   const f = spieler();
+
+  /* Überfall: Der Spieler ist im Gebäude. Dann läuft nur die Uhr —
+     steuern kann man nicht, gesehen wird man auch nicht. */
+  if (zustand.drinnen) {
+    const geldDrin = zustand.geld;
+    zustand.missionen.rechnen(dt, f, zustand);
+    if (zustand.geld > geldDrin) { Ton.kasse(); bestwertSichern(); }
+    auftragAnzeigen();
+    kameraFolgen(dt);
+    Ton.laufen(0, zustand.fahndung.stufe, dt, 0);
+    hudFahndung();
+    return;
+  }
+
   touchModus(!!f.imAuto);
   let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
   let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
@@ -821,11 +860,13 @@ function rechnen(dt) {
 
   /* ── Missionen ── */
   const geldVorher = zustand.geld;
+  const erledigtVorher = zustand.missionen.erledigt.size;
   zustand.missionen.rechnen(dt, f, zustand);
   if (zustand.geld > geldVorher) { Ton.kasse(); bestwertSichern(); }
-  const auftrag = zustand.missionen.anzeige();
-  hud.auftrag.textContent = auftrag;
-  hud.auftrag.classList.toggle("is-an", !!auftrag);
+  if (zustand.missionen.erledigt.size > erledigtVorher) {
+    endeZeigen(L("AUFTRAG GESCHAFFT", "JOB DONE"), "gut");
+  }
+  auftragAnzeigen();
 
   /* ── Polizei ── */
   zustand.schonung = Math.max(0, zustand.schonung - dt);
@@ -834,8 +875,14 @@ function rechnen(dt) {
   if (zustand.leben <= 0) erledigt();
   hudFahndung();
 
-  /* ── Route zum Ziel ── */
+  /* ── Route und Wegpunkt ── */
   const pos = f.imAuto || f;
+  if (zustand.wegpunkt &&
+      Math.hypot(pos.x - zustand.wegpunkt.x, pos.y - zustand.wegpunkt.y) < 9) {
+    zustand.wegpunkt = null;
+    zustand.route.leeren();
+    hinweis(L("Wegpunkt erreicht", "Waypoint reached"));
+  }
   zustand.route.aktualisieren(pos.x, pos.y, routenZiel(), dt);
 
   /* ── Ton ── */
@@ -935,6 +982,20 @@ function zeichnen() {
     }
   }
 
+  /* Während eines Überfalls steckt der Spieler im Haus: statt der Figur
+     pulsiert der Eingang. */
+  if (zustand.drinnen) {
+    const [px, py] = aufBild(zustand.drinnen.x, zustand.drinnen.y);
+    const r = kamera.zoom * (1.4 + Math.sin(zustand.zeit * 4) * 0.2);
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, "rgba(57,212,255,.55)");
+    g.addColorStop(1, "rgba(57,212,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   for (const p of zustand.passanten) if (sichtbar(p)) p.zeichnen(ctx, kamera);
   for (const a of zustand.autos) if (sichtbar(a)) a.zeichnen(ctx, kamera);
   for (const a of zustand.verkehr) if (sichtbar(a)) a.zeichnen(ctx, kamera);
@@ -942,6 +1003,7 @@ function zeichnen() {
   zustand.missionen.zeichnen(ctx, kamera, zustand.zeit);
   for (const name of Object.keys(zustand.figuren)) {
     const f = zustand.figuren[name];
+    if (zustand.drinnen && name === zustand.aktiv) continue;   // steckt im Haus
     if (sichtbar(f)) f.zeichnen(ctx, kamera);
   }
 
@@ -1114,6 +1176,7 @@ ladenFeld.addEventListener("click", e => {
    gedrückter Maustaste. */
 let ansicht = null;
 let karteBild = 0;
+let karteMaus = null;            // Zeigerposition auf der großen Karte
 
 function karteUmschalten(an) {
   const auf = an === undefined ? grossFeld.hidden : an;
@@ -1151,7 +1214,7 @@ function karteFrisch(neu) {
 function karteSchleife() {
   if (grossFeld.hidden) return;
   karteFrisch(false);
-  Minikarte.grosseKarteZeichnen(grossKarte, zustand, spieler(), ansicht);
+  Minikarte.grosseKarteZeichnen(grossKarte, zustand, spieler(), ansicht, karteMaus);
   karteBild = requestAnimationFrame(karteSchleife);
 }
 
@@ -1168,6 +1231,16 @@ grossKarte.addEventListener("wheel", e => {
 }, { passive: false });
 
 let schieben = null;
+grossKarte.addEventListener("pointermove", e => {
+  const kasten = grossKarte.getBoundingClientRect();
+  if (!kasten.width) return;
+  karteMaus = {
+    x: (e.clientX - kasten.left) / kasten.width * grossKarte.width,
+    y: (e.clientY - kasten.top) / kasten.height * grossKarte.height
+  };
+});
+grossKarte.addEventListener("pointerleave", () => { karteMaus = null; });
+
 grossKarte.addEventListener("pointerdown", e => {
   grossKarte.setPointerCapture(e.pointerId);
   schieben = { x: e.clientX, y: e.clientY, weg: 0, ax: ansicht.x, ay: ansicht.y };
@@ -1266,7 +1339,33 @@ function pauseUmschalten(an) {
 document.addEventListener("visibilitychange", () => { if (document.hidden) pauseUmschalten(true); });
 pauseFeld.addEventListener("click", () => pauseUmschalten(false));
 
+/* ── Zugang ──
+   Das Spiel merkt sich Geld, erledigte Aufträge und den Bestwert im
+   Konto — deshalb geht es nur angemeldet. Ist gar kein Konto-Backend
+   eingerichtet (etwa lokal ohne Firebase), bleibt die Tür offen, sonst
+   könnte niemand spielen. */
+let torOffen = false;
+
+function torPruefen() {
+  torOffen = !konto.backend || !!konto.nutzer;
+  if (zustand.laeuft) { torFeld.hidden = true; return; }
+  torFeld.hidden = torOffen;
+  start.hidden = !torOffen;
+}
+
+kontoBereit.then(torPruefen);
+kontoAbo(torPruefen);
+/* Falls das Konto-Modul hängt, nach ein paar Sekunden trotzdem entscheiden */
+setTimeout(torPruefen, 4000);
+
+torFeld.addEventListener("click", e => {
+  const k = e.target.closest("[data-tor]");
+  if (!k) return;
+  dialogOeffnen(k.dataset.tor === "neu" ? "registrieren" : "anmelden");
+});
+
 async function starten() {
+  if (!torOffen) { torPruefen(); return; }
   start.classList.add("is-laden");
   const autos = Object.keys(TYPEN).map(t => "auto_" + t);
   const ampeln = ["ampel_rot", "ampel_gelb", "ampel_gruen"];

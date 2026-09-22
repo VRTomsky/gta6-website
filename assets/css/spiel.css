@@ -228,7 +228,7 @@
   font-variant-numeric:tabular-nums;
 }
 
-/* ── Verhaftet / Erledigt ── */
+/* ── Einblendungen: verhaftet, tot, Auftrag geschafft ── */
 .sende{
   position:absolute; inset:0; display:grid; place-items:center;
   background:rgba(8,12,26,.6); backdrop-filter:blur(2px);
@@ -240,7 +240,9 @@
   font-size:clamp(3rem, 12vw, 8rem); letter-spacing:.06em;
   color:#ff6a86; text-shadow:0 8px 40px rgba(255,60,90,.5);
 }
-.sende--tot .sende__t{ color:#ffd24a; text-shadow:0 8px 40px rgba(255,190,60,.45); }
+.sende--verhaftet .sende__t{ color:#7ab8ff; text-shadow:0 8px 40px rgba(90,150,255,.45); }
+.sende--tot .sende__t{ color:#ff5566; text-shadow:0 8px 40px rgba(255,60,90,.5); }
+.sende--gut .sende__t{ color:#6ee7a0; text-shadow:0 8px 40px rgba(80,230,150,.45); }
 
 @media (prefers-reduced-motion:reduce){
   .shud__leben i{ transition:none; }
@@ -403,6 +405,19 @@
   pointer-events:auto; cursor:crosshair; touch-action:none;
 }
 
+/* ── Tor: ohne Konto kein Spiel ── */
+.stor{
+  position:absolute; inset:0; z-index:7; display:grid; place-items:center;
+  padding:var(--s3); text-align:center;
+  background:radial-gradient(120% 90% at 50% 20%, rgba(28,20,58,.9), rgba(8,12,26,.96));
+}
+.stor[hidden]{ display:none; }
+.stor__karte{ max-width:480px; display:flex; flex-direction:column; gap:12px; align-items:center; }
+.stor__karte h2{ margin:0; font-size:clamp(1.8rem, 5vw, 3rem); }
+.stor__karte p{ margin:0; color:var(--fg-mid); }
+.stor__knoepfe{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+.stor__klein{ font-size:.78rem; color:var(--fg-dim); }
+
 /* ── Waffenladen ── */
 .sladen{
   position:absolute; inset:0; z-index:6; display:grid; place-items:center;
@@ -459,7 +474,17 @@
 .sgross__seite{ display:flex; flex-direction:column; gap:14px; justify-content:space-between; }
 .sgross__legende{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
 .sgross__legende li{ display:flex; align-items:center; gap:10px; color:var(--fg-mid); font-size:.86rem; }
-.sgross__legende i{ width:12px; height:12px; border-radius:50%; display:block; }
+.sgross__legende i{ width:12px; height:12px; border-radius:50%; display:block; flex:none; }
+/* Die Formen der Legende entsprechen den Marken auf der Karte */
+.sm--stern{
+  border-radius:0;
+  clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.sm--raute{ border-radius:2px; clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+.sm--kreuz{ border-radius:0; clip-path:polygon(38% 0, 62% 0, 62% 38%, 100% 38%, 100% 62%, 62% 62%, 62% 100%, 38% 100%, 38% 62%, 0 62%, 0 38%, 38% 38%); }
+.sm--fahne{ border-radius:0; clip-path:polygon(18% 0, 100% 22%, 18% 46%, 18% 100%, 2% 100%, 2% 0); }
+.sm--pfeil{ border-radius:0; clip-path:polygon(50% 0, 100% 100%, 50% 76%, 0 100%); }
+.sm--punkt{ width:8px; height:8px; }
 .sgross__knoepfe{ display:flex; flex-direction:column; gap:8px; }
 .sgross__hinweis{ margin:0; font-size:.78rem; color:var(--fg-dim); }
 

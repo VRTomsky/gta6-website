@@ -26,13 +26,30 @@ export const STUFEN = 5;
 const SICHT = 95;                     // so weit sieht die Polizei
 
 export class Streife extends VerkehrsAuto {
-  constructor(x, y, dx, dy) {
+  constructor(x, y, dx, dy, versatz = 0) {
     super("streife", x, y, dx, dy);
     this.wunschTempo = 22;                   // deutlich schneller als der Verkehr
     this.blinken = Math.random() * 10;
     this.ziel = null;
     this.jagdZiel = null;
+    /* Jeder Wagen fährt seitlich versetzt an — sonst hängen alle in einer
+       Reihe hinter dem Spieler und keiner schneidet ihm den Weg ab. */
+    this.versatz = versatz;
     this.zielSuchen();
+  }
+
+  /* Wohin die Streife tatsächlich hält: etwas vor den Spieler und
+     seitlich versetzt. Vorhalten macht sie deutlich schwerer abzuhängen. */
+  anfahrpunkt(ziel) {
+    const vx = ziel.vx || 0, vy = ziel.vy || 0;
+    const tempo = Math.hypot(vx, vy);
+    const vorhalt = Math.min(1.4, tempo * 0.12);
+    let qx = 0, qy = 0;
+    if (tempo > 1) {
+      qx = -vy / tempo * this.versatz;
+      qy = vx / tempo * this.versatz;
+    }
+    return { x: ziel.x + vx * vorhalt + qx, y: ziel.y + vy * vorhalt + qy };
   }
 
   /* An der Kreuzung die Richtung nehmen, die näher an den Spieler führt —
@@ -71,7 +88,8 @@ export class Streife extends VerkehrsAuto {
     this.jagdZiel = ziel;
 
     if (this.freieSicht(ziel)) {
-      const zx = ziel.x - this.x, zy = ziel.y - this.y;
+      const punkt = this.anfahrpunkt(ziel);
+      const zx = punkt.x - this.x, zy = punkt.y - this.y;
       let ab = Math.atan2(zy, zx) - this.winkel;
       while (ab > Math.PI) ab -= Math.PI * 2;
       while (ab < -Math.PI) ab += Math.PI * 2;
@@ -190,12 +208,12 @@ export class Fahndung {
       const p = Karte.freierPunkt(zielX + (Math.random() - 0.5) * 120,
                                   zielY + (Math.random() - 0.5) * 120,
                                   [Karte.ART.STRASSE], 70);
-      const weit = Math.hypot(p.x - zielX, p.y - zielY);
-      if (weit < 45) { /* zu nah: trotzdem nehmen, sonst hängt die Schleife */ }
       const senkrecht = Math.random() < 0.5;
+      /* abwechselnd links, mittig, rechts anfahren */
+      const versatz = [0, -7, 7, -12, 12, 0][this.streifen.length % 6];
       this.streifen.push(new Streife(p.x, p.y,
         senkrecht ? 0 : (Math.random() < 0.5 ? 1 : -1),
-        senkrecht ? (Math.random() < 0.5 ? 1 : -1) : 0));
+        senkrecht ? (Math.random() < 0.5 ? 1 : -1) : 0, versatz));
     }
     while (this.streifen.length > this.sollWagen) this.streifen.pop();
   }
@@ -271,11 +289,21 @@ export class Fahndung {
       this.streifen.splice(k, 1);
     }
 
-    /* Fahndung kühlt ab, wenn niemand den Spieler sieht */
-    this.ruhe = gesehen ? 0 : this.ruhe + dt;
+    /* Fahndung kühlt ab, wenn niemand den Spieler sieht — und doppelt so
+       schnell, wenn auch der nächste Streifenwagen weit weg ist. Vorher
+       konnte man minutenlang unbehelligt fahren, ohne dass ein Stern fiel. */
+    let naechste = Infinity;
+    for (const s of this.streifen) {
+      naechste = Math.min(naechste, Math.hypot(s.x - ziel.x, s.y - ziel.y));
+    }
+    const weitWeg = naechste > 150;
+    this.ruhe = gesehen ? 0 : this.ruhe + dt * (weitWeg ? 2 : 1);
     if (this.ruhe > 12) {
       this.stufe = Math.max(0, this.stufe - 1);
       this.ruhe = 0;
+      /* Wer eine Stufe verliert, schüttelt auch die Wagen ab, die ihn
+         ohnehin nicht mehr finden */
+      if (weitWeg) this.streifen.length = Math.min(this.streifen.length, this.sollWagen);
     }
   }
 

@@ -163,25 +163,17 @@ export function zeichnen(leinwand, zustand, spieler) {
   /* Route zum Ziel — sie folgt jetzt den Straßen */
   routeMalen(ctx, zustand.route, nach, Math.max(2.5, h * 0.035));
 
-  const punkt = (x, y, farbe, r, rand) => {
+  const marke = (x, y, art, r) => {
     const [px, py] = nach(x, y);
-    ctx.fillStyle = farbe;
-    ctx.beginPath();
-    ctx.arc(px, py, r, 0, Math.PI * 2);
-    ctx.fill();
-    if (rand) {
-      ctx.strokeStyle = "rgba(10,14,26,.85)";
-      ctx.lineWidth = Math.max(1, r * 0.35);
-      ctx.stroke();
-    }
+    symbol(ctx, art, px, py, r);
   };
 
-  for (const m of zustand.missionen.marken()) punkt(m.x, m.y, m.farbe, h * 0.035, true);
-  for (const l of zustand.laeden || []) punkt(l.x, l.y, "#6ee7a0", h * 0.03, true);
-  for (const s of zustand.fahndung.streifen) punkt(s.x, s.y, "#ff5566", h * 0.028, true);
+  for (const m of zustand.missionen.marken()) marke(m.x, m.y, m.art || "auftrag", h * 0.04);
+  for (const l of zustand.laeden || []) marke(l.x, l.y, "laden", h * 0.032);
+  for (const s of zustand.fahndung.streifen) marke(s.x, s.y, "polizei", h * 0.03);
   for (const name of Object.keys(zustand.figuren)) {
     if (name === zustand.aktiv) continue;
-    punkt(zustand.figuren[name].x, zustand.figuren[name].y, "#7ab8ff", h * 0.03, true);
+    marke(zustand.figuren[name].x, zustand.figuren[name].y, "figur", h * 0.032);
   }
   if (zustand.wegpunkt) wegpunktMalen(ctx, nach(zustand.wegpunkt.x, zustand.wegpunkt.y), h * 0.055);
   ctx.restore();
@@ -229,6 +221,54 @@ export function zeichnen(leinwand, zustand, spieler) {
     ctx.textBaseline = "middle";
     ctx.fillText(text, h * 0.05 + breite / 2, h * 0.113);
   }
+}
+
+/* ── Symbole ──
+   Vorher waren alle Marken Kreise in ähnlichen Farben; grün war sowohl
+   das aktuelle Ziel als auch der Waffenladen. Jetzt hat jede Art ihre
+   eigene Form und Farbe. */
+export const MARKEN = {
+  auftrag:     { farbe: "#ffd24a", form: "stern",  name: ["Auftrag", "Job"] },
+  ziel:        { farbe: "#39d4ff", form: "raute",  name: ["Aktuelles Ziel", "Current target"] },
+  laden:       { farbe: "#4bd07f", form: "kreuz",  name: ["Ammu-Vice", "Ammu-Vice"] },
+  figur:       { farbe: "#7ab8ff", form: "kreis",  name: ["Zweite Figur", "Second character"] },
+  polizei:     { farbe: "#ff5566", form: "kreis",  name: ["Polizei", "Police"] },
+  wahrzeichen: { farbe: "#e6ecff", form: "punkt",  name: ["Ort", "Landmark"] },
+  wegpunkt:    { farbe: "#ff4aa0", form: "fahne",  name: ["Dein Wegpunkt", "Your waypoint"] }
+};
+
+function symbol(ctx, art, px, py, r) {
+  const m = MARKEN[art] || MARKEN.wahrzeichen;
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.fillStyle = m.farbe;
+  ctx.strokeStyle = "rgba(8,12,24,.9)";
+  ctx.lineWidth = Math.max(1, r * 0.3);
+  ctx.beginPath();
+  if (m.form === "stern") {
+    for (let k = 0; k < 10; k++) {
+      const w = (k / 10) * Math.PI * 2 - Math.PI / 2;
+      const rr = k % 2 ? r * 0.45 : r;
+      k ? ctx.lineTo(Math.cos(w) * rr, Math.sin(w) * rr)
+        : ctx.moveTo(Math.cos(w) * rr, Math.sin(w) * rr);
+    }
+    ctx.closePath();
+  } else if (m.form === "raute") {
+    ctx.moveTo(0, -r);
+    ctx.lineTo(r, 0);
+    ctx.lineTo(0, r);
+    ctx.lineTo(-r, 0);
+    ctx.closePath();
+  } else if (m.form === "kreuz") {
+    const d = r * 0.42;
+    ctx.rect(-d, -r, d * 2, r * 2);
+    ctx.rect(-r, -d, r * 2, d * 2);
+  } else {
+    ctx.arc(0, 0, m.form === "punkt" ? r * 0.7 : r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 /* Klick auf die Minikarte → Ort in der Stadt. Sie ist nach Norden
@@ -335,7 +375,35 @@ export function ortAusKlick(leinwand, ansicht, klickX, klickY) {
   };
 }
 
-export function grosseKarteZeichnen(leinwand, zustand, spieler, ansicht) {
+/* Alles, was auf der großen Karte liegt — auch für den Hinweis unter
+   dem Mauszeiger */
+export function kartenMarken(zustand) {
+  const liste = [];
+  for (const w of Karte.wahrzeichen) {
+    liste.push({ x: w.x, y: w.y, art: "wahrzeichen", name: w.name });
+  }
+  for (const l of zustand.laeden || []) {
+    liste.push({ x: l.x, y: l.y, art: "laden", name: l.name || "Ammu-Vice" });
+  }
+  for (const m of zustand.missionen.marken()) {
+    liste.push({ x: m.x, y: m.y, art: m.art || "auftrag", name: m.name });
+  }
+  for (const s of zustand.fahndung.streifen) {
+    liste.push({ x: s.x, y: s.y, art: "polizei", name: MARKEN.polizei.name[0] });
+  }
+  for (const name of Object.keys(zustand.figuren)) {
+    if (name === zustand.aktiv) continue;
+    const f = zustand.figuren[name];
+    liste.push({ x: f.x, y: f.y, art: "figur", name: f.daten.name });
+  }
+  if (zustand.wegpunkt) {
+    liste.push({ x: zustand.wegpunkt.x, y: zustand.wegpunkt.y, art: "wegpunkt",
+                 name: MARKEN.wegpunkt.name[0] });
+  }
+  return liste;
+}
+
+export function grosseKarteZeichnen(leinwand, zustand, spieler, ansicht, maus) {
   const ctx = leinwand.getContext("2d");
   const b = leinwand.width, h = leinwand.height;
   const puffer = weltPufferBauen();
@@ -355,7 +423,7 @@ export function grosseKarteZeichnen(leinwand, zustand, spieler, ansicht) {
   const dpr = Math.min(2.5, devicePixelRatio || 1);
   const pt = px => px * dpr;                  // Schriftgrößen in Bildschirmpunkten
 
-  /* Wahrzeichen mit Namen — groß genug zum Lesen, mit dunklem Saum */
+  /* Ortsnamen — groß genug zum Lesen, mit dunklem Saum */
   ctx.font = `600 ${Math.round(pt(13))}px Figtree, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -363,41 +431,24 @@ export function grosseKarteZeichnen(leinwand, zustand, spieler, ansicht) {
   for (const w of Karte.wahrzeichen) {
     const [px, py] = nach(w.x, w.y);
     if (px < -80 || py < -40 || px > b + 80 || py > h + 40) continue;
-    ctx.fillStyle = "rgba(255,255,255,.9)";
-    ctx.beginPath();
-    ctx.arc(px, py, pt(3.5), 0, Math.PI * 2);
-    ctx.fill();
     ctx.lineWidth = pt(3);
     ctx.strokeStyle = "rgba(8,12,24,.85)";
-    ctx.strokeText(w.name, px, py - pt(7));
+    ctx.strokeText(w.name, px, py - pt(8));
     ctx.fillStyle = "rgba(236,242,255,.95)";
-    ctx.fillText(w.name, px, py - pt(7));
+    ctx.fillText(w.name, px, py - pt(8));
   }
 
-  /* Route und Wegpunkt */
+  /* Route */
   routeMalen(ctx, zustand.route, nach, Math.max(pt(2.5), ansicht.pxProM * 0.9));
 
-  const punkt = (x, y, farbe, r) => {
-    const [px, py] = nach(x, y);
-    ctx.fillStyle = farbe;
-    ctx.strokeStyle = "rgba(8,12,24,.85)";
-    ctx.lineWidth = pt(1.5);
-    ctx.beginPath();
-    ctx.arc(px, py, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  };
-
-  for (const l of zustand.laeden || []) punkt(l.x, l.y, "#6ee7a0", pt(5));
-  for (const m of zustand.missionen.marken()) punkt(m.x, m.y, m.farbe, pt(6));
-  for (const s of zustand.fahndung.streifen) punkt(s.x, s.y, "#ff5566", pt(4));
-  for (const name of Object.keys(zustand.figuren)) {
-    if (name === zustand.aktiv) continue;
-    punkt(zustand.figuren[name].x, zustand.figuren[name].y, "#7ab8ff", pt(5));
-  }
-  if (zustand.wegpunkt) {
-    const [px, py] = nach(zustand.wegpunkt.x, zustand.wegpunkt.y);
-    wegpunktMalen(ctx, [px, py], pt(15));
+  /* Marken mit eigener Form je Art */
+  const marken = kartenMarken(zustand);
+  for (const m of marken) {
+    const [px, py] = nach(m.x, m.y);
+    m.px = px;
+    m.py = py;
+    if (m.art === "wegpunkt") wegpunktMalen(ctx, [px, py], pt(15));
+    else symbol(ctx, m.art, px, py, pt(m.art === "wahrzeichen" ? 4 : 7));
   }
 
   /* Spieler als Pfeil */
@@ -419,5 +470,41 @@ export function grosseKarteZeichnen(leinwand, zustand, spieler, ansicht) {
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+  ctx.restore();
+
+  /* Hinweis unter dem Zeiger: was ist dieser Punkt? */
+  if (maus) {
+    let beste = null;
+    for (const m of marken) {
+      const d = Math.hypot(m.px - maus.x, m.py - maus.y);
+      if (d > pt(16)) continue;
+      if (!beste || d < beste.d) beste = { m, d };
+    }
+    if (beste) hinweisFahne(ctx, beste.m, pt, b);
+  }
+}
+
+/* Kleines Schild mit dem Namen der Marke */
+function hinweisFahne(ctx, m, pt, breite) {
+  const text = m.name || "";
+  if (!text) return;
+  ctx.save();
+  ctx.font = `600 ${Math.round(pt(13))}px Figtree, system-ui, sans-serif`;
+  const tb = ctx.measureText(text).width;
+  const bb = tb + pt(18), hh = pt(26);
+  let x = m.px - bb / 2;
+  x = Math.max(pt(4), Math.min(breite - bb - pt(4), x));
+  const y = m.py - hh - pt(12);
+  ctx.fillStyle = "rgba(10,14,28,.92)";
+  ctx.strokeStyle = (MARKEN[m.art] || MARKEN.wahrzeichen).farbe;
+  ctx.lineWidth = pt(1.5);
+  ctx.beginPath();
+  ctx.roundRect(x, y, bb, hh, pt(8));
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#eef2ff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x + bb / 2, y + hh / 2 + pt(0.5));
   ctx.restore();
 }

@@ -303,6 +303,27 @@ WAS BISHER GEMACHT WURDE
      Rettungswagen mit rotem Kreuz auf dem Dach, Feuerwehr mit Leiter
      und Reflexstreifen.
 
+20. Spiel, achter Schritt (22.09.2026):
+   - Zehn Auftraege statt vier, mit mehr Abwechslung: Kurierfahrt,
+     Autoklau, Ladenraub, Bankraub, Flucht, Sammeltour, Schutzgeld,
+     Verfolgungsjagd, Notfallfahrt und eine Einweisung.
+   - Der Ladenraub laeuft jetzt richtig ab: vor dem Laden druecken,
+     die Figur verschwindet drinnen, danach steht man mit Beute und
+     zwei Sternen draussen und muss fliehen.
+   - Beim Abhaengen zaehlt der Abstand: wer weit genug weg ist, wird
+     die Fahndung doppelt so schnell los.
+   - Drei verschiedene Einblendungen: VERHAFTET (blau), TOT (rot) und
+     AUFTRAG GESCHAFFT (gruen). Vorher hiess beides "Erledigt".
+   - Nach dem Tod wacht man an der Klinik auf, nach einer Festnahme
+     vor der Polizeiwache.
+   - Die Marken auf der Karte haben eigene Formen und Farben, und beim
+     Druebergehen steht dabei, was sie bedeuten.
+   - Der Wegpunkt verschwindet von selbst, wenn man angekommen ist.
+   - Die Polizei faehrt schlauer: jeder Wagen kommt seitlich versetzt
+     und haelt auf den Punkt zu, wo man gleich sein wird.
+   - Das Spiel laeuft nur noch mit Konto. Ohne Anmeldung erscheint ein
+     Hinweis mit Knoepfen zum Anmelden oder Registrieren.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI
