@@ -105,6 +105,7 @@ const zustand = {
   geld: 0,
   innen: null,                // Zustand im Gebäude (innen.js)
   clubTueren: [],             // Eingänge der drei Nachtclubs
+  fehler: [],                 // letzte Aussetzer, auch in localStorage
   schwarz: null,              // { rest, dauer, text } für die Ausblendung
   clubTuer: null,             // Eingang des Pink Flamingo auf der Straße
   fahndung: new Fahndung(),
@@ -960,14 +961,36 @@ function sicher(was, name) {
     return true;
   } catch (fehler) {
     const text = String(fehler && fehler.message || fehler);
+    /* Fehler sichtbar und nachlesbar machen: Der Nutzer sieht die
+       Konsole nicht, deshalb landet der Bericht auch im Browser-Speicher
+       und unter window.__fehler. */
+    const bericht = {
+      wann: new Date().toISOString(),
+      wo: name,
+      text,
+      stapel: String(fehler && fehler.stack || "").split(String.fromCharCode(10)).slice(0, 4).join(" | ")
+    };
+    zustand.fehler.push(bericht);
+    if (zustand.fehler.length > 20) zustand.fehler.shift();
+    try {
+      localStorage.setItem("spiel-fehler", JSON.stringify(zustand.fehler));
+    } catch { /* privater Modus: dann eben nicht */ }
     if (text !== letzterFehler) {
       letzterFehler = text;
       console.error(`[Spiel] Fehler in ${name}:`, fehler);
-      hinweis(L("Kurzer Aussetzer — läuft weiter", "Brief hiccup — still running"));
+      hinweis(`${L("Aussetzer", "Hiccup")}: ${text.slice(0, 70)}`);
     }
     return false;
   }
 }
+
+/* Für die Fehlersuche: ein Rechenschritt von außen, ohne Bild.
+   Damit lässt sich eine Viertelstunde Spiel in Sekunden durchrechnen. */
+window.__schritt = (dt = 1 / 60, male = false) => {
+  zustand.zeit += dt;
+  rechnen(dt);
+  if (male) zeichnen();
+};
 
 function schleife(jetzt) {
   if (!zustand.laeuft) return;
@@ -1091,7 +1114,7 @@ function rechnen(dt) {
     Math.abs(a.x - f.x) < 60 && Math.abs(a.y - f.y) < 60 && Math.hypot(a.vx, a.vy) > 3);
   for (const p of zustand.passanten) {
     if (Math.abs(p.x - f.x) > 90 || Math.abs(p.y - f.y) > 90) continue;
-    p.denken(dt, naheAutos);
+    p.denken(dt, naheAutos, zustand.zeit * 1000);
   }
   passantenNachziehen(zustand.passanten, f.x, f.y);
 

@@ -115,7 +115,12 @@ export class Streife extends VerkehrsAuto {
     let ab = Math.atan2(dy, dx) - this.winkel;
     while (ab > Math.PI) ab -= Math.PI * 2;
     while (ab < -Math.PI) ab += Math.PI * 2;
-    const frei = this.freiVoraus(autos, []);
+    /* Abstand zum Vordermann: beim Umbau des Verkehrs wurde aus dem
+       alten freiVoraus() das hindernis(), das den Abstand liefert. Der
+       alte Name stand hier noch — die Streife warf dadurch bei jeder
+       Verfolgung einen Fehler, und das Spiel blieb stehen. */
+    const abstand = this.hindernis(autos, []);
+    const frei = abstand > 6 + this.tempo * 0.7;
     this.fahren(frei ? 1 : -0.4, Math.max(-1, Math.min(1, ab * 2.2)), false, dt);
   }
 

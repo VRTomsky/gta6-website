@@ -408,6 +408,18 @@ WAS BISHER GEMACHT WURDE
    - Die Karte hat eigene Ortssymbole statt bunter Punkte. Selbst
      gezeichnet - fremde Spielsymbole sind geschuetzt.
 
+26. Spiel, vierzehnter Schritt (23.09.2026):
+   - Der Grund fuer das Haengenbleiben ist gefunden: Die Polizei rief
+     eine Funktion, die beim Verkehrsumbau umbenannt wurde. Bei jeder
+     Verfolgung gab es dadurch einen Fehler. Behoben und mit 10
+     Minuten Dauerverfolgung geprueft.
+   - Aussetzer werden jetzt mit Text gemeldet und gespeichert.
+   - Strassen: gruene Mittelinsel raus, Beton mit Bordstein rein.
+     Richtige Zebrastreifen statt Punkten. Ampeln waren sechs Meter
+     hoch, jetzt drei und am Bordstein. Gehwegbelag blockweise.
+   - Passanten benutzen jetzt die Fussgaengerueberwege und warten
+     dabei auf Rot fuer die Autos.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

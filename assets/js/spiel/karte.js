@@ -365,18 +365,21 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
   }
 
   if (a === ART.KREUZUNG) {
-    ctx.fillStyle = "rgba(236,232,220,.38)";
-    /* Zebrastreifen an den Rändern der Kreuzung */
+    /* Fußgängerüberweg: breite Balken über die ganze Kachel, dort wo die
+       Kreuzung an die Fahrbahn stößt. Vorher waren das kleine Punkte in
+       den Ecken — auf dem Asphalt sah das aus wie Dreck. */
     const randOben = art(tx, ty - 1) !== ART.KREUZUNG && befahrbar(art(tx, ty - 1));
     const randUnten = art(tx, ty + 1) !== ART.KREUZUNG && befahrbar(art(tx, ty + 1));
     const randLinks = art(tx - 1, ty) !== ART.KREUZUNG && befahrbar(art(tx - 1, ty));
     const randRechts = art(tx + 1, ty) !== ART.KREUZUNG && befahrbar(art(tx + 1, ty));
-    for (let k = 0; k < 4; k++) {
-      const t = (k + 0.25) / 4;
-      if (randOben) ctx.fillRect(px + g * t, py + g * 0.04, g * 0.12, g * 0.18);
-      if (randUnten) ctx.fillRect(px + g * t, py + g * 0.78, g * 0.12, g * 0.18);
-      if (randLinks) ctx.fillRect(px + g * 0.04, py + g * t, g * 0.18, g * 0.12);
-      if (randRechts) ctx.fillRect(px + g * 0.78, py + g * t, g * 0.18, g * 0.12);
+    ctx.fillStyle = "rgba(240,238,230,.72)";
+    const balken = 5, dick = g * 0.12, lang = g * 0.5;
+    for (let k = 0; k < balken; k++) {
+      const t = ((k + 0.5) / balken) * g - dick / 2;
+      if (randOben) ctx.fillRect(px + t, py + g * 0.06, dick, lang);
+      if (randUnten) ctx.fillRect(px + t, py + g - g * 0.06 - lang, dick, lang);
+      if (randLinks) ctx.fillRect(px + g * 0.06, py + t, lang, dick);
+      if (randRechts) ctx.fillRect(px + g - g * 0.06 - lang, py + t, lang, dick);
     }
     return;
   }
@@ -411,9 +414,23 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
   }
 
   if (band.breite >= 4 && Math.abs(stelle - mitte) < 0.6) {
-    ctx.fillStyle = "rgba(74,104,80,.95)";                   // begrünte Mittelinsel
-    if (senkrecht) ctx.fillRect(px + g * 0.3, py, g * 0.4, g + 1);
-    else ctx.fillRect(px, py + g * 0.3, g + 1, g * 0.4);
+    /* Mittelinsel aus Beton mit Bordstein. Vorher lag da ein grünes
+       Rechteck mitten auf dem Asphalt — das sah aus wie ein Fehler. */
+    const dickeM = g * 0.34;
+    ctx.fillStyle = "rgba(150,150,146,.95)";
+    if (senkrecht) {
+      const rand = px + (g - dickeM) / 2;
+      ctx.fillRect(rand, py, dickeM, g + 1);
+      ctx.fillStyle = "rgba(226,206,120,.5)";
+      ctx.fillRect(rand, py, g * 0.05, g + 1);
+      ctx.fillRect(rand + dickeM - g * 0.05, py, g * 0.05, g + 1);
+    } else {
+      const rand = py + (g - dickeM) / 2;
+      ctx.fillRect(px, rand, g + 1, dickeM);
+      ctx.fillStyle = "rgba(226,206,120,.5)";
+      ctx.fillRect(px, rand, g + 1, g * 0.05);
+      ctx.fillRect(px, rand + dickeM - g * 0.05, g + 1, g * 0.05);
+    }
   } else if (band.breite <= 3 && Math.abs(stelle - mitte) < 0.55) {
     ctx.fillStyle = "rgba(235,225,180,.8)";                  // Mittelstreifen
     if (senkrecht) ctx.fillRect(px + g * 0.46, py + g * 0.15, g * 0.08, g * 0.7);
@@ -425,7 +442,10 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
 function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
   ctx.fillStyle = FARBE.gehweg;
   ctx.fillRect(px, py, g + 1, g + 1);
-  const belag = bez === Plan.BEZIRK.INNENSTADT && streu(tx, ty, 147) > 0.6 ? "platz" : "gehweg";
+  /* Der Belag wechselt blockweise, nicht von Kachel zu Kachel — sonst
+     sieht der Gehweg aus, als wäre er zusammengewürfelt. */
+  const belag = bez === Plan.BEZIRK.INNENSTADT &&
+                streu(Math.floor(tx / 7), Math.floor(ty / 7), 147) > 0.55 ? "platz" : "gehweg";
   if (!bodenMalen(ctx, belag, px, py, g)) {
     Tex.malen(ctx, "gehweg", streu(tx, ty, 103), px, py, g);
   }
@@ -809,10 +829,13 @@ function ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM
         ctx.fillRect(px + g * 0.38, py + g * 0.38, g * 0.24, g * 0.24);
         continue;
       }
-      /* Höhe vorgeben, nicht Breite: die Ampel ist ein hohes, schmales Bild */
-      const h = g * 1.5, w = (b.width / b.height) * h;
+      /* Höhe vorgeben, nicht Breite: die Ampel ist ein hohes, schmales
+         Bild. Sie war mit anderthalb Kacheln — sechs Metern — viel zu
+         groß und lag wie ein Klotz auf der Straße; jetzt sind es knapp
+         drei Meter, und sie steht an der Bordsteinkante. */
+      const h = g * 0.72, w = (b.width / b.height) * h;
       ctx.save();
-      ctx.translate(px + g / 2, py + g / 2);
+      ctx.translate(px + g / 2 + dx * g * 0.3, py + g / 2 + dy * g * 0.3);
       ctx.rotate(Math.atan2(dy, dx) + Math.PI / 2);
       ctx.drawImage(b, -w / 2, -h / 2, w, h);
       /* Leuchten: kleiner Schein in der Ampelfarbe, damit man sie auch

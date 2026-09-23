@@ -913,6 +913,29 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
      `sicher()`. Ein Fehler kostet jetzt ein Bild statt das ganze Spiel,
      wird einmal gemeldet, und ein Wächter startet die Schleife neu,
      falls zwei Sekunden lang kein Bild mehr kam.
+- **Der echte Absturz war ein Tippfehler (23.09.2026):** Beim Umbau des
+  Verkehrs wurde aus `freiVoraus()` das `hindernis()`. In `polizei.js`
+  stand der alte Name noch — **jede Verfolgung warf dadurch einen
+  Fehler**, und weil das jedes Bild passierte, blieb das Bild stehen.
+  Gefunden mit einem neuen Werkzeug: `window.__schritt(dt, malen)` rechnet
+  das Spiel ohne Bild weiter, damit lassen sich 15 Spielminuten in
+  Sekunden durchrechnen. Danach: 10 Minuten Dauerverfolgung mit vier
+  Streifen, kein Fehler mehr.
+- **Fehlerbericht:** Jeder Aussetzer landet jetzt mit Text und Aufrufliste
+  in `zustand.fehler` und in `localStorage["spiel-fehler"]`, der Hinweis
+  im Spiel zeigt die Meldung selbst. Ohne das sucht man blind.
+- **Straßen aufgeräumt (23.09.2026):** Die grüne „Mittelinsel" war ein
+  flaches grünes Rechteck auf dem Asphalt — jetzt Beton mit Bordstein.
+  Die Zebrastreifen waren kleine Punkte in den Ecken — jetzt fünf breite
+  Balken über die ganze Kachel, dort wo die Kreuzung an die Fahrbahn
+  stößt. Der Gehwegbelag wechselt blockweise statt von Kachel zu Kachel.
+  Die Ampeln waren **sechs Meter hoch** und lagen wie Klötze auf der
+  Straße; jetzt knapp drei Meter, an der Bordsteinkante.
+- **Passanten queren an der Ampel:** `Passant.kreuzungSuchen()` sucht
+  einen Überweg an einer Kreuzung, der Passant wartet am Bordstein, bis
+  die Autos auf seiner Achse Rot haben (`ampelGruen`), und geht dann
+  durch. Gemessen über zwei Minuten: bis zu neun gleichzeitig auf einem
+  Überweg, danach wieder alle auf dem Gehweg.
 - **Häuser drehen sich zur Straße:** `hausDrehung` zählt Straße und
   Gehweg an allen vier Seiten des Grundstücks und dreht das Bild so, dass
   die Vorderseite (im Bild unten) dorthin zeigt — vorher stand der Club

@@ -291,6 +291,8 @@ export class Passant extends Figur {
     this.ziel = Math.random() * Math.PI * 2;
     this.warten = Math.random() * 3;
     this.flucht = 0;
+    this.kreuzen = null;               // laufender Gang über einen Überweg
+    this.kreuzenZeit = 0;
   }
 
   get daten() {
@@ -302,7 +304,35 @@ export class Passant extends Figur {
     return GEHBAR.includes(Karte.art(Karte.inKachel(x), Karte.inKachel(y)));
   }
 
-  denken(dt, autos) {
+  /* ── Überqueren an der Ampel ──
+     Passanten laufen sonst nie über die Straße. Jetzt suchen sie sich
+     einen Fußgängerüberweg an einer Kreuzung, warten dort, bis die
+     Autos auf dieser Achse Rot haben, und gehen dann durch. */
+  kreuzungSuchen() {
+    const tx = Karte.inKachel(this.x), ty = Karte.inKachel(this.y);
+    const seiten = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (let i = seiten.length - 1; i > 0; i--) {            // mischen
+      const j = Math.floor(Math.random() * (i + 1));
+      [seiten[i], seiten[j]] = [seiten[j], seiten[i]];
+    }
+    for (const [dx, dy] of seiten) {
+      if (Karte.art(tx + dx, ty + dy) !== Karte.ART.KREUZUNG) continue;
+      let k = 1;
+      while (k < 9 && Karte.befahrbar(Karte.art(tx + dx * k, ty + dy * k))) k++;
+      if (k < 2 || k >= 9) continue;
+      if (Karte.art(tx + dx * k, ty + dy * k) !== Karte.ART.GEHWEG) continue;
+      return {
+        x: Karte.inMeter(tx + dx * k) + Karte.KACHEL / 2,
+        y: Karte.inMeter(ty + dy * k) + Karte.KACHEL / 2,
+        tx: tx + dx, ty: ty + dy,
+        senkrecht: dx !== 0,          // quer zur Fahrtrichtung der Autos
+        los: false
+      };
+    }
+    return null;
+  }
+
+  denken(dt, autos, zeit = 0) {
     if (this.tot) { this.totZeit += dt; return; }
     if (this.ko > 0) { this.bewegen(0, 0, false, dt); return; }   // liegt noch
     /* Kommt ein Auto mit Schwung näher, nichts wie weg */
@@ -317,6 +347,26 @@ export class Passant extends Figur {
       }
     }
 
+    /* Ist ein Überweg angefangen, wird er zu Ende gegangen */
+    if (this.kreuzen && this.flucht <= 0) {
+      const zx = this.kreuzen.x - this.x, zy = this.kreuzen.y - this.y;
+      const weit = Math.hypot(zx, zy);
+      this.kreuzenZeit += dt;
+      if (weit < 0.7 || this.kreuzenZeit > 22) {
+        this.kreuzen = null;
+        this.warten = 1 + Math.random() * 3;
+      } else {
+        if (!this.kreuzen.los &&
+            !Karte.ampelGruen(this.kreuzen.tx, this.kreuzen.ty, zeit, this.kreuzen.senkrecht)) {
+          this.kreuzen.los = true;                 // jetzt haben die Autos Rot
+        }
+        if (this.kreuzen.los) this.bewegen(zx / weit, zy / weit, false, dt);
+        else this.bewegen(0, 0, false, dt);        // an der Bordsteinkante warten
+        return;
+      }
+    }
+    if (this.flucht > 0) this.kreuzen = null;
+
     this.warten -= dt;
     if (this.warten <= 0 && this.flucht <= 0) {
       /* Auf der Straße gelandet — etwa nach einer Flucht? Dann
@@ -325,6 +375,9 @@ export class Passant extends Figur {
         const heim = Karte.freierPunkt(this.x, this.y, [Karte.ART.GEHWEG], 9);
         this.ziel = heim ? Math.atan2(heim.y - this.y, heim.x - this.x)
                          : Math.random() * Math.PI * 2;
+        this.warten = 1;
+      } else if (Math.random() < 0.3 && (this.kreuzen = this.kreuzungSuchen())) {
+        this.kreuzenZeit = 0;                      // Überweg gefunden
         this.warten = 1;
       } else {
         this.warten = 1.5 + Math.random() * 4;
