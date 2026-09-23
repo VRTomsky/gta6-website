@@ -921,6 +921,32 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   das Spiel ohne Bild weiter, damit lassen sich 15 Spielminuten in
   Sekunden durchrechnen. Danach: 10 Minuten Dauerverfolgung mit vier
   Streifen, kein Fehler mehr.
+- **Abhängen geht jetzt wirklich (23.09.2026):** Die Fahndung schickte
+  ununterbrochen Nachschub an die **aktuelle** Position — egal, ob dich
+  jemand sah. Man konnte minutenlang weg sein und hatte trotzdem Streifen
+  vor der Nase. Jetzt merkt sich `Fahndung` den **letzten gesehenen Ort**;
+  sieht dich niemand, fahren alle nur noch dorthin und es kommt kein
+  Wagen mehr dazu. Das Abkühlen hängt am Abstand: gesehen → gar nicht,
+  Streife näher als 140 m → sehr langsam (sie suchen noch), bis 220 m →
+  ein Stern je 9 s, weiter weg → doppelt so schnell. Gemessen: aus 600 m
+  Entfernung fallen drei Sterne in 13 Sekunden, direkt verfolgt bleibt
+  die Stufe stehen.
+- **Schaden umgebaut:** Blech hält mehr aus (Wandschaden erst ab Tempo 4
+  und nur ein Drittel so stark, Rammschaden ein Drittel). Ein Rempler
+  kostet **kein Leben** mehr — erst ein harter Aufprall über Tempo 11,
+  und auch den fängt die neue **Panzerung** ab (`schadenNehmen`, eigene
+  Leiste im HUD, Weste für $800 bei Ammu-Vice). Auch die Schüsse der
+  Polizei laufen darüber.
+- **Polizisten kann man überfahren** — kostet drei Sterne, tot vier.
+- **Verkehr fährt nicht mehr durch Passanten:** Wer jemanden streift,
+  stößt ihn zur Seite, erschreckt ihn und bremst.
+- **Jeder startet woanders:** `figurenVerteilen()` verteilt Jason und
+  Lucia auf zufällige Wahrzeichen, die nicht gespielte Figur sitzt mit
+  40 % Wahrscheinlichkeit in einem Wagen davor. Und sie steht nicht mehr
+  stocksteif herum: `zweitLeben()` schickt sie über den Gehweg spazieren.
+  **Fallstrick:** `Karte.freierPunkt` würfelt mit `streu`, gibt bei
+  gleichem Start also immer denselben Punkt — der lag direkt vor den
+  Füßen, und die Figur bewegte sich keinen Meter. Ziel selbst auswürfeln.
 - **Fehlerbericht:** Jeder Aussetzer landet jetzt mit Text und Aufrufliste
   in `zustand.fehler` und in `localStorage["spiel-fehler"]`, der Hinweis
   im Spiel zeigt die Meldung selbst. Ohne das sucht man blind.

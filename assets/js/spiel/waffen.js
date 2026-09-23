@@ -56,7 +56,8 @@ export const WARE = [
   { waffe: "mp", preis: 1200, munition: 150 },
   { waffe: "pumpgun", preis: 1900, munition: 40 },
   { waffe: "ak", preis: 3200, munition: 120 },
-  { waffe: "munition", preis: 150, munition: 60 }      // Nachschub für alles
+  { waffe: "munition", preis: 150, munition: 60 },     // Nachschub für alles
+  { waffe: "weste", preis: 800, munition: 0 }          // Panzerung auffüllen
 ];
 
 export class Arsenal {

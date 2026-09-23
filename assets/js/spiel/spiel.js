@@ -52,6 +52,8 @@ const hud = {
   lebenZahl: document.querySelector("[data-hud=lebenZahl]"),
   ausdauer: document.querySelector("[data-hud=ausdauer]"),
   ausdauerZahl: document.querySelector("[data-hud=ausdauerZahl]"),
+  panzer: document.querySelector("[data-hud=panzer]"),
+  panzerZahl: document.querySelector("[data-hud=panzerZahl]"),
   waffe: document.querySelector("[data-hud=waffe]"),
   waffenBild: document.querySelector("[data-hud=waffenbild]"),
   schuss: document.querySelector("[data-hud=schuss]"),
@@ -102,6 +104,8 @@ const zustand = {
   zeit: 0,
   leben: 100,
   ausdauer: 100,              // Rennen kostet, Essen und Trinken füllt auf
+  panzerung: 0,               // Weste aus dem Waffenladen, fängt Schaden ab
+  schadenNehmen: null,        // wird unten gesetzt, auch für polizei.js
   geld: 0,
   innen: null,                // Zustand im Gebäude (innen.js)
   clubTueren: [],             // Eingänge der drei Nachtclubs
@@ -124,6 +128,8 @@ const zustand = {
   wahl: null,          // Figur, die gerade im Wechselmenü gewählt ist
   fahrt: null          // { von, nach, t } während der Kamerafahrt
 };
+
+zustand.schadenNehmen = menge => schadenNehmen(menge);
 
 const spieler = () => zustand.figuren[zustand.aktiv];
 
@@ -294,6 +300,7 @@ function weltBauen() {
   zustand.passanten = passantenVerteilen(75, Karte.START.x, Karte.START.y);
   zustand.laeden = laedenSetzen(Karte.START.x, Karte.START.y);
   zustand.clubTueren = clubTuerenSuchen();
+  figurenVerteilen();
   /* Ein Wagen steht auf der Straße neben dem Start: die nächste
      Straßenkachel im Umkreis, mindestens 3,5 m entfernt. */
   let beste = null;
@@ -317,6 +324,39 @@ function weltBauen() {
       zustand.autos.push(new Fahrzeug("cabrio", beste.x, beste.y, senkrecht ? -Math.PI / 2 : 0));
     }
   }
+}
+
+/* ── Wo das Spiel beginnt ──
+   Immer derselbe Startplatz wurde langweilig. Jetzt startet jede Figur
+   an einem anderen Ort der Stadt, und wer gerade nicht dran ist, sitzt
+   manchmal in einem Wagen davor. */
+function figurenVerteilen() {
+  const orte = Karte.wahrzeichen.slice();
+  for (let i = orte.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [orte[i], orte[j]] = [orte[j], orte[i]];
+  }
+  const namen = Object.keys(zustand.figuren);
+  namen.forEach((name, k) => {
+    const ort = orte[k % orte.length];
+    if (!ort) return;
+    const p = Karte.freierPunkt(ort.x, ort.y, [Karte.ART.GEHWEG, Karte.ART.PARK], 24);
+    const figur = zustand.figuren[name];
+    figur.x = p.x;
+    figur.y = p.y;
+    figur.vx = figur.vy = 0;
+    figur.streifzug = null;
+    /* Die nicht gespielte Figur setzt sich manchmal in einen Wagen */
+    if (name !== zustand.aktiv && Math.random() < 0.4) {
+      const wagen = zustand.autos.find(a => !a.fahrer &&
+        Math.hypot(a.x - p.x, a.y - p.y) < 30);
+      if (wagen) { figur.imAuto = wagen; wagen.fahrer = figur; }
+    }
+  });
+  const held = spieler();
+  kamera.x = held.x;
+  kamera.y = held.y;
+  zustand.missionen = new Missionen(held.x, held.y);
 }
 
 /* ── Pink Flamingo ──────────────────────────────────────────
@@ -679,7 +719,60 @@ function hudFahndung() {
   const kraft = Math.max(0, Math.min(100, zustand.ausdauer));
   hud.ausdauer.style.width = kraft + "%";
   hud.ausdauerZahl.textContent = Math.round(kraft);
+  const panzer = Math.max(0, Math.min(100, zustand.panzerung));
+  hud.panzer.style.width = panzer + "%";
+  hud.panzerZahl.textContent = Math.round(panzer);
   hud.geld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
+}
+
+/* ── Schaden ──
+   Alles, was wehtut, läuft hier durch: erst frisst die Weste, was übrig
+   bleibt geht ans Leben. */
+function schadenNehmen(menge) {
+  /* Auch von außen erreichbar — die Polizei schießt aus ihrem Modul */
+  if (menge <= 0) return;
+  if (zustand.panzerung > 0) {
+    const weg = Math.min(zustand.panzerung, menge);
+    zustand.panzerung -= weg;
+    menge -= weg;
+  }
+  zustand.leben -= menge;
+}
+
+/* ── Die zweite Figur ──
+   Sie stand bisher regungslos herum, bis man zu ihr wechselte. Jetzt
+   schlendert sie über den Gehweg oder sitzt in ihrem Wagen. */
+function zweitLeben(figur, dt) {
+  if (figur.imAuto) {
+    figur.imAuto.fahren(0, 0, false, dt);
+    figur.x = figur.imAuto.x;
+    figur.y = figur.imAuto.y;
+    return;
+  }
+  figur.streifzugZeit = (figur.streifzugZeit || 0) - dt;
+  if (!figur.streifzug || figur.streifzugZeit <= 0) {
+    /* Selbst würfeln statt Karte.freierPunkt: das liefert bei gleichem
+       Start immer denselben Punkt — und der lag direkt vor den Füßen,
+       weshalb die zweite Figur sich keinen Meter bewegt hat. */
+    figur.streifzug = null;
+    for (let k = 0; k < 24 && !figur.streifzug; k++) {
+      const w = Math.random() * Math.PI * 2;
+      const r = 8 + Math.random() * 16;
+      const x = figur.x + Math.cos(w) * r, y = figur.y + Math.sin(w) * r;
+      const a = Karte.art(Karte.inKachel(x), Karte.inKachel(y));
+      if (a === Karte.ART.GEHWEG || a === Karte.ART.PARK) figur.streifzug = { x, y };
+    }
+    figur.streifzugZeit = 6 + Math.random() * 8;
+  }
+  const dx = figur.streifzug ? figur.streifzug.x - figur.x : 0;
+  const dy = figur.streifzug ? figur.streifzug.y - figur.y : 0;
+  const weit = Math.hypot(dx, dy);
+  if (!figur.streifzug || weit < 0.8) {
+    figur.streifzug = null;
+    figur.bewegen(0, 0, false, dt);
+    return;
+  }
+  figur.bewegen((dx / weit) * 0.5, (dy / weit) * 0.5, false, dt);
 }
 
 /* ── Ausdauer ──
@@ -797,6 +890,23 @@ function zusammenstoesse(dt, f, alleAutos) {
         if (zustand.angefahren.length >= 3) mindestens(1);
       }
     }
+    /* Polizisten zu Fuß kann man auch umfahren — sie sind nicht aus
+       Stein. Das kostet natürlich einen Stern extra. */
+    for (const p of zustand.fahndung.polizisten) {
+      if (p.tot) continue;
+      if (Math.hypot(p.x - auto.x, p.y - auto.y) > 2.2) continue;
+      if (tempo <= 3) continue;
+      p.x += (p.x - auto.x) * 0.6 + auto.vx * 0.12;
+      p.y += (p.y - auto.y) * 0.6 + auto.vy * 0.12;
+      const tot = p.treffer(tempo * 8);
+      if (rammPause > 0) continue;
+      rammPause = 1.2;
+      Ton.rumms(0.8);
+      mindestens(tot ? 4 : 3);
+      hinweis(tot ? L("Polizist überfahren", "You ran over a cop")
+                  : L("Polizist angefahren", "You hit a cop"));
+    }
+
     /* Andere Autos und Streifenwagen rammen */
     for (const a of alleAutos.concat(zustand.fahndung.streifen)) {
       if (a === auto) continue;
@@ -808,9 +918,12 @@ function zusammenstoesse(dt, f, alleAutos) {
       a.vy += ny * wucht * 0.8;
       auto.vx -= nx * wucht * 0.5;
       auto.vy -= ny * wucht * 0.5;
-      auto.schaden = Math.min(130, auto.schaden + wucht * 0.75);
-      a.schaden = Math.min(130, (a.schaden || 0) + wucht * 0.9);
-      zustand.leben -= wucht * 0.22;
+      /* Blech hält mehr aus als vorher, und ein Rempler kostet kein
+         Leben mehr — erst ein richtig harter Aufprall tut weh, und auch
+         den fängt die Weste ab. */
+      auto.schaden = Math.min(130, auto.schaden + Math.max(0, wucht - 3) * 0.3);
+      a.schaden = Math.min(130, (a.schaden || 0) + Math.max(0, wucht - 3) * 0.4);
+      if (wucht > 11) schadenNehmen((wucht - 11) * 0.5);
       if (wucht > 3) Ton.rumms(Math.min(1, wucht / 14));
       if (zustand.fahndung.streifen.includes(a) && rammPause <= 0 && wucht > 5) {
         mindestens(2);
@@ -833,7 +946,7 @@ function zusammenstoesse(dt, f, alleAutos) {
       if (d > 1.8) continue;
       const tempo = Math.hypot(a.vx, a.vy);
       if (tempo < 3) continue;
-      zustand.leben -= tempo * 1.6 * dt * 10;
+      schadenNehmen(tempo * 1.1 * dt * 10);
       f.x += (f.x - a.x) * 0.4;
       f.y += (f.y - a.y) * 0.4;
       hinweis(L("Angefahren!", "You got hit!"));
@@ -1091,12 +1204,7 @@ function rechnen(dt) {
   /* Die zweite Figur bleibt stehen, rollt aber im Auto aus */
   for (const name of Object.keys(zustand.figuren)) {
     if (name === zustand.aktiv) continue;
-    const andere = zustand.figuren[name];
-    if (andere.imAuto) {
-      andere.imAuto.fahren(0, 0, false, dt);
-      andere.x = andere.imAuto.x;
-      andere.y = andere.imAuto.y;
-    }
+    zweitLeben(zustand.figuren[name], dt);
   }
 
   /* Verkehr: fahren lassen, was in der Nähe ist */
@@ -1108,6 +1216,27 @@ function rechnen(dt) {
     a.denken(dt, zustand.zeit * 1000, alleAutos, zustand.passanten);
   }
   verkehrNachziehen(zustand.verkehr, f.x, f.y, 190, alleAutos);
+
+  /* Wer im Verkehr jemanden streift, stößt ihn zur Seite und bremst
+     erschrocken. Vorher fuhren die Wagen einfach durch die Leute
+     hindurch, als wären sie Luft. */
+  for (const a of zustand.verkehr) {
+    if (a.fahrer || a.verlassen) continue;
+    if (Math.abs(a.x - f.x) > 90 || Math.abs(a.y - f.y) > 90) continue;
+    const tempo = Math.hypot(a.vx, a.vy);
+    if (tempo < 2) continue;
+    for (const p of zustand.passanten) {
+      if (p.tot || Math.hypot(p.x - a.x, p.y - a.y) > 2) continue;
+      p.x += (p.x - a.x) * 0.5 + a.vx * 0.08;
+      p.y += (p.y - a.y) * 0.5 + a.vy * 0.08;
+      p.flucht = 2.2;
+      p.kreuzen = null;
+      if (tempo > 10) p.treffer(tempo * 2.5);
+      a.vx *= 0.6;
+      a.vy *= 0.6;
+      break;
+    }
+  }
 
   /* Passanten: nur die in der Nähe bewegen, der Rest ruht */
   const naheAutos = alleAutos.filter(a =>
@@ -1411,13 +1540,17 @@ function ladenZeichnen() {
   ladenGeld.textContent = "$" + zustand.geld.toLocaleString(EN ? "en-US" : "de-DE");
   ladenListe.innerHTML = WARE.map((w, k) => {
     const munition = w.waffe === "munition";
-    const waffe = munition ? null : WAFFEN[w.waffe];
-    const name = munition ? L("Munition für alles", "Ammo for everything") : waffe.name;
-    const hat = !munition && zustand.arsenal.besitzt(w.waffe);
+    const weste = w.waffe === "weste";
+    const waffe = munition || weste ? null : WAFFEN[w.waffe];
+    const name = munition ? L("Munition für alles", "Ammo for everything")
+               : weste ? L("Schutzweste", "Body armour") : waffe.name;
+    const hat = !munition && !weste && zustand.arsenal.besitzt(w.waffe);
     const reicht = zustand.geld >= w.preis;
-    const bild = munition ? "" : Waffenbilder.datenUrl(w.waffe);
+    const bild = munition || weste ? "" : Waffenbilder.datenUrl(w.waffe);
     const wucht = munition
       ? L("füllt jede Waffe auf", "tops up every weapon")
+      : weste
+      ? L("Panzerung wieder voll", "armour back to full")
       : L(`Schaden ${waffe.schaden} · Reichweite ${Math.round(waffe.reichweite)} m`,
           `Damage ${waffe.schaden} · range ${Math.round(waffe.reichweite)} m`);
     return `<li>
@@ -1425,7 +1558,7 @@ function ladenZeichnen() {
         <i class="sladen__bild">${bild ? `<img src="${bild}" alt="" width="84" height="26">` : "+"}</i>
         <span class="sladen__text">
           <b>${k + 1} · ${name}${hat ? " ✓" : ""}</b>
-          <small>${wucht} · ${w.munition} ${L("Schuss", "rounds")}</small>
+          <small>${wucht}${w.munition ? ` · ${w.munition} ${L("Schuss", "rounds")}` : ""}</small>
         </span>
         <em>$${w.preis}</em>
       </button>
@@ -1442,6 +1575,7 @@ function kaufen(nr) {
   }
   zustand.geld -= w.preis;
   if (w.waffe === "munition") zustand.arsenal.nachladen(w.munition);
+  else if (w.waffe === "weste") zustand.panzerung = 100;
   else zustand.arsenal.geben(w.waffe, w.munition);
   Ton.kasse();
   waffeZeigen();

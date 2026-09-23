@@ -183,6 +183,8 @@ export class Fahndung {
   constructor() {
     this.stufe = 0;
     this.ruhe = 0;                    // Sekunden ohne Sichtkontakt
+    this.gesehen = false;             // hat dich gerade jemand im Blick?
+    this.letzterOrt = null;           // dorthin fahren sie, wenn nicht
     this.streifen = [];
     this.polizisten = [];
   }
@@ -219,9 +221,12 @@ export class Fahndung {
 
   nachschub(zielX, zielY) {
     while (this.streifen.length < this.sollWagen) {
-      const p = Karte.freierPunkt(zielX + (Math.random() - 0.5) * 120,
-                                  zielY + (Math.random() - 0.5) * 120,
-                                  [Karte.ART.STRASSE], 70);
+      /* Näher heransetzen als früher: Ein Wagen, der 150 Meter entfernt
+         einsetzt, sieht den Spieler nie — dadurch fiel die Fahndung,
+         obwohl man mitten in der Verfolgung steckte. */
+      const p = Karte.freierPunkt(zielX + (Math.random() - 0.5) * 90,
+                                  zielY + (Math.random() - 0.5) * 90,
+                                  [Karte.ART.STRASSE], 60);
       const senkrecht = Math.random() < 0.5;
       /* abwechselnd links, mittig, rechts anfahren */
       const versatz = [0, -7, 7, -12, 12, 0][this.streifen.length % 6];
@@ -240,13 +245,22 @@ export class Fahndung {
     }
 
     const ziel = spieler.imAuto || spieler;
-    this.nachschub(ziel.x, ziel.y);
+
+    /* Abhängen muss möglich sein. Solange dich jemand sieht, wird der
+       echte Ort gejagt und Nachschub geschickt. Sobald dich niemand mehr
+       sieht, fahren alle nur noch zum letzten bekannten Ort, und es
+       kommt **kein** neuer Wagen mehr dazu — vorher tauchten ständig
+       frische Streifen direkt neben dem Spieler auf, egal wie lange er
+       weg war. */
+    if (this.gesehen) this.letzterOrt = { x: ziel.x, y: ziel.y, vx: 0, vy: 0 };
+    const suchOrt = this.gesehen ? ziel : (this.letzterOrt || ziel);
+    if (this.gesehen || this.ruhe < 4) this.nachschub(suchOrt.x, suchOrt.y);
 
     let gesehen = false;
     for (const s of this.streifen) {
       const d = Math.hypot(s.x - ziel.x, s.y - ziel.y);
       if (d < SICHT) gesehen = true;
-      s.jagen(dt, ziel, autos, this.hart);
+      s.jagen(dt, suchOrt, autos, this.hart);
 
       /* Aussteigen: wenn der Spieler zu Fuß ist, aber auch, wenn sein
          Wagen steht — sonst fahren sie nur ewig im Kreis. */
@@ -268,14 +282,18 @@ export class Fahndung {
         if (p.totZeit > 20) this.polizisten.splice(k, 1);
         continue;
       }
-      const d = p.jagen(dt, ziel);
-      if (d < SICHT) gesehen = true;
+      const d = p.jagen(dt, this.gesehen ? ziel : suchOrt);
+      if (Math.hypot(p.x - ziel.x, p.y - ziel.y) < SICHT) gesehen = true;
 
       /* Ab zwei Sternen wird geschossen — auch auf einen Spieler im Auto */
       if (this.bewaffnet && zustand && d < 24 && p.nachladen <= 0 && sicht(p, ziel, 26)) {
         p.nachladen = 1.2 + Math.random() * 1.1;
         const treffer = Math.random() < 0.42;
-        if (treffer) zustand.leben -= 5;
+        /* Die Weste fängt Schüsse ab, wenn eine da ist */
+        if (treffer) {
+          if (zustand.schadenNehmen) zustand.schadenNehmen(5);
+          else zustand.leben -= 5;
+        }
         zustand.strahlen.push({
           x1: p.x, y1: p.y,
           x2: treffer ? ziel.x : ziel.x + (Math.random() - 0.5) * 4,
@@ -310,14 +328,24 @@ export class Fahndung {
     for (const s of this.streifen) {
       naechste = Math.min(naechste, Math.hypot(s.x - ziel.x, s.y - ziel.y));
     }
-    const weitWeg = naechste > 150;
-    this.ruhe = gesehen ? 0 : this.ruhe + dt * (weitWeg ? 2 : 1);
-    if (this.ruhe > 12) {
+    /* Wie schnell die Fahndung abkühlt, hängt davon ab, wie nah die
+       Streifen noch dran sind:
+         gesehen              → gar nicht
+         Wagen näher als 140m → sehr langsam, sie suchen ja noch
+         bis 220 m            → normal
+         weiter weg           → doppelt so schnell, du bist raus */
+    const weitWeg = naechste > 220;
+    const suchtNoch = naechste < 140;
+    this.gesehen = gesehen;
+    this.ruhe = gesehen ? 0
+      : this.ruhe + dt * (suchtNoch ? 0.35 : weitWeg ? 2 : 1);
+    if (this.ruhe > 9) {
       this.stufe = Math.max(0, this.stufe - 1);
       this.ruhe = 0;
       /* Wer eine Stufe verliert, schüttelt auch die Wagen ab, die ihn
          ohnehin nicht mehr finden */
-      if (weitWeg) this.streifen.length = Math.min(this.streifen.length, this.sollWagen);
+      this.streifen.length = Math.min(this.streifen.length, this.sollWagen);
+      if (this.stufe === 0) this.polizisten.length = 0;
     }
   }
 

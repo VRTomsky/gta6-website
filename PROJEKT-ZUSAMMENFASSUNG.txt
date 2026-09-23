@@ -420,6 +420,19 @@ WAS BISHER GEMACHT WURDE
    - Passanten benutzen jetzt die Fussgaengerueberwege und warten
      dabei auf Rot fuer die Autos.
 
+27. Spiel, fuenfzehnter Schritt (23.09.2026):
+   - Cops kann man jetzt abhaengen. Sie fahren zum letzten Ort, an
+     dem sie dich gesehen haben, und es kommt kein Nachschub mehr.
+     Aus 600 Metern fallen drei Sterne in 13 Sekunden.
+   - Das Auto geht viel langsamer kaputt, und ein Rempler kostet
+     kein Leben mehr.
+   - Neue Panzerungsleiste. Weste kostet 800 Dollar bei Ammu-Vice
+     und faengt Schaden ab, bevor das Leben drankommt.
+   - Polizisten kann man ueberfahren.
+   - Der Verkehr faehrt nicht mehr durch Fussgaenger hindurch.
+   - Jason und Lucia starten an verschiedenen Orten, und wer gerade
+     nicht dran ist, laeuft herum oder sitzt in einem Auto.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

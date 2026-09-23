@@ -150,7 +150,10 @@ export class Fahrzeug {
     else { getroffen = true; this.vy *= -0.22; }
     if (getroffen) {
       const wucht = Math.hypot(this.vx, this.vy);
-      this.schaden = Math.min(100, this.schaden + wucht * 0.6);
+      /* Nur ein richtiger Aufprall macht Schaden. Vorher zählte jedes
+         Schrammen an der Wand mit — ein Wagen war nach zwei Kurven
+         Schrott. */
+      if (wucht > 4) this.schaden = Math.min(100, this.schaden + (wucht - 4) * 0.35);
       this.vx *= 0.55;
       this.vy *= 0.55;
       /* Ein Stück von der Wand wegsetzen, damit der nächste Gasstoß greift */
