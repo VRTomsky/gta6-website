@@ -447,6 +447,21 @@ WAS BISHER GEMACHT WURDE
    - Sechs verschiedene Polizeiwagen, dazu Rettung und Feuerwehr im
      Verkehr.
 
+29. Spiel und Seite (24.09.2026) - Wasser, Bruecken, Admin:
+   - Neues Wasser ohne Streifen und Naehte, Kaimauern mit Gelaender,
+     Straende mit Schaum.
+   - Bruecken haben links und rechts Gehwege mit Stahltraegern und
+     Laternen; Passanten laufen darueber.
+   - Der Spielstand (Geld, Waffen, Munition, Weste, Auftraege) wird
+     im Konto gespeichert.
+   - Admin-Rolle fuer das Konto VRTomsky: roter Reiter "Admin" in der
+     Navigation, roter Chip im Profil, Admin-Seite (admin.html) mit
+     Hinweisbanner und Belohnungsfaktor fuers Spiel.
+   - Entwicklermenue im Spiel mit F8: Geld, unendlich Leben/Weste/
+     Ausdauer, Waffen, Fahrzeuge spawnen, Fahndung, Nacht.
+   - Neue firestore.rules - muessen in der Firebase-Konsole
+     veroeffentlicht werden.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

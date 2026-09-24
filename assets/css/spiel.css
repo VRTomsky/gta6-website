@@ -425,6 +425,66 @@
 .stor__klein{ font-size:.78rem; color:var(--fg-dim); }
 
 /* ── Waffenladen ── */
+/* ── Entwicklermenü (Admin, F8) ──
+   Rot statt Pink: soll auf den ersten Blick anders aussehen als alles,
+   was normale Spieler zu sehen bekommen. */
+.sdev{
+  position:absolute; inset:0; z-index:7; display:grid; place-items:center;
+  padding:clamp(10px, 2vw, 24px);
+  background:rgba(8,4,10,.82); backdrop-filter:blur(4px);
+}
+.sdev[hidden]{ display:none; }
+.sdev__karte{
+  width:min(640px, 100%); max-height:100%; overflow:auto;
+  background:rgba(18,8,14,.95); border:1px solid rgba(255,70,80,.55);
+  border-radius:var(--r); padding:clamp(14px, 2vw, 22px);
+  box-shadow:0 0 0 1px rgba(255,70,80,.15), 0 20px 60px rgba(255,40,60,.15);
+}
+.sdev__kopf{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.sdev__kopf h2{ margin:0; flex:1; font-size:clamp(1.3rem, 3vw, 1.9rem); }
+.sdev__marke{
+  font:800 .7rem/1 var(--f-label); letter-spacing:.14em; padding:5px 8px;
+  border-radius:6px; background:#e3263a; color:#fff;
+}
+.sdev__zu{
+  width:34px; height:34px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
+  background:none; color:var(--cream); font-size:1.3rem; cursor:pointer;
+}
+.sdev__zu:hover{ background:#e3263a; border-color:#e3263a; }
+.sdev__gruppe{ margin:0 0 14px; }
+.sdev__gruppe h3{
+  margin:0 0 7px; font:700 .7rem/1 var(--f-label); letter-spacing:.14em;
+  text-transform:uppercase; color:#ff8a94;
+}
+.sdev__reihe{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.sdev__reihe button, .sdev__reihe select, .sdev__reihe input{
+  font:inherit; font-size:.82rem; color:var(--cream);
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+  border-radius:9px; padding:7px 10px;
+}
+.sdev__reihe button{ cursor:pointer; }
+.sdev__reihe button:hover{ background:#e3263a; border-color:#e3263a; color:#fff; }
+.sdev__reihe input{ width:9em; }
+.sdev__reihe select{ max-width:100%; }
+.sdev__reihe option{ background:#1a0c14; }
+.sdev__schalter{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:6px; }
+.sdev__schalter label{
+  display:flex; align-items:center; gap:8px; font-size:.84rem; color:var(--fg-mid);
+  padding:7px 10px; border-radius:9px; background:rgba(255,255,255,.04); cursor:pointer;
+}
+.sdev__schalter input{ accent-color:#e3263a; width:16px; height:16px; }
+.sdev__schalter input:checked + span{ color:#fff; }
+.sdev__hinweis{ margin:6px 0 0; font-size:.76rem; color:var(--fg-dim); }
+.sdevknopf{
+  position:absolute; right:calc(clamp(10px, 1.6vw, 18px) + 144px); bottom:clamp(10px, 1.6vw, 18px);
+  z-index:3; height:40px; padding:0 10px; display:grid; place-items:center;
+  border-radius:12px; border:1px solid rgba(255,70,80,.6);
+  background:rgba(40,6,14,.75); color:#ff8a94; cursor:pointer;
+  font:800 .72rem/1 var(--f-label); letter-spacing:.12em;
+}
+.sdevknopf[hidden]{ display:none; }
+.sdevknopf:hover{ background:#e3263a; color:#fff; }
+
 .sladen{
   position:absolute; inset:0; z-index:6; display:grid; place-items:center;
   padding:clamp(14px, 2.4vw, 30px);

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Einfache Unterseiten (konto.html, datenschutz.html)
+   Einfache Unterseiten (konto.html, admin.html, datenschutz.html)
 
    Die Startseite hat main.js, die Akten char.js — beide bauen viel
    mehr auf, als diese Seiten brauchen. Hier nur das Gemeinsame:

@@ -28,6 +28,7 @@ import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
 import { Missionen } from "./missionen.js";
 import * as Innen from "./innen.js";
+import { istAdmin } from "../konto/rolle.js";
 import { Arsenal, feuern, laedenSetzen, WAFFEN, WARE } from "./waffen.js";
 import * as Waffenbilder from "./waffenbilder.js";
 import { Route } from "./wege.js";
@@ -64,6 +65,9 @@ const radar = document.getElementById("spielKarte");
 const grossFeld = document.getElementById("spielGross");
 const grossKarte = document.getElementById("spielGrossKarte");
 const orteFeld = document.getElementById("spielOrte");
+const devFeld = document.getElementById("spielDev");
+const devInhalt = document.getElementById("spielDevInhalt");
+const devKnopf = document.getElementById("spielDevKnopf");
 const ladenFeld = document.getElementById("spielLaden");
 const ladenListe = document.getElementById("spielLadenListe");
 const ladenGeld = document.getElementById("spielLadenGeld");
@@ -110,6 +114,8 @@ const zustand = {
   innen: null,                // Zustand im Gebäude (innen.js)
   clubTueren: [],             // Eingänge der drei Nachtclubs
   fehler: [],                 // letzte Aussetzer, auch in localStorage
+  /* Schalter aus dem Entwicklermenü (nur Admins) */
+  cheats: { leben: false, panzer: false, ausdauer: false, polizei: false, nacht: false },
   schwarz: null,              // { rest, dauer, text } für die Ausblendung
   clubTuer: null,             // Eingang des Pink Flamingo auf der Straße
   fahndung: new Fahndung(),
@@ -152,6 +158,11 @@ addEventListener("keydown", e => {
   /* Pfeiltasten, Leertaste und Alt sollen die Seite nicht bedienen */
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Tab", "AltLeft", "AltRight"].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
+  if (e.code === "F8") { e.preventDefault(); devUmschalten(); return; }
+  if (!devFeld.hidden) {                           // Entwicklermenü offen
+    if (e.code === "Escape") devUmschalten(false);
+    return;
+  }
   tasten.add(e.code);
   if (zustand.fahrt) return;                       // während der Kamerafahrt nichts
   if (!ladenFeld.hidden) {                         // Laden offen
@@ -995,9 +1006,17 @@ function neustartAn(x, y) {
 }
 
 /* Ort eines Wahrzeichens, sonst der Notfallpunkt */
+/* Nächstes Wahrzeichen dieser Art — seit es vier Wachen und drei
+   Kliniken gibt, wacht man in der nächsten auf, nicht quer durch die Stadt */
 function wahrzeichenPunkt(bau, ersatzX, ersatzY) {
-  const w = Karte.wahrzeichen.find(x => x.bau === bau);
-  return w ? { x: w.x, y: w.y } : { x: ersatzX, y: ersatzY };
+  const f = spieler();
+  let beste = null, bestWeit = Infinity;
+  for (const w of Karte.wahrzeichen) {
+    if (w.bau !== bau) continue;
+    const d = Math.hypot(w.x - f.x, w.y - f.y);
+    if (d < bestWeit) { bestWeit = d; beste = w; }
+  }
+  return beste ? { x: beste.x, y: beste.y } : { x: ersatzX, y: ersatzY };
 }
 
 function verhaftet() {
@@ -1291,6 +1310,7 @@ function rechnen(dt) {
   zustand.schonung = Math.max(0, zustand.schonung - dt);
   zustand.fahndung.rechnen(dt, f, alleAutos.concat(zustand.fahndung.streifen), zustand);
   if (zustand.schonung <= 0 && zustand.fahndung.verhaftet(f)) verhaftet();
+  cheatsAnwenden();
   if (zustand.leben <= 0) erledigt();
   hudFahndung();
 
@@ -1482,6 +1502,189 @@ function zeichnen() {
       break;
     }
   }
+  if (zustand.cheats.nacht) nachtMalen();
+}
+
+/* Nacht: dunkelblauer Schleier, um den Spieler ein Lichtkegel —
+   im Auto die Scheinwerfer nach vorn. */
+function nachtMalen() {
+  const f = spieler();
+  const ziel = f.imAuto || f;
+  const px = (ziel.x - kamera.x) * kamera.zoom + kamera.breite / 2;
+  const py = (ziel.y - kamera.y) * kamera.zoom + kamera.hoehe / 2;
+  ctx.save();
+  ctx.fillStyle = "rgba(6,10,38,.62)";
+  ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
+  ctx.globalCompositeOperation = "lighter";
+  const r = kamera.zoom * (f.imAuto ? 9 : 6);
+  const lx = f.imAuto ? px + Math.cos(f.imAuto.winkel) * r * 0.6 : px;
+  const ly = f.imAuto ? py + Math.sin(f.imAuto.winkel) * r * 0.6 : py;
+  const licht = ctx.createRadialGradient(lx, ly, 0, lx, ly, r);
+  licht.addColorStop(0, "rgba(255,230,170,.35)");
+  licht.addColorStop(1, "rgba(255,230,170,0)");
+  ctx.fillStyle = licht;
+  ctx.beginPath();
+  ctx.arc(lx, ly, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/* ── Entwicklermenü ─────────────────────────────────────────
+   Nur für Admins (assets/js/konto/rolle.js), im Spiel mit F8 oder dem
+   roten DEV-Knopf. Im Demo-Modus zum Testen mit ?demo&admin. */
+function devErlaubt() {
+  if (istAdmin(konto.profil)) return true;
+  return !!(konto.backend && konto.backend.modus === "demo" &&
+            new URLSearchParams(location.search).has("admin"));
+}
+
+function devKnopfZeigen() {
+  if (devKnopf) devKnopf.hidden = !(zustand.laeuft && devErlaubt());
+}
+
+function devUmschalten(an) {
+  if (!zustand.laeuft || !devErlaubt()) return;
+  const auf = an === undefined ? devFeld.hidden : an;
+  devFeld.hidden = !auf;
+  zustand.pause = auf;
+  pauseFeld.hidden = true;
+  if (auf) { Ton.anhalten(); devBauen(); }
+  else { letzte = performance.now(); leinwand.focus(); }
+}
+
+const devWaffen = () => Object.keys(WAFFEN).filter(w => w !== "faust");
+
+function devBauen() {
+  const schalter = [
+    ["leben", L("Leben unendlich", "Infinite health")],
+    ["panzer", L("Panzerung unendlich", "Infinite armour")],
+    ["ausdauer", L("Ausdauer unendlich", "Infinite stamina")],
+    ["polizei", L("Keine Polizei", "No police")],
+    ["nacht", L("Nacht", "Night")]
+  ];
+  const autos = Object.keys(TYPEN)
+    .map(t => `<option value="${t}">${TYPEN[t].name}</option>`).join("");
+  devInhalt.innerHTML = `
+    <div class="sdev__gruppe">
+      <h3>${L("Geld", "Money")} · $${zustand.geld.toLocaleString(EN ? "en-US" : "de-DE")}</h3>
+      <div class="sdev__reihe">
+        <input type="number" min="0" max="99999999" step="1000" id="devGeld" value="${zustand.geld}">
+        <button type="button" data-dev="geld">${L("Setzen", "Set")}</button>
+        <button type="button" data-dev="plus" data-wert="10000">+10.000</button>
+        <button type="button" data-dev="plus" data-wert="100000">+100.000</button>
+        <button type="button" data-dev="plus" data-wert="1000000">+1.000.000</button>
+      </div>
+    </div>
+    <div class="sdev__gruppe">
+      <h3>${L("Schalter", "Toggles")}</h3>
+      <div class="sdev__schalter">
+        ${schalter.map(([k, t]) => `<label><input type="checkbox" data-schalter="${k}"
+          ${zustand.cheats[k] ? "checked" : ""}><span>${t}</span></label>`).join("")}
+      </div>
+    </div>
+    <div class="sdev__gruppe">
+      <h3>${L("Waffen", "Weapons")}</h3>
+      <div class="sdev__reihe">
+        <button type="button" data-dev="alle">${L("Alle Waffen", "All weapons")}</button>
+        ${devWaffen().map(w => `<button type="button" data-dev="waffe" data-wert="${w}">${WAFFEN[w].name}</button>`).join("")}
+        <button type="button" data-dev="munition">${L("Munition voll", "Full ammo")}</button>
+        <button type="button" data-dev="heilen">${L("Leben, Weste, Ausdauer voll", "Heal, armour, stamina")}</button>
+      </div>
+    </div>
+    <div class="sdev__gruppe">
+      <h3>${L("Fahrzeug", "Vehicle")}</h3>
+      <div class="sdev__reihe">
+        <select id="devAuto">${autos}</select>
+        <button type="button" data-dev="auto">${L("Spawnen und einsteigen", "Spawn and get in")}</button>
+      </div>
+    </div>
+    <div class="sdev__gruppe">
+      <h3>${L("Fahndung", "Wanted level")} · ${zustand.fahndung.stufe}</h3>
+      <div class="sdev__reihe">
+        ${[0, 1, 2, 3, 4, 5].map(n => `<button type="button" data-dev="sterne" data-wert="${n}">${n} ★</button>`).join("")}
+        <button type="button" data-dev="wegpunkt">${L("Zum Wegpunkt springen", "Teleport to waypoint")}</button>
+      </div>
+    </div>`;
+}
+
+devFeld.addEventListener("change", e => {
+  const k = e.target.dataset && e.target.dataset.schalter;
+  if (!k) return;
+  zustand.cheats[k] = e.target.checked;
+  hinweis(`${k}: ${e.target.checked ? L("an", "on") : L("aus", "off")}`);
+});
+
+devFeld.addEventListener("click", e => {
+  const k = e.target.closest("[data-dev]");
+  if (!k) return;
+  const was = k.dataset.dev, wert = k.dataset.wert;
+  const f = spieler();
+  if (was === "zu") { devUmschalten(false); return; }
+  if (was === "geld") {
+    const n = parseInt(document.getElementById("devGeld").value, 10);
+    if (Number.isFinite(n)) zustand.geld = Math.max(0, Math.min(99999999, n));
+  }
+  if (was === "plus") zustand.geld = Math.min(99999999, zustand.geld + parseInt(wert, 10));
+  if (was === "alle") for (const w of devWaffen()) zustand.arsenal.geben(w, 300);
+  if (was === "waffe") zustand.arsenal.geben(wert, 300);
+  if (was === "munition") zustand.arsenal.nachladen(999);
+  if (was === "heilen") { zustand.leben = 100; zustand.panzerung = 100; zustand.ausdauer = 100; }
+  if (was === "sterne") {
+    const n = parseInt(wert, 10);
+    if (n === 0) zustand.fahndung.loeschen();
+    else { zustand.fahndung.loeschen(); zustand.fahndung.melden(n); }
+  }
+  if (was === "wegpunkt" && zustand.wegpunkt) {
+    const p = Karte.freierPunkt(zustand.wegpunkt.x, zustand.wegpunkt.y,
+      [Karte.ART.STRASSE, Karte.ART.GEHWEG], 20);
+    const ziel = f.imAuto || f;
+    ziel.x = p.x; ziel.y = p.y; ziel.vx = ziel.vy = 0;
+    f.x = p.x; f.y = p.y;
+    kamera.x = p.x; kamera.y = p.y;
+  }
+  if (was === "auto") {
+    const typ = document.getElementById("devAuto").value;
+    if (f.imAuto) aussteigen();
+    const p = devStellplatz(f.x, f.y);
+    const neu = new Fahrzeug(typ, p.x, p.y, f.winkel || 0);
+    zustand.autos.push(neu);
+    f.imAuto = neu;
+    neu.fahrer = f;
+    Ton.tuer();
+    devUmschalten(false);
+    hinweis(neu.daten.name);
+    return;
+  }
+  waffeZeigen();
+  hudFahndung();
+  devBauen();
+});
+
+/* Nächstes Straßenfeld, auf dem kein anderes Auto steht — sonst
+   steckt der neue Wagen in einem anderen fest */
+function devStellplatz(x, y) {
+  const t0x = Karte.inKachel(x), t0y = Karte.inKachel(y);
+  for (let r = 0; r < 12; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        if (Karte.art(t0x + dx, t0y + dy) !== Karte.ART.STRASSE) continue;
+        const px = Karte.inMeter(t0x + dx) + Karte.KACHEL / 2;
+        const py = Karte.inMeter(t0y + dy) + Karte.KACHEL / 2;
+        if (zustand.autos.every(a => Math.hypot(a.x - px, a.y - py) > 7)) return { x: px, y: py };
+      }
+    }
+  }
+  return Karte.freierPunkt(x, y, [Karte.ART.STRASSE], 12);
+}
+
+/* Schalter anwenden — vor dem Todescheck, sonst stirbt man trotzdem */
+function cheatsAnwenden() {
+  const c = zustand.cheats;
+  if (c.leben) zustand.leben = 100;
+  if (c.panzer) zustand.panzerung = 100;
+  if (c.ausdauer) zustand.ausdauer = 100;
+  if (c.polizei && zustand.fahndung.stufe > 0) zustand.fahndung.loeschen();
 }
 
 /* ── Punkte und Bestenliste ──
@@ -1502,6 +1705,66 @@ async function bestwertLaden() {
     zustand.bestwert = bestwertLesenLokal();
   }
   eigenZeigen();
+}
+
+/* ── Spielstand im Konto ─────────────────────────────────────
+   Geld, Waffen, Munition, Weste, erledigte Aufträge und der Bestwert
+   am Schießstand gehören zum Konto. Gesichert wird alle zehn Sekunden,
+   wenn sich etwas geändert hat, dazu beim Verlassen der Seite. */
+function spielstandJetzt() {
+  return {
+    geld: Math.round(zustand.geld),
+    waffen: zustand.arsenal.reihe.slice(),
+    munition: { ...zustand.arsenal.munition },
+    panzerung: Math.round(zustand.panzerung),
+    erledigt: [...zustand.missionen.erledigt],
+    schiessBest: zustand.schiessBest || 0,
+    schiessRunden: zustand.schiessRunden || 0
+  };
+}
+
+let spielstandZuletzt = "";
+async function spielstandLaden() {
+  if (!konto.backend || !konto.nutzer) return;
+  const d = await konto.backend.spielstandLaden(konto.nutzer.uid);
+  if (!d) return;
+  zustand.geld = d.geld | 0;
+  for (const w of d.waffen || []) {
+    if (w === "faust") continue;
+    zustand.arsenal.geben(w, 0);
+  }
+  zustand.arsenal.munition = { ...(d.munition || {}) };
+  zustand.arsenal.aktiv = 0;
+  zustand.panzerung = d.panzerung | 0;
+  for (const id of d.erledigt || []) zustand.missionen.erledigt.add(id);
+  zustand.schiessBest = d.schiessBest | 0;
+  zustand.schiessRunden = d.schiessRunden | 0;
+  spielstandZuletzt = JSON.stringify(spielstandJetzt());
+  waffeZeigen();
+  hudFahndung();
+  if (zustand.geld > 0 || (d.waffen || []).length > 1) {
+    hinweis(L(`Spielstand geladen — $${zustand.geld.toLocaleString("de-DE")}`,
+              `Game loaded — $${zustand.geld.toLocaleString("en-US")}`));
+  }
+}
+
+async function spielstandSichern() {
+  if (!zustand.laeuft || !konto.backend || !konto.nutzer) return;
+  const jetzt = spielstandJetzt();
+  const text = JSON.stringify(jetzt);
+  if (text === spielstandZuletzt) return;
+  spielstandZuletzt = text;
+  const ok = await konto.backend.spielstandSetzen(konto.nutzer.uid, jetzt);
+  if (!ok) spielstandZuletzt = "";               // beim nächsten Mal nochmal
+}
+setInterval(spielstandSichern, 10000);
+document.addEventListener("visibilitychange", () => { if (document.hidden) spielstandSichern(); });
+
+/* Belohnungsfaktor der Admin-Seite: 1 = normal, 2 = doppelt … */
+async function spielEinstellungenLaden() {
+  if (!konto.backend || !konto.backend.einstellungLaden) return;
+  const e = await konto.backend.einstellungLaden("spiel");
+  zustand.missionen.geldFaktor = Math.max(1, Math.min(5, (e && e.geldFaktor) | 0 || 1));
 }
 
 let speichernLaeuft = false;
@@ -1939,7 +2202,11 @@ async function starten() {
   waffeZeigen();
   bestwertLaden();
   bestenlisteZeigen();
+  await spielstandLaden();
+  spielEinstellungenLaden();
   addEventListener("pagehide", bestwertSichern);
+  addEventListener("pagehide", spielstandSichern);
+  devKnopfZeigen();
   hinweis(L("E einsteigen und Clubs betreten · Umschalt rennen · Maustaste schlagen · M Karte",
             "E to get in and enter clubs · shift to run · mouse to fight · M for the map"));
   letzte = performance.now();
@@ -1954,6 +2221,8 @@ wechselFeld.addEventListener("click", e => {
 });
 
 document.getElementById("spielStartKnopf").addEventListener("click", starten);
+if (devKnopf) devKnopf.addEventListener("click", () => devUmschalten());
+kontoAbo(() => devKnopfZeigen());
 groesseAnpassen();
 
 /* Rechtsklick im Spiel soll kein Browser-Menü öffnen */

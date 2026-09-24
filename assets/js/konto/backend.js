@@ -392,6 +392,47 @@ async function firebaseBackend(config, slot) {
       } catch (e) { /* Bestenliste ist Beiwerk — Fehler bleiben still */ }
     },
 
+    /* ── Spielstand des Browser-Spiels ──
+       Ein Dokument je Konto, nur für die Person selbst: Geld, Waffen,
+       Munition, Weste, erledigte Aufträge. Vorher fing jede Runde bei
+       null an, obwohl man angemeldet sein muss. */
+    async spielstandLaden(uid) {
+      try {
+        const s = await frist(F.getDoc(F.doc(db, "spielstaende", uid)));
+        return s.exists() ? s.data() : null;
+      } catch (e) { return null; }
+    },
+
+    async spielstandSetzen(uid, d) {
+      try {
+        await frist(F.setDoc(F.doc(db, "spielstaende", uid), {
+          geld: Math.max(0, Math.min(99999999, Math.round(d.geld || 0))),
+          waffen: (d.waffen || []).slice(0, 10).map(String),
+          munition: Object.fromEntries(Object.entries(d.munition || {}).slice(0, 10)
+            .map(([k, v]) => [String(k), Math.max(0, Math.min(99999, Math.round(v) || 0))])),
+          panzerung: Math.max(0, Math.min(100, Math.round(d.panzerung || 0))),
+          erledigt: (d.erledigt || []).slice(0, 50).map(String),
+          schiessBest: Math.max(0, Math.min(10, d.schiessBest | 0)),
+          schiessRunden: Math.max(0, Math.min(99999, d.schiessRunden | 0)),
+          updatedAt: F.serverTimestamp()
+        }), 15000);
+        return true;
+      } catch (e) { return false; }
+    },
+
+    /* ── Einstellungen der Seite (nur Admin schreibt) ── */
+    async einstellungLaden(name) {
+      try {
+        const s = await frist(F.getDoc(F.doc(db, "einstellungen", name)));
+        return s.exists() ? s.data() : null;
+      } catch (e) { return null; }
+    },
+
+    async einstellungSetzen(name, daten) {
+      await frist(F.setDoc(F.doc(db, "einstellungen", name),
+        { ...daten, updatedAt: F.serverTimestamp() }), 15000);
+    },
+
     async bestenliste(anzahl = 10) {
       try {
         const q = F.query(F.collection(db, "bestenliste"),
@@ -619,6 +660,32 @@ function demoBackend(slot) {
       const s = lese();
       s.bestenliste = s.bestenliste || {};
       s.bestenliste[uid] = { name, punkte: Math.round(punkte) };
+      schreibe(s);
+    },
+
+    /* Spielstand und Einstellungen im Demo-Modus: nur in diesem Browser */
+    async spielstandLaden(uid) {
+      const s = lese();
+      return (s.spielstaende && s.spielstaende[uid]) || null;
+    },
+
+    async spielstandSetzen(uid, d) {
+      const s = lese();
+      s.spielstaende = s.spielstaende || {};
+      s.spielstaende[uid] = JSON.parse(JSON.stringify(d));
+      schreibe(s);
+      return true;
+    },
+
+    async einstellungLaden(name) {
+      const s = lese();
+      return (s.einstellungen && s.einstellungen[name]) || null;
+    },
+
+    async einstellungSetzen(name, daten) {
+      const s = lese();
+      s.einstellungen = s.einstellungen || {};
+      s.einstellungen[name] = JSON.parse(JSON.stringify(daten));
       schreibe(s);
     },
 

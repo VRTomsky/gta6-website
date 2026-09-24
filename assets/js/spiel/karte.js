@@ -176,6 +176,182 @@ function dekoMalen(ctx, name, px, py, g, vx = 0.5, vy = 0.5, dreh = 0) {
   ctx.drawImage(b, mx - w / 2, my - h / 2, w, h);
 }
 
+/* ── Wasser ────────────────────────────────────────────────
+   Vorher: eine Textur je Kachel mit waagerechten Streifen, die an jeder
+   Kachelkante abrissen — das Meer sah aus wie ein Duschvorhang. Jetzt
+   ein nahtloses Muster, 16 × 16 m groß, das an der Welt festhängt statt
+   an der Kachel. Dadurch gibt es keine Kanten mehr. Gerechnet wird es
+   einmal; die Wellen laufen mit ganzzahligen Frequenzen über die
+   Periode, deshalb passt der Rand genau an den Anfang. */
+const WASSER_PX = 16;                 // Bildpunkte je Meter im Muster
+let wasserBild = null;
+const wasserMuster = new WeakMap();
+
+function wasserBildBauen() {
+  const n = 16 * WASSER_PX;
+  const l = document.createElement("canvas");
+  l.width = l.height = n;
+  const c = l.getContext("2d");
+  const bild = c.createImageData(n, n);
+  const d = bild.data, T = Math.PI * 2 / n;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      /* Dünung: drei Wellenzüge in verschiedene Richtungen */
+      const v = Math.sin(T * (2 * x + y)) * 0.5 +
+                Math.sin(T * (3 * x - 2 * y) + 1.3) * 0.3 +
+                Math.sin(T * (5 * x + 4 * y) + 0.7) * 0.2;
+      /* Glanzlinien: schmale helle Kämme, leicht gewellt */
+      const k = Math.sin(T * (7 * x + 3 * y) + Math.sin(T * 2 * y) * 2.2);
+      const glanz = k > 0.965 ? ((k - 0.965) / 0.035) * 0.55 : 0;
+      const t = v * 0.5 + 0.5;
+      const q = (y * n + x) * 4;
+      d[q] = 14 + t * 18 + glanz * 90;
+      d[q + 1] = 58 + t * 34 + glanz * 110;
+      d[q + 2] = 102 + t * 44 + glanz * 100;
+      d[q + 3] = 255;
+    }
+  }
+  c.putImageData(bild, 0, 0);
+  return l;
+}
+
+function wasserFlaeche(ctx, tx, ty, px, py, g) {
+  if (!wasserBild) wasserBild = wasserBildBauen();
+  let muster = wasserMuster.get(ctx);
+  if (!muster) { muster = ctx.createPattern(wasserBild, "repeat"); wasserMuster.set(ctx, muster); }
+  /* Muster an die Welt hängen: Weltursprung liegt bei px − tx·g */
+  const k = (g / KACHEL) / WASSER_PX;
+  muster.setTransform(new DOMMatrix([k, 0, 0, k, px - tx * g, py - ty * g]));
+  ctx.fillStyle = muster;
+  ctx.fillRect(px, py, g + 1, g + 1);
+}
+
+/* Wasser am Ufer: Schatten unter der Kaimauer oder Brücke, eine helle
+   Schaumlinie; am Strand stattdessen flaches, helleres Wasser. */
+function wasserUfer(ctx, tx, ty, px, py, g) {
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const nb = art(tx + dx, ty + dy);
+    if (nb === ART.WASSER) continue;
+    const strand = nb === ART.STRAND;
+    const bruecke = nb === ART.BRUECKE || Plan.istSteg(tx + dx, ty + dy);
+    const breit = g * (strand ? 0.5 : bruecke ? 0.42 : 0.22);
+    /* Verlauf von der Uferkante ins Wasser hinein */
+    const kx = dx > 0 ? px + g : px, ky = dy > 0 ? py + g : py;
+    const verlauf = dx
+      ? ctx.createLinearGradient(kx, 0, kx - dx * breit, 0)
+      : ctx.createLinearGradient(0, ky, 0, ky - dy * breit);
+    if (strand) {
+      verlauf.addColorStop(0, "rgba(120,215,210,.55)");
+      verlauf.addColorStop(1, "rgba(120,215,210,0)");
+    } else {
+      verlauf.addColorStop(0, bruecke ? "rgba(2,10,24,.6)" : "rgba(2,10,24,.45)");
+      verlauf.addColorStop(1, "rgba(2,10,24,0)");
+    }
+    ctx.fillStyle = verlauf;
+    if (dx > 0) ctx.fillRect(px + g - breit, py, breit, g + 1);
+    if (dx < 0) ctx.fillRect(px, py, breit, g + 1);
+    if (dy > 0) ctx.fillRect(px, py + g - breit, g + 1, breit);
+    if (dy < 0) ctx.fillRect(px, py, g + 1, breit);
+    /* Schaumlinie */
+    ctx.fillStyle = strand ? "rgba(240,250,255,.5)" : "rgba(210,232,250,.28)";
+    const f = g * 0.03, ab = g * (strand ? 0.06 : 0.04);
+    if (dx > 0) ctx.fillRect(px + g - ab - f, py, f, g + 1);
+    if (dx < 0) ctx.fillRect(px + ab, py, f, g + 1);
+    if (dy > 0) ctx.fillRect(px, py + g - ab - f, g + 1, f);
+    if (dy < 0) ctx.fillRect(px, py + ab, g + 1, f);
+  }
+}
+
+/* Kaimauer an Land: Betonkante zum Wasser, dahinter ein Geländer
+   (am Hafen Poller statt Geländer). Vorher stieß der Asphalt ohne
+   jede Kante ans Wasser. */
+function uferKante(ctx, tx, ty, px, py, g, a) {
+  if (a === ART.WASSER || a === ART.STRAND || a === ART.GEBAEUDE || a === ART.BRUECKE) return;
+  if (Plan.istSteg(tx, ty)) return;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    if (art(tx + dx, ty + dy) !== ART.WASSER) continue;
+    const kante = g * 0.12, gel = g * 0.2;
+    /* Rechteck entlang der Wasserseite, von Tiefe t0 bis t1 nach innen */
+    const streifen = (t0, t1) => dx > 0 ? [px + g - t1, py, t1 - t0, g + 1]
+                              : dx < 0 ? [px + t0, py, t1 - t0, g + 1]
+                              : dy > 0 ? [px, py + g - t1, g + 1, t1 - t0]
+                              : [px, py + t0, g + 1, t1 - t0];
+    ctx.fillStyle = "#b9b5aa";                             // Mauerkrone
+    ctx.fillRect(...streifen(0, kante));
+    ctx.fillStyle = "rgba(40,36,30,.55)";                  // Außenkante
+    ctx.fillRect(...streifen(0, g * 0.025));
+    if (a === ART.HAFEN) {                                 // Poller statt Geländer
+      ctx.fillStyle = "#2c2f36";
+      for (let k = 0.25; k < 1; k += 0.5) {
+        const bx = dx ? (dx > 0 ? px + g - kante * 1.6 : px + kante * 1.6) : px + g * k;
+        const by = dx ? py + g * k : (dy > 0 ? py + g - kante * 1.6 : py + kante * 1.6);
+        ctx.beginPath();
+        ctx.arc(bx, by, g * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      continue;
+    }
+    /* Geländer: Handlauf und Pfosten alle gut ein Meter */
+    ctx.fillStyle = "#2b2f38";
+    ctx.fillRect(...streifen(kante + gel * 0.3, kante + gel * 0.3 + g * 0.03));
+    for (let k = 0.12; k < 1; k += 0.25) {
+      const p = g * k;
+      if (dx) {
+        const x = dx > 0 ? px + g - kante - gel * 0.45 : px + kante + gel * 0.15;
+        ctx.fillRect(x, py + p, g * 0.06, g * 0.06);
+      } else {
+        const y = dy > 0 ? py + g - kante - gel * 0.45 : py + kante + gel * 0.15;
+        ctx.fillRect(px + p, y, g * 0.06, g * 0.06);
+      }
+    }
+  }
+}
+
+/* Gehweg auf der Brücke: Betonplatten, zur Wasserseite ein Stahlträger
+   mit Kreuzverstrebung, zur Fahrbahn ein Bordstein. */
+function stegMalen(ctx, tx, ty, px, py, g) {
+  ctx.fillStyle = "#8d8a84";
+  ctx.fillRect(px, py, g + 1, g + 1);
+  bodenMalen(ctx, "gehweg", px, py, g);
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const nb = art(tx + dx, ty + dy);
+    if (nb === ART.WASSER) {
+      const t = g * 0.28;                                  // Trägerbreite
+      const bx = dx > 0 ? px + g - t : px, by = dy > 0 ? py + g - t : py;
+      const bw = dx ? t : g + 1, bh = dx ? g + 1 : t;
+      ctx.fillStyle = "#3b4049";                           // Stahlträger
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = "#6c4a3c";                         // rostrote Streben
+      ctx.lineWidth = Math.max(1, g * 0.035);
+      ctx.beginPath();
+      for (let k = 0; k < 2; k++) {
+        if (dx) {
+          const y0 = by + (bh / 2) * k, y1 = y0 + bh / 2;
+          ctx.moveTo(bx, y0); ctx.lineTo(bx + bw, y1);
+          ctx.moveTo(bx + bw, y0); ctx.lineTo(bx, y1);
+        } else {
+          const x0 = bx + (bw / 2) * k, x1 = x0 + bw / 2;
+          ctx.moveTo(x0, by); ctx.lineTo(x1, by + bh);
+          ctx.moveTo(x0, by + bh); ctx.lineTo(x1, by);
+        }
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#1f232a";                           // Obergurt zum Gehweg
+      if (dx) ctx.fillRect(dx > 0 ? bx : bx + bw - g * 0.05, by, g * 0.05, bh);
+      else ctx.fillRect(bx, dy > 0 ? by : by + bh - g * 0.05, bw, g * 0.05);
+    } else if (nb === ART.BRUECKE) {
+      ctx.fillStyle = "rgba(226,206,120,.4)";              // Bordstein zur Fahrbahn
+      const b = g * 0.08;
+      if (dx > 0) ctx.fillRect(px + g - b, py, b, g + 1);
+      if (dx < 0) ctx.fillRect(px, py, b, g + 1);
+      if (dy > 0) ctx.fillRect(px, py + g - b, g + 1, b);
+      if (dy < 0) ctx.fillRect(px, py, g + 1, b);
+    }
+  }
+  /* Laternen in regelmäßigem Abstand */
+  if ((tx + ty) % 3 === 0) dekoMalen(ctx, "laterne", px, py, g);
+}
+
 /* ── Farben ─────────────────────────────────────────────── */
 const FARBE = {
   wasser: "#123a63",
@@ -396,8 +572,7 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
   ctx.fillRect(px, py, g + 1, g + 1);
   /* Zwei Asphaltsorten im Wechsel, damit die Straße nicht wie Linoleum
      aussieht; Brücken bleiben beim alten Belag. */
-  const kachel = a === ART.BRUECKE ? null
-    : streu(tx, ty, 131) > 0.78 ? "asphalt_riss" : "asphalt";
+  const kachel = streu(tx, ty, 131) > 0.78 && a !== ART.BRUECKE ? "asphalt_riss" : "asphalt";
   if (!kachel || !bodenMalen(ctx, kachel, px, py, g)) {
     Tex.malen(ctx, "asphalt", streu(tx, ty, 101), px, py, g);
   }
@@ -432,12 +607,14 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
   }
 
   if (a === ART.BRUECKE) {
-    /* Geländer an den Seiten */
-    ctx.fillStyle = "rgba(210,214,224,.5)";
-    if (!befahrbar(art(tx - 1, ty))) ctx.fillRect(px, py, g * 0.12, g + 1);
-    if (!befahrbar(art(tx + 1, ty))) ctx.fillRect(px + g * 0.88, py, g * 0.12, g + 1);
-    if (!befahrbar(art(tx, ty - 1))) ctx.fillRect(px, py, g + 1, g * 0.12);
-    if (!befahrbar(art(tx, ty + 1))) ctx.fillRect(px, py + g * 0.88, g + 1, g * 0.12);
+    /* Direkt am Wasser (Brücken ohne Gehweg, etwa die Autobahn): ein
+       Stahlträger als Rand. Liegt daneben ein Steg, malt der den Rand. */
+    ctx.fillStyle = "#3b4049";
+    const t = g * 0.16;
+    if (art(tx - 1, ty) === ART.WASSER) ctx.fillRect(px, py, t, g + 1);
+    if (art(tx + 1, ty) === ART.WASSER) ctx.fillRect(px + g - t, py, t, g + 1);
+    if (art(tx, ty - 1) === ART.WASSER) ctx.fillRect(px, py, g + 1, t);
+    if (art(tx, ty + 1) === ART.WASSER) ctx.fillRect(px, py + g - t, g + 1, t);
   }
 
   /* Mittel- und Spurlinien: aus der Lage im Band bestimmt */
@@ -462,21 +639,25 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
 
   if (band.breite >= 4 && Math.abs(stelle - mitte) < 0.6) {
     /* Mittelinsel aus Beton mit Bordstein. Vorher lag da ein grünes
-       Rechteck mitten auf dem Asphalt — das sah aus wie ein Fehler. */
+       Rechteck mitten auf dem Asphalt — das sah aus wie ein Fehler.
+       Bei gerader Spurzahl liegt die Mitte auf der Kachelgrenze: Dann
+       malt jede der beiden mittleren Kacheln ihre Hälfte der Insel an
+       die gemeinsame Kante. Vorher lagen zwei Inseln nebeneinander. */
     const dickeM = g * 0.34;
+    const lage = stelle < mitte - 0.25 ? "hinten" : stelle > mitte + 0.25 ? "vorn" : "mitte";
+    /* Anfang und Breite der Insel quer zur Fahrtrichtung, in Kachelpunkten */
+    const von = lage === "mitte" ? (g - dickeM) / 2 : lage === "hinten" ? g - dickeM / 2 : 0;
+    const breit = lage === "mitte" ? dickeM : dickeM / 2;
+    const bord = g * 0.05;
     ctx.fillStyle = "rgba(150,150,146,.95)";
-    if (senkrecht) {
-      const rand = px + (g - dickeM) / 2;
-      ctx.fillRect(rand, py, dickeM, g + 1);
-      ctx.fillStyle = "rgba(226,206,120,.5)";
-      ctx.fillRect(rand, py, g * 0.05, g + 1);
-      ctx.fillRect(rand + dickeM - g * 0.05, py, g * 0.05, g + 1);
-    } else {
-      const rand = py + (g - dickeM) / 2;
-      ctx.fillRect(px, rand, g + 1, dickeM);
-      ctx.fillStyle = "rgba(226,206,120,.5)";
-      ctx.fillRect(px, rand, g + 1, g * 0.05);
-      ctx.fillRect(px, rand + dickeM - g * 0.05, g + 1, g * 0.05);
+    if (senkrecht) ctx.fillRect(px + von, py, breit, g + 1);
+    else ctx.fillRect(px, py + von, g + 1, breit);
+    ctx.fillStyle = "rgba(226,206,120,.5)";
+    const kanten = lage === "mitte" ? [von, von + breit - bord]
+                 : lage === "hinten" ? [von] : [breit - bord];
+    for (const k of kanten) {
+      if (senkrecht) ctx.fillRect(px + k, py, bord, g + 1);
+      else ctx.fillRect(px, py + k, g + 1, bord);
     }
   } else if (band.breite <= 3 && Math.abs(stelle - mitte) < 0.55) {
     ctx.fillStyle = "rgba(235,225,180,.8)";                  // Mittelstreifen
@@ -509,6 +690,11 @@ function strassenMarke(ctx, tx, ty, px, py, g) {
     if (r < 0.88) return bodenGedreht(ctx, "mark_rechts", px, py, g, pfeil);
     return bodenGedreht(ctx, "mark_links", px, py, g, pfeil);
   }
+  /* Mitten auf einer Insel liegen keine Gullys — sonst reißt sie ab */
+  const senk = befahrbar(art(tx, ty - 1)) && befahrbar(art(tx, ty + 1));
+  const bnd = bandGrenzen(tx, ty, senk);
+  const st = (senk ? tx : ty) - bnd.von, mi = (bnd.breite - 1) / 2;
+  if (bnd.breite >= 4 && Math.abs(st - mi) < 0.6) return false;
   const z = streu(tx, ty, 179);
   const dreh = Math.floor(streu(tx, ty, 181) * 4) * (Math.PI / 2);
   if (z < 0.025) return bodenGedreht(ctx, "mark_gully", px, py, g, dreh);
@@ -518,12 +704,8 @@ function strassenMarke(ctx, tx, ty, px, py, g) {
   const amRand = !befahrbar(art(tx - 1, ty)) || !befahrbar(art(tx + 1, ty)) ||
                  !befahrbar(art(tx, ty - 1)) || !befahrbar(art(tx, ty + 1));
   if (!amRand) return false;
-  if (z < 0.075) {
-    /* Die Rinne liegt im Bild rechts — zum Bordstein drehen */
-    const zumBord = !befahrbar(art(tx + 1, ty)) ? 0 : !befahrbar(art(tx - 1, ty)) ? Math.PI
-                  : !befahrbar(art(tx, ty + 1)) ? Math.PI / 2 : -Math.PI / 2;
-    return bodenGedreht(ctx, "mark_rinne", px, py, g, zumBord);
-  }
+  /* Die Rinne (Gully am Bordstein) ist raus: als einzelne Kachel sah sie
+     aus wie ein grauer Balken mitten auf der Fahrbahn. */
   if (z < 0.085) return bodenGedreht(ctx, "mark_rad", px, py, g,
     befahrbar(art(tx, ty - 1)) && befahrbar(art(tx, ty + 1)) ? 0 : Math.PI / 2);
   return false;
@@ -767,14 +949,8 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
 
   switch (a) {
     case ART.WASSER: {
-      ctx.fillStyle = FARBE.wasser;
-      ctx.fillRect(px, py, g + 1, g + 1);
-      Tex.malen(ctx, "wasser", streu(tx, ty, 109), px, py, g);
-      const w = Math.sin(tx * 0.7 + ty * 0.4 + zeit * 0.0009) * 0.5 + 0.5;
-      ctx.globalAlpha = 0.08 + w * 0.14;
-      ctx.fillStyle = "#bfe4ff";
-      ctx.fillRect(px, py + g * (0.28 + w * 0.2), g + 1, g * 0.1);
-      ctx.globalAlpha = 1;
+      wasserFlaeche(ctx, tx, ty, px, py, g);
+      wasserUfer(ctx, tx, ty, px, py, g);
       /* Ein paar Boote draußen — nur, wo kein Ufer angrenzt */
       const f = streu(tx, ty, 151);
       if (f > 0.985) dekoMalen(ctx, "segler", px, py, g, 0.5, 0.5, streu(tx, ty, 153) * 6.28);
@@ -809,7 +985,8 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
       strasseMalen(ctx, tx, ty, px, py, g, a);
       break;
     case ART.GEHWEG:
-      gehwegMalen(ctx, tx, ty, px, py, g, bez);
+      if (Plan.istSteg(tx, ty)) stegMalen(ctx, tx, ty, px, py, g);
+      else gehwegMalen(ctx, tx, ty, px, py, g, bez);
       break;
     case ART.PARK: {
       ctx.fillStyle = FARBE.park;
@@ -895,6 +1072,7 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
       break;
     }
   }
+  uferKante(ctx, tx, ty, px, py, g, a);
 }
 
 /* ── Wände und Schatten ─────────────────────────────────── */

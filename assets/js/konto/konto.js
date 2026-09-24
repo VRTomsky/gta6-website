@@ -25,6 +25,7 @@
 
 import { backendWaehlen, istDemo, KontoFehler } from "./backend.js";
 import { titelVergessen } from "./titelcache.js";
+import { istAdmin } from "./rolle.js";
 
 export const L = window.L || (de => de);
 export const LANG = window.LANG || "de";
@@ -319,7 +320,91 @@ export function abmelden() {
 const ICON_PERSON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.2" r="3.7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20.2c1.3-3.6 4.2-5.4 7.5-5.4s6.2 1.8 7.5 5.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 const ICON_PFEIL = `<svg class="acct__pfeil" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+/* Reiter „Admin" in der Navigation — nur für Admins, rot abgesetzt.
+   Die Navigation steht fest in jeder Seite, deshalb wird der Reiter
+   hier nachträglich eingehängt (oben und im Handy-Menü). */
+function adminReiter() {
+  const admin = istAdmin(zustand.profil);
+  const ziele = [...document.querySelectorAll(".nav__links, #mobileMenu nav")];
+  for (const nav of ziele) {
+    let link = nav.querySelector("[data-admin-reiter]");
+    if (!admin) { if (link) link.remove(); continue; }
+    if (link) continue;
+    link = document.createElement("a");
+    link.href = "admin.html";
+    link.className = "nav__admin";
+    link.dataset.adminReiter = "";
+    link.textContent = "Admin";
+    if (/admin\.html$/.test(location.pathname)) link.setAttribute("aria-current", "page");
+    nav.appendChild(link);
+  }
+}
+
+/* Hinweisbanner: eine feste Leiste über der Navigation, von der
+   Admin-Seite aus gesetzt. Einmal je Seitenaufruf geladen. Die Nav
+   rutscht um die Höhe der Leiste nach unten (--banner-h). Weggeklickt
+   bleibt sie weg, bis ein anderer Text kommt. */
+const BANNER_WEG = "gta6-banner-weg";
+let bannerGeladen = false;
+let bannerBeobachter = null;
+
+function bannerHoehe() {
+  const leiste = document.getElementById("seitenBanner");
+  const h = leiste ? leiste.offsetHeight : 0;
+  document.documentElement.style.setProperty("--banner-h", h + "px");
+  document.documentElement.classList.toggle("hat-banner", h > 0);
+}
+
+function bannerEntfernen() {
+  const alt = document.getElementById("seitenBanner");
+  if (alt) alt.remove();
+  if (bannerBeobachter) { bannerBeobachter.disconnect(); bannerBeobachter = null; }
+  bannerHoehe();
+}
+
+/* Nach dem Speichern auf der Admin-Seite sofort neu zeigen */
+export function bannerAuffrischen() {
+  bannerGeladen = false;
+  return bannerZeigen();
+}
+async function bannerZeigen() {
+  if (bannerGeladen || !zustand.backend || !zustand.backend.einstellungLaden) return;
+  bannerGeladen = true;
+  const e = await zustand.backend.einstellungLaden("seite");
+  bannerEntfernen();
+  if (!e || !e.bannerAn) return;
+  const text = LANG === "en" ? (e.bannerEn || e.bannerDe) : (e.bannerDe || e.bannerEn);
+  if (!text) return;
+  let weg = "";
+  try { weg = localStorage.getItem(BANNER_WEG) || ""; } catch (err) { /* privat */ }
+  if (weg === text) return;
+  const leiste = document.createElement("div");
+  leiste.id = "seitenBanner";
+  leiste.className = "seitenbanner";
+  leiste.setAttribute("role", "status");
+  const t = document.createElement("span");
+  t.textContent = text;
+  const zu = document.createElement("button");
+  zu.type = "button";
+  zu.className = "seitenbanner__zu";
+  zu.setAttribute("aria-label", L("Hinweis schließen", "Close notice"));
+  zu.textContent = "×";
+  zu.addEventListener("click", () => {
+    try { localStorage.setItem(BANNER_WEG, text); } catch (err) { /* privat */ }
+    bannerEntfernen();
+  });
+  leiste.append(t, zu);
+  document.body.prepend(leiste);
+  bannerHoehe();
+  if ("ResizeObserver" in window) {
+    bannerBeobachter = new ResizeObserver(bannerHoehe);
+    bannerBeobachter.observe(leiste);
+  }
+}
+
 function navZeichnen() {
+  adminReiter();
+  bannerZeigen();
   document.querySelectorAll("[data-acct]").forEach(box => {
     if (!zustand.backend || !zustand.geladen) { box.innerHTML = ""; return; }
     const { nutzer, profil } = zustand;

@@ -731,6 +731,33 @@ newsletter/{uid}           email, lang, consentAt
 6. Wer die Namenswahl wegklickt, wird in derselben Sitzung nicht bei jedem Seitenwechsel
    erneut gefragt (`sessionStorage konto-profil-spaeter`); die Nav bietet „Profil anlegen".
 
+### Admin, Rollen, Einstellungen (24.09.2026)
+
+- **Wer Admin ist**, steht an zwei Stellen und muss gleich bleiben:
+  `assets/js/konto/rolle.js` (`ADMINS = ["vrtomsky"]`, Benutzername klein) und
+  `firestore.rules` (`istAdmin()` liest `users/{uid}.usernameLower`). Der Seitenbesitzer
+  heißt auf der Seite **VRTomsky**. Die Liste in `rolle.js` blendet nur Knöpfe ein —
+  geschützt wird durch die Regeln.
+- **Admins sehen:** roten Reiter „Admin" in der Nav (oben und im Handy-Menü, von
+  `konto.js → adminReiter()` eingehängt), roten Chip „Admin" im Profil, im Spiel den
+  DEV-Knopf und das Entwicklermenü (F8).
+- **`admin.html` + `konto/admin.js`:** Hinweisbanner (an/aus, Text DE/EN, je 200 Zeichen,
+  Vorschau), Belohnungsfaktor für Spielaufträge 1×–5×, Übersicht Entwicklermenü,
+  Bestenliste. Andere sehen „Kein Zugriff", Abgemeldete „Nur für Admins".
+- **Speicherort:** Sammlung `einstellungen`, Dokumente `seite` (`bannerAn`, `bannerDe`,
+  `bannerEn`) und `spiel` (`geldFaktor`). Für alle lesbar, schreiben nur Admins.
+- **Banner** (`konto.js → bannerZeigen`): feste Leiste über der Nav, `html.hat-banner`
+  schiebt Nav, Handy-Menü und Seite um `--banner-h` nach unten (ResizeObserver, weil der
+  Text am Handy umbricht). Das × merkt sich den Text in `localStorage gta6-banner-weg` —
+  ein neuer Text erscheint wieder.
+- **Spielstand** (`spielstaende/{uid}`): Geld, Waffen, Munition, Weste, erledigte
+  Aufträge, Schießstand. Nur die Person selbst liest und schreibt.
+- **Neue Regeln müssen in der Firebase-Konsole veröffentlicht werden**, sonst schlagen
+  Spielstand und Admin-Einstellungen auf der echten Seite fehl (die Admin-Seite sagt das
+  dann auch). Im Demo-Modus geht alles ohne.
+- **Testen:** `admin.html?demo`, Demo-Konto mit dem Namen `VRTomsky` registrieren. Das
+  Entwicklermenü geht im Demo-Modus auch ohne diesen Namen mit `spiel.html?demo&admin`.
+
 ## Newswire automatisch
 
 Die Liste „Rockstar Newswire" auf der Startseite (und „Neu für dich" im Profil) aktualisiert
@@ -1281,6 +1308,29 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   zueinander und 9 m zum fahrenden Verkehr. Vorher standen am Start zehn Wagen
   ineinander. Es sind 22 parkende und 70 fahrende.
 - Rechtsklick öffnet auf der Spielbühne kein Browser-Menü mehr.
+- **Wasser (24.09.2026):** keine Kachel-Textur mehr, sondern ein nahtloses Muster
+  (`wasserBildBauen`, 256 × 256, Sinuswellen mit ganzzahligen Frequenzen), das über
+  `setTransform` an die Welt gebunden ist — dadurch keine Streifen und Nähte an den
+  Stück-Grenzen. `wasserUfer()` dunkelt unter Kaimauern ab und macht Strände flach
+  türkis mit Schaumlinie. `uferKante()` setzt an jede Straße/Gehweg-Kante zum Wasser
+  eine Betonkante mit Geländer, am Hafen Poller.
+- **Brücken mit Gehweg:** `stadtplan.js → brueckenStege()` macht aus dem Wasser neben
+  einer Brücke Gehwegfelder (`felder.steg`, `istSteg()`), Autobahnbrücken ausgenommen.
+  `karte.js → stegMalen()` zeichnet Gehweg, Stahlträger mit rostigen Kreuzstreben,
+  Bordstein zur Fahrbahn und alle drei Felder eine Laterne. Passanten laufen darüber,
+  weil es normale Gehwegfelder sind. Gemessen: 399 Brückenfelder, 179 Stegfelder, ein
+  zusammenhängendes Straßennetz.
+- **Mittelstreifen:** bei gerader Spurzahl lag die Mitte auf der Kachelgrenze und wurde
+  doppelt gemalt. Jetzt `lage` hinten/vorn/mitte — ein Streifen über die Grenze.
+- **Spielstand im Konto:** `spiel.js → spielstandLaden/-Sichern`. Gesichert alle 10 s,
+  wenn sich etwas geändert hat, dazu bei Tabwechsel und Verlassen. Geprüft: Geld und
+  Waffen sind nach Neuladen wieder da.
+- **Entwicklermenü (F8 oder DEV-Knopf, nur Admins):** Geld setzen/dazu, Leben, Panzerung,
+  Ausdauer unendlich, keine Polizei, Nacht, alle oder einzelne Waffen, Munition voll,
+  heilen, jedes Fahrzeug spawnen und einsteigen (`devStellplatz` sucht ein Straßenfeld
+  ohne anderes Auto), Fahndung 0–5, Sprung zum Wegpunkt. Das Menü pausiert das Spiel;
+  `cheatsAnwenden()` läuft vor dem Todescheck.
+- **Belohnungsfaktor** aus der Admin-Seite: `missionen.geldFaktor`, beim Spielstart geladen.
 - Neu erzeugen:
 
 ```bash

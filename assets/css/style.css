@@ -173,6 +173,30 @@ p strong{ color:var(--fg); font-weight:700; }
   transition:color .18s var(--ease), background-color .18s var(--ease);
 }
 .nav__links a:hover{ color:var(--fg); background:rgba(255,255,255,.07); }
+/* Admin-Reiter: nur für Admins, rot */
+.nav__links a.nav__admin, #mobileMenu a.nav__admin{ color:#ff6b78; }
+.nav__links a.nav__admin:hover{ background:rgba(227,38,58,.18); color:#fff; }
+.nav__links a.nav__admin[aria-current="page"]{ color:#fff; background:#e3263a; }
+/* Hinweisbanner der Admin-Seite: feste Leiste über der Nav, schiebt
+   Nav, Handy-Menü und Seite um ihre Höhe (--banner-h) nach unten */
+.seitenbanner{
+  position:fixed; top:0; left:0; right:0; z-index:112;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:8px 48px; text-align:center;
+  background:linear-gradient(90deg, #e3263a, #ff4aa0); color:#fff;
+  font:700 .88rem/1.35 var(--f-label, system-ui); letter-spacing:.02em;
+}
+.seitenbanner__zu{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  width:30px; height:30px; border:0; border-radius:8px; cursor:pointer;
+  background:rgba(0,0,0,.18); color:#fff; font-size:1.1rem; line-height:1;
+}
+.seitenbanner__zu:hover{ background:rgba(0,0,0,.34); }
+html.hat-banner body{ padding-top:var(--banner-h, 0px); }
+html.hat-banner .nav{ top:var(--banner-h, 0px); }
+html.hat-banner .mobile-menu{ top:calc(var(--nav-h) + var(--banner-h, 0px)); }
+/* In der Admin-Vorschau steht die Leiste im Fluss */
+.adm__vorschau .seitenbanner{ position:relative; z-index:auto; padding:8px 16px; }
 .nav__links a.is-active{ color:var(--cream); }
 .nav__links a.is-active::after{
   content:""; position:absolute; left:14px; right:14px; bottom:3px;

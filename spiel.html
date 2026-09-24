@@ -264,6 +264,24 @@
       </div>
     </div>
 
+    <!-- Entwicklermenü: nur für Admins, im Spiel mit F8 -->
+    <div class="sdev" id="spielDev" hidden>
+      <div class="sdev__karte">
+        <div class="sdev__kopf">
+          <span class="sdev__marke">DEV</span>
+          <h2 class="h-display" data-en="Developer menu">Entwicklermenü</h2>
+          <button type="button" class="sdev__zu" data-dev="zu" aria-label="Schließen"
+                  data-en-aria-label="Close">×</button>
+        </div>
+        <div id="spielDevInhalt"></div>
+        <p class="sdev__hinweis" data-en="F8 or Esc closes the menu. Only visible for admins.">F8 oder Esc schließt das Menü. Nur für Admins sichtbar.</p>
+      </div>
+    </div>
+
+    <button type="button" class="sdevknopf" id="spielDevKnopf" hidden
+            aria-label="Entwicklermenü" data-en-aria-label="Developer menu" title="Entwicklermenü (F8)"
+            data-en-title="Developer menu (F8)">DEV</button>
+
     <div class="spause" id="spielPause" hidden>
       <p data-en="Paused — click to continue">Pause — zum Weiterspielen klicken</p>
     </div>

@@ -20,6 +20,10 @@ rules_version = '2';
 //    bestenliste/{uid}    { name, punkte, updatedAt } — Bestwert im
 //                         Browser-Spiel; für alle lesbar, schreiben nur
 //                         den eigenen Eintrag
+//    spielstaende/{uid}   Geld, Waffen, Munition, Weste, erledigte Aufträge
+//                         im Browser-Spiel — nur die Person selbst
+//    einstellungen/{name} "seite" (Hinweisbanner) und "spiel" (Belohnungs-
+//                         faktor) — für alle lesbar, schreiben nur Admins
 //
 //  Alles andere ist gesperrt. Auslesen der Newsletter-Liste geht nur
 //  über die Firebase-Konsole (Projektinhaber).
@@ -34,6 +38,14 @@ service cloud.firestore {
 
     function istSelbst(uid) {
       return angemeldet() && request.auth.uid == uid;
+    }
+
+    // Admin ist, wessen Profil den Benutzernamen des Seitenbesitzers
+    // trägt. Namen sind einmalig (usernames/), deshalb reicht das.
+    // Dieselbe Liste steht in assets/js/konto/rolle.js.
+    function istAdmin() {
+      return angemeldet()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameLower in ['vrtomsky'];
     }
 
     function profilFelder() {
@@ -138,6 +150,45 @@ service cloud.firestore {
         && request.resource.data.punkte >= 0
         && request.resource.data.punkte <= 9999999;
       allow delete: if istSelbst(uid);
+    }
+
+    // ── Spielstand des Browser-Spiels ───────────────────────────
+    // Nur die Person selbst liest und schreibt. Grenzen gegen Unsinn,
+    // nicht gegen Schummeln — es ist das eigene Spiel.
+    match /spielstaende/{uid} {
+      allow get: if istSelbst(uid);
+      allow list: if false;
+      allow create, update: if istSelbst(uid)
+        && request.resource.data.keys().hasOnly(['geld', 'waffen', 'munition', 'panzerung',
+             'erledigt', 'schiessBest', 'schiessRunden', 'updatedAt'])
+        && request.resource.data.geld is int
+        && request.resource.data.geld >= 0 && request.resource.data.geld <= 99999999
+        && request.resource.data.waffen is list && request.resource.data.waffen.size() <= 10
+        && request.resource.data.munition is map && request.resource.data.munition.size() <= 10
+        && request.resource.data.panzerung is int
+        && request.resource.data.panzerung >= 0 && request.resource.data.panzerung <= 100
+        && request.resource.data.erledigt is list && request.resource.data.erledigt.size() <= 50
+        && request.resource.data.schiessBest is int
+        && request.resource.data.schiessRunden is int
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if istSelbst(uid);
+    }
+
+    // ── Einstellungen (Admin-Seite) ─────────────────────────────
+    match /einstellungen/{name} {
+      allow read: if true;
+      allow write: if istAdmin() && (
+        (name == 'seite'
+          && request.resource.data.keys().hasOnly(['bannerAn', 'bannerDe', 'bannerEn', 'updatedAt'])
+          && request.resource.data.bannerAn is bool
+          && request.resource.data.bannerDe is string && request.resource.data.bannerDe.size() <= 200
+          && request.resource.data.bannerEn is string && request.resource.data.bannerEn.size() <= 200)
+        ||
+        (name == 'spiel'
+          && request.resource.data.keys().hasOnly(['geldFaktor', 'updatedAt'])
+          && request.resource.data.geldFaktor is int
+          && request.resource.data.geldFaktor >= 1 && request.resource.data.geldFaktor <= 5)
+      );
     }
 
     // ── Benutzernamen ───────────────────────────────────────────

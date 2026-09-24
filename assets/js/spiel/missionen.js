@@ -237,9 +237,11 @@ export class Missionen {
 
   fertig(zustand) {
     const m = this.aktiv;
-    zustand.geld += m.lohn;
+    /* Faktor aus der Admin-Seite (Wochenend-Aktion o. ä.) */
+    const lohn = m.lohn * (this.geldFaktor || 1);
+    zustand.geld += lohn;
     this.erledigt.add(m.id);
-    this.meldung = L("Geschafft: ", "Done: ") + m.name + "  +$" + m.lohn;
+    this.meldung = L("Geschafft: ", "Done: ") + m.name + "  +$" + lohn;
     this.geschafft = 2.4;
     this.aktiv = null;
     this.fluechtiger = null;

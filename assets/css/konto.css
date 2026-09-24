@@ -385,6 +385,12 @@ body.ist-bearbeiten .khero{ min-height:52svh; }
 }
 .kchip img{ width:20px; height:20px; border-radius:50%; object-fit:cover; margin-left:-6px; }
 .kchip--pink{ background:var(--pink); border-color:var(--pink); color:var(--ink); }
+/* Admin: Warnrot mit Glimmen — soll sofort auffallen */
+.kchip--admin{
+  background:#e3263a; border-color:#ff5a68; color:#fff; font-weight:800;
+  letter-spacing:.08em; text-transform:uppercase;
+  box-shadow:0 0 0 1px rgba(255,70,80,.35), 0 0 18px rgba(255,40,60,.45);
+}
 .kchip--warn{ background:rgba(255,154,77,.14); border-color:rgba(255,154,77,.4); color:#ffc796; }
 .kchip--vorschau{ background:rgba(69,224,218,.16); border-color:rgba(69,224,218,.5); color:#b5f6f3; }
 
@@ -884,4 +890,74 @@ html.konto-an .footer a[href="datenschutz.html"]{ display:inline; }
 @media (prefers-reduced-motion: reduce){
   .kd, .kd__karte, .acct, .acct__menu, .kschalter__bahn::after, .kz, .tb-wahl, .kw, .kw__karte, .kbg img, .khero{ transition:none; animation:none; }
   .kd__karte{ transform:none; }
+}
+
+/* ══════════ Admin-Seite (admin.html) ══════════
+   Aufbau wie die Kontoseite, Akzent Rot statt Pink — soll sofort
+   anders aussehen als alles, was Besucher zu sehen bekommen. */
+.adm{
+  background:
+    radial-gradient(900px 480px at 85% -5%, rgba(227,38,58,.18), transparent 70%),
+    radial-gradient(700px 420px at 0% 10%, rgba(232,84,140,.10), transparent 70%);
+}
+.adm__kicker{ color:#ff6b78; }
+.adm__leer .h-display{ font-size:clamp(2.6rem, 8vw, 5rem); }
+.adm__kopf{
+  max-width:calc(var(--wrap) + var(--pad) * 2); margin:0 auto;
+  padding:calc(var(--nav-h) + 70px) var(--pad) var(--s3);
+}
+.adm__kopf .h-display{ font-size:clamp(2.8rem, 8vw, 5.6rem); margin-bottom:14px; }
+.adm__wer{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0; color:var(--fg-mid); }
+.adm__wer b{ color:var(--fg); }
+.adm__raster{
+  max-width:calc(var(--wrap) + var(--pad) * 2); margin:0 auto; padding:0 var(--pad) var(--s6);
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:22px; align-items:start;
+}
+.adm__box .kbox__k{ color:#ff6b78; }
+.adm__box--dev{ border-color:rgba(255,70,80,.4);
+  background:linear-gradient(180deg, rgba(227,38,58,.10), rgba(227,38,58,0) 60%), var(--surf); }
+.adm__box kbd{
+  display:inline-block; padding:1px 7px; border-radius:6px; font:700 .82rem/1.4 var(--f-label);
+  background:#e3263a; color:#fff;
+}
+.adm__box .kschalter[aria-checked="true"]{ border-color:rgba(255,90,104,.55); background:rgba(227,38,58,.08); }
+.adm__box .kschalter[aria-checked="true"] .kschalter__bahn{ background:#e3263a; }
+.adm__vorschau{ display:flex; flex-direction:column; gap:7px; }
+.adm__vorschau[hidden]{ display:none; }
+.adm__vorschau .seitenbanner{ border-radius:10px; }
+.adm__vorschau.is-aus .seitenbanner{ opacity:.35; filter:grayscale(1); }
+.adm__vl{ font:700 .68rem/1 var(--f-label); letter-spacing:.16em; text-transform:uppercase; color:var(--fg-dim); }
+.adm__faktor{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:8px; }
+.adm__faktor label{ position:relative; cursor:pointer; }
+.adm__faktor input{ position:absolute; opacity:0; pointer-events:none; }
+.adm__faktor span{
+  display:flex; flex-direction:column; align-items:center; gap:3px; padding:14px 4px;
+  border-radius:14px; border:1px solid var(--line2); background:rgba(255,255,255,.04);
+  transition:border-color .18s var(--ease), background-color .18s var(--ease);
+}
+.adm__faktor b{ font:800 1.5rem/1 var(--f-display); color:var(--cream); }
+.adm__faktor small{ font-size:.72rem; color:var(--fg-dim); }
+.adm__faktor input:checked + span{ border-color:#ff5a68; background:rgba(227,38,58,.16); }
+.adm__faktor input:checked + span small{ color:#ffb3ba; }
+.adm__faktor input:focus-visible + span{ outline:2px solid #ff5a68; outline-offset:2px; }
+.adm__liste{ margin:0 0 20px; padding:0; list-style:none; display:grid; gap:8px; }
+.adm__liste li{ position:relative; padding-left:20px; font-size:.92rem; color:var(--fg-mid); }
+.adm__liste li::before{
+  content:""; position:absolute; left:2px; top:.55em; width:8px; height:8px; border-radius:2px; background:#e3263a;
+}
+.adm__beste{ margin:0; padding:0; list-style:none; counter-reset:platz; display:grid; gap:6px; }
+.adm__beste li{
+  counter-increment:platz; display:flex; align-items:center; gap:12px;
+  padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.04);
+}
+.adm__beste li::before{ content:counter(platz); width:1.6em; font:800 1rem/1 var(--f-display); color:#ff6b78; }
+.adm__beste li span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
+.adm__beste li b{ font-variant-numeric:tabular-nums; color:var(--cream); }
+.adm__beste li.adm__leer{ color:var(--fg-dim); }
+.adm__beste li.adm__leer::before{ content:none; }
+@media (max-width:900px){
+  .adm__raster{ grid-template-columns:1fr; }
+}
+@media (max-width:480px){
+  .adm__faktor{ grid-template-columns:repeat(3, minmax(0,1fr)); }
 }

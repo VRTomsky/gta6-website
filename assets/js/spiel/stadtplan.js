@@ -51,7 +51,8 @@ export const felder = {
   bau: new Uint8Array(N),
   haus: new Uint16Array(N),          // Hausnummer: gleiche Nummer = ein Haus
   bezirk: new Uint8Array(N),
-  hoehe: new Uint8Array(N)           // 0…255 → Höhe für Wand und Schatten
+  hoehe: new Uint8Array(N),          // 0…255 → Höhe für Wand und Schatten
+  steg: new Uint8Array(N)            // 1 = Gehweg auf einer Brücke
 };
 
 const i = (tx, ty) => ty * BREITE + tx;
@@ -161,6 +162,7 @@ function brueckenNachtragen() {
   for (let q = 0; q < N; q++) {
     if (wasserKopie[q] !== ART.WASSER) continue;
     const a = felder.art[q];
+    if (a === ART.AUTOBAHN) autobahnFelder.add(q);
     if (a === ART.STRASSE || a === ART.AUTOBAHN) felder.art[q] = ART.BRUECKE;
   }
 }
@@ -442,13 +444,47 @@ function brueckenBauen() {
         const by = ty + dy * s + (dy ? 0 : b);
         if (!drin(bx, by)) continue;
         const art = felder.art[i(bx, by)];
-        if (art === ART.WASSER) felder.art[i(bx, by)] = ART.BRUECKE;
-        else if (art === ART.GEBAEUDE) felder.art[i(bx, by)] = ART.STRASSE;
+        if (art === ART.WASSER) {
+          felder.art[i(bx, by)] = ART.BRUECKE;
+          if (a === ART.AUTOBAHN) autobahnFelder.add(i(bx, by));
+        } else if (art === ART.GEBAEUDE) felder.art[i(bx, by)] = ART.STRASSE;
       }
     }
     gebaut.push([tx, ty]);
   }
 }
+
+/* ═══ 5b · Gehwege auf den Brücken ═══════════════════════
+   Brücken waren nur Fahrbahn — zu Fuß kam man nicht über den Fluss,
+   und Passanten schon gar nicht. Jetzt bekommt jede Straßenbrücke auf
+   beiden Seiten einen Gehweg: eine Wasserkachel, die seitlich an einer
+   Brücke liegt, wird zum Steg. Seitlich heißt: quer zur Fahrtrichtung
+   der Brücke. Autobahnbrücken bleiben ohne — da läuft niemand. */
+function brueckenStege() {
+  const neu = [];
+  for (let ty = 1; ty < HOEHE - 1; ty++) {
+    for (let tx = 1; tx < BREITE - 1; tx++) {
+      if (felder.art[i(tx, ty)] !== ART.WASSER) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const bx = tx + dx, by = ty + dy;
+        if (!drin(bx, by) || felder.art[i(bx, by)] !== ART.BRUECKE) continue;
+        if (wasserKopie && autobahnKachel(bx, by)) continue;
+        /* Läuft die Brücke quer zu dieser Seite? Dann ist hier ihr Rand */
+        const q1 = felder.art[i(bx + dy, by + dx)], q2 = felder.art[i(bx - dy, by - dx)];
+        const fahr = a => a === ART.BRUECKE || a === ART.STRASSE || a === ART.KREUZUNG;
+        if (fahr(q1) || fahr(q2)) { neu.push(i(tx, ty)); break; }
+      }
+    }
+  }
+  for (const q of neu) {
+    felder.art[q] = ART.GEHWEG;
+    felder.steg[q] = 1;
+  }
+}
+
+/* War die Kachel ursprünglich Autobahn? Dann bekommt sie keinen Steg. */
+const autobahnFelder = new Set();
+function autobahnKachel(tx, ty) { return autobahnFelder.has(i(tx, ty)); }
 
 /* ═══ 6 · Gehwege ════════════════════════════════════════ */
 function gehwegeBauen() {
@@ -787,6 +823,7 @@ export function bauen() {
   brueckenBauen();
   brueckenNachtragen();
   strassenSaeubern();
+  brueckenStege();
   bezirkeSetzen();
   gehwegeBauen();
   bloeckeFuellen();
@@ -867,6 +904,7 @@ export const bauArt = (tx, ty) => (drin(tx, ty) ? felder.bau[i(tx, ty)] : 0);
 export const hausNr = (tx, ty) => (drin(tx, ty) ? felder.haus[i(tx, ty)] : 0);
 export const bezirkVon = (tx, ty) => (drin(tx, ty) ? felder.bezirk[i(tx, ty)] : BEZIRK.WOHNEN);
 export const hoeheVon = (tx, ty) => (drin(tx, ty) ? felder.hoehe[i(tx, ty)] / 255 : 0);
+export const istSteg = (tx, ty) => drin(tx, ty) && felder.steg[i(tx, ty)] === 1;
 
 export function fest(tx, ty) {
   const a = art(tx, ty);

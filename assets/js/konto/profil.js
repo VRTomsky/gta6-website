@@ -32,6 +32,7 @@ import {
   datumMonat, kontenLesen, VORLAGEN, TITEL_VORLAGEN, TITEL_STANDARD, NAME_MUSTER, BIO_MAX
 } from "./konto.js";
 import { zuschneiden } from "./zuschnitt.js";
+import { istAdmin } from "./rolle.js";
 import { titelLesen, titelMerken, titelVergessen, titelAufraeumen } from "./titelcache.js";
 
 const root = document.getElementById("kontoRoot");
@@ -446,6 +447,7 @@ function kopfAuffrischen({ nutzer, profil }) {
   if (plattform) chips.push(`<span class="kchip">${esc(plattform.name)}</span>`);
   if (profil.edition === "ultimate") chips.push(`<span class="kchip kchip--gold">Ultimate Edition</span>`);
   if (newsletterAn) chips.push(`<span class="kchip kchip--pink">${L("Newsletter aktiv", "Newsletter on")}</span>`);
+  if (istAdmin(profil)) chips.push(`<span class="kchip kchip--admin">Admin</span>`);
   if (!nutzer.emailVerified) chips.push(`<span class="kchip kchip--warn">${L("E-Mail nicht bestätigt", "Email not confirmed")}</span>`);
   q("chips").innerHTML = chips.join("");
 
