@@ -18,8 +18,15 @@
    ═══════════════════════════════════════════════════════════ */
 
 export const KACHEL = 4;                    // Meter je Kachel
-export const BREITE = 240;
-export const HOEHE = 220;
+/* Maßstab der Stadt (23.09.2026: von 1,0 auf 1,3). Alle festen Orte —
+   Küste, Fluss, Autobahnring, Hauptachsen, Wahrzeichen — werden damit
+   gestreckt; Straßenbreiten und Blockgrößen bleiben gleich. Dadurch
+   wird die Stadt nicht einfach gröber, sondern bekommt mehr Blöcke und
+   mehr Häuser. */
+export const S = 1.3;
+const s = v => Math.round(v * S);
+export const BREITE = s(240);
+export const HOEHE = s(220);
 
 export const ART = {
   WASSER: 0, STRAND: 1, STRASSE: 2, KREUZUNG: 3, GEHWEG: 4,
@@ -106,8 +113,14 @@ function linie(x0, y0, x1, y1, breite, art) {
 }
 
 /* ═══ 1 · Land, Meer, Kanal, Hafen ═══════════════════════ */
-const STRAND_VON = 206;                       // ab hier Sand
-const MEER_VON = 224;
+const STRAND_VON = s(206);                    // ab hier Sand
+const MEER_VON = s(224);
+
+/* Mittellinie des Flusses — gestreckt mit dem Maßstab */
+function flussY(tx) {
+  const t = tx / S;
+  return Math.round(s(126) + (Math.sin(t * 0.035) * 12 + Math.sin(t * 0.011) * 8) * S);
+}
 
 function wasserBauen() {
   felder.art.fill(ART.GEBAEUDE);               // vorerst alles Bauland
@@ -118,22 +131,22 @@ function wasserBauen() {
 
   /* Kanal zwischen Festland und Strandinsel, mit zwei Lücken für Brücken */
   for (let ty = 0; ty < HOEHE; ty++) {
-    const wellig = Math.round(Math.sin(ty * 0.05) * 4);
-    rechteck(196 + wellig, ty, 202 + wellig, ty, ART.WASSER);
+    const wellig = Math.round(Math.sin(ty * 0.05 / S) * 4);
+    rechteck(s(196) + wellig, ty, s(196) + 6 + wellig, ty, ART.WASSER);
   }
 
   /* Fluss quer durch die Stadt — trennt Nord und Süd */
-  for (let tx = 0; tx < 200; tx++) {
-    const y = Math.round(126 + Math.sin(tx * 0.035) * 12 + Math.sin(tx * 0.011) * 8);
+  for (let tx = 0; tx < s(200); tx++) {
+    const y = flussY(tx);
     rechteck(tx, y - 4, tx, y + 4, ART.WASSER);
   }
 
   /* Hafenbecken im Südwesten */
-  rechteck(4, HOEHE - 34, 30, HOEHE - 6, ART.WASSER);
-  rechteck(30, HOEHE - 38, 46, HOEHE - 4, ART.HAFEN);
+  rechteck(4, HOEHE - s(34), s(30), HOEHE - 6, ART.WASSER);
+  rechteck(s(30), HOEHE - s(38), s(46), HOEHE - 4, ART.HAFEN);
 
   /* Seeufer-Park im Nordwesten */
-  kreis(38, 34, 15, ART.PARK);
+  kreis(s(38), s(34), s(15), ART.PARK);
 
   /* Merken, wo Wasser war: Straßen, die später darüber gemalt werden,
      sind in Wahrheit Brücken. */
@@ -157,8 +170,8 @@ const autobahn = [];                           // für Auf- und Abfahrten
 
 function autobahnBauen() {
   /* Ring um die Innenstadt, Ecken abgerundet */
-  const l = 26, r = 190, o = 24, u = 196;
-  const ecke = 18;
+  const l = s(26), r = s(190), o = s(24), u = s(196);
+  const ecke = s(18);
   const punkte = [
     [l + ecke, o], [r - ecke, o], [r, o + ecke], [r, u - ecke],
     [r - ecke, u], [l + ecke, u], [l, u - ecke], [l, o + ecke]
@@ -175,23 +188,23 @@ const plaetze = [];
 
 function hauptstrassenBauen() {
   /* Vier breite Achsen mit ungleichem Abstand */
-  const senkrecht = [54, 96, 134, 170];
-  const waagerecht = [46, 88, 150, 184];
+  const senkrecht = [54, 96, 134, 170].map(s);
+  const waagerecht = [46, 88, 150, 184].map(s);
   for (const x of senkrecht) rechteck(x, 6, x + 3, HOEHE - 7, ART.STRASSE);
-  for (const y of waagerecht) rechteck(6, y, BREITE - 40, y + 3, ART.STRASSE);
+  for (const y of waagerecht) rechteck(6, y, BREITE - s(40), y + 3, ART.STRASSE);
 
   /* Zwei Diagonalen, die das Raster brechen */
-  linie(30, 30, 150, 120, 3, ART.STRASSE);
-  linie(180, 40, 70, 180, 3, ART.STRASSE);
+  linie(s(30), s(30), s(150), s(120), 3, ART.STRASSE);
+  linie(s(180), s(40), s(70), s(180), 3, ART.STRASSE);
 
   /* Strandboulevard, geschwungen der Küste entlang */
   for (let ty = 6; ty < HOEHE - 6; ty++) {
-    const x = 208 + Math.round(Math.sin(ty * 0.06) * 3);
+    const x = s(208) + Math.round(Math.sin(ty * 0.06 / S) * 3);
     rechteck(x, ty, x + 3, ty, ART.STRASSE);
   }
 
   /* Kreisverkehre an zwei Kreuzungen */
-  for (const [mx, my] of [[96, 88], [134, 150]]) {
+  for (const [mx, my] of [[s(96), s(88)], [s(134), s(150)]]) {
     ring(mx + 1.5, my + 1.5, 5, 9, ART.STRASSE);
     kreis(mx + 1.5, my + 1.5, 5, ART.PARK);
     plaetze.push([mx + 1.5, my + 1.5]);
@@ -203,8 +216,8 @@ function hauptstrassenBauen() {
    Stummel zwischen den Häusern. Die Promenade fängt sie auf. */
 function uferstrassenBauen() {
   /* Beide Ufer des Flusses */
-  for (let tx = 2; tx < 200; tx++) {
-    const y = Math.round(126 + Math.sin(tx * 0.035) * 12 + Math.sin(tx * 0.011) * 8);
+  for (let tx = 2; tx < s(200); tx++) {
+    const y = flussY(tx);
     for (let b = 0; b < 2; b++) {
       strasseSetzen(tx, y - 6 - b);
       strasseSetzen(tx, y + 6 + b);
@@ -212,12 +225,12 @@ function uferstrassenBauen() {
   }
   /* Westufer des Kanals */
   for (let ty = 2; ty < HOEHE - 2; ty++) {
-    const wellig = Math.round(Math.sin(ty * 0.05) * 4);
-    for (let b = 0; b < 2; b++) strasseSetzen(196 + wellig - 3 - b, ty);
+    const wellig = Math.round(Math.sin(ty * 0.05 / S) * 4);
+    for (let b = 0; b < 2; b++) strasseSetzen(s(196) + wellig - 3 - b, ty);
   }
   /* Rund um das Hafenbecken */
-  for (let tx = 2; tx <= 33; tx++) for (let b = 0; b < 2; b++) strasseSetzen(tx, HOEHE - 37 - b);
-  for (let ty = HOEHE - 37; ty < HOEHE - 3; ty++) for (let b = 0; b < 2; b++) strasseSetzen(32 + b, ty);
+  for (let tx = 2; tx <= s(33); tx++) for (let b = 0; b < 2; b++) strasseSetzen(tx, HOEHE - s(37) - b);
+  for (let ty = HOEHE - s(37); ty < HOEHE - 3; ty++) for (let b = 0; b < 2; b++) strasseSetzen(s(32) + b, ty);
 }
 
 /* ═══ 4 · Nebenstraßen: Blöcke unterschiedlich groß ═══════ */
@@ -232,7 +245,7 @@ function nebenstrassenBauen() {
      aufhört, ergibt keinen Sinn. Wo Wasser dazwischenliegt, räumt der
      spätere Durchgang „strassenSaeubern" den Rest weg. */
   let x = 12;
-  while (x < BREITE - 28) {
+  while (x < BREITE - s(28)) {
     const breit = zufall() < 0.25 ? 3 : 2;
     const schwung = zufall() < 0.45 ? zwischen(1.5, 4.5) : zwischen(0, 1.2);
     const takt = zwischen(0.012, 0.045);
@@ -245,7 +258,7 @@ function nebenstrassenBauen() {
   }
 
   let y = 12;
-  while (y < HOEHE - 18) {
+  while (y < HOEHE - s(18)) {
     const breit = zufall() < 0.2 ? 3 : 2;
     const schwung = zufall() < 0.45 ? zwischen(1.5, 4.0) : zwischen(0, 1.2);
     const takt = zwischen(0.012, 0.04);
@@ -260,9 +273,9 @@ function nebenstrassenBauen() {
   /* Geschwungene Wohnstraßen quer durch die Stadt. Sie brechen das
      Raster auf und werden breiter gemalt als die Rasterstraßen, sonst
      zerfallen sie beim Aufräumen. */
-  for (let k = 0; k < 8; k++) {
-    let px = ganz(12, 190), py = ganz(12, 200);
-    const laenge = ganz(70, 150);
+  for (let k = 0; k < Math.round(8 * S * S); k++) {
+    let px = ganz(12, s(190)), py = ganz(12, s(200));
+    const laenge = ganz(s(70), s(150));
     let richtung = zufall() * Math.PI * 2;
     for (let s = 0; s < laenge; s++) {
       richtung += zwischen(-0.085, 0.085);
@@ -458,11 +471,11 @@ function bezirkeSetzen() {
   for (let ty = 0; ty < HOEHE; ty++) {
     for (let tx = 0; tx < BREITE; tx++) {
       let b = BEZIRK.WOHNEN;
-      if (tx >= 196) b = BEZIRK.STRAND;
-      else if (tx < 48 && ty > HOEHE - 44) b = BEZIRK.HAFEN;
-      else if (tx < 60 && ty > 150) b = BEZIRK.INDUSTRIE;
-      else if (Math.hypot(tx - 112, ty - 84) < 44) b = BEZIRK.INNENSTADT;
-      else if (Math.hypot(tx - 38, ty - 34) < 20) b = BEZIRK.PARKLAND;
+      if (tx >= s(196)) b = BEZIRK.STRAND;
+      else if (tx < s(48) && ty > HOEHE - s(44)) b = BEZIRK.HAFEN;
+      else if (tx < s(60) && ty > s(150)) b = BEZIRK.INDUSTRIE;
+      else if (Math.hypot(tx - s(112), ty - s(84)) < s(44)) b = BEZIRK.INNENSTADT;
+      else if (Math.hypot(tx - s(38), ty - s(34)) < s(20)) b = BEZIRK.PARKLAND;
       felder.bezirk[i(tx, ty)] = b;
     }
   }
@@ -630,9 +643,72 @@ function wahrzeichenSetzen() {
     { bau: BAU.CLUB, name: "Club Sunset", nah: [82, 64] }
   ];
 
+  /* Die festen Orte stammen aus der kleineren Stadt — mitstrecken */
+  for (const w of wunsch) w.nah = [s(w.nah[0]), s(w.nah[1])];
+
+  /* ── Weitere Wachen, Kliniken, Tankstellen, Clubs, Läden ──
+     Die größere Stadt braucht mehr davon. Sie werden nicht von Hand
+     gesetzt, sondern gleichmäßig verteilt: Für jedes neue Haus wird die
+     Stelle gesucht, die am weitesten von allen gleichartigen entfernt
+     liegt. So entsteht keine Häufung, und jeder Stadtteil hat seine
+     Wache, seine Tankstelle, seinen Club. */
+  const mehr = [
+    [BAU.POLIZEI, "VCPD", 3],
+    [BAU.FEUERWEHR, "Feuerwache", 3],
+    [BAU.KRANKENHAUS, "Klinik", 2],
+    [BAU.TANKSTELLE, "Tankstelle", 5],
+    [BAU.CLUB, ["Velvet Palms", "Sapphire Room", "Midnight Mirage"], 3],
+    [BAU.WAFFEN, "Ammu-Vice", 2],
+    [BAU.STADION, "Sportpark", 2]
+  ];
+  /* Kandidaten: ein Gitter über der bebauten Stadt — mit Abstand zum
+     Kartenrand und westlich vom Kanal. Beim ersten Versuch landeten die
+     neuen Häuser alle in den äußersten Ecken, weil die natürlich am
+     weitesten von allem anderen weg sind. */
+  const kandidaten = [];
+  for (let y = s(24); y < HOEHE - s(24); y += 8) {
+    for (let x = s(28); x < s(186); x += 8) kandidaten.push([x, y]);
+  }
+  /* Bewertung: weit weg von der eigenen Art (damit sich alles verteilt)
+     und nicht direkt neben einem anderen Wahrzeichen (damit nicht drei
+     Häuser auf einem Fleck landen). */
+  const abstand = (liste, x, y) =>
+    Math.min(999, ...liste.map(([gx, gy]) => Math.hypot(gx - x, gy - y)));
+  const mitteX = s(112), mitteY = s(110);
+  /* Acht Richtungen vom Stadtkern aus; ist ein Name schon vergeben,
+     bekommt der nächste eine Nummer */
+  const RICHTUNG = ["Ost", "Südost", "Süd", "Südwest", "West", "Nordwest", "Nord", "Nordost"];
+  const himmel = (x, y) => {
+    const w = Math.atan2(y - mitteY, x - mitteX);
+    return RICHTUNG[(Math.round(w / (Math.PI / 4)) + 8) % 8];
+  };
+  const eindeutig = titel => {
+    let neu = titel, n = 2;
+    while (wunsch.some(w => w.name === neu)) neu = `${titel} ${n++}`;
+    return neu;
+  };
+  for (const [bau, name, anzahl] of mehr) {
+    for (let k = 0; k < anzahl; k++) {
+      const gleiche = wunsch.filter(w => w.bau === bau).map(w => w.nah);
+      const alle = wunsch.map(w => w.nah);
+      let beste = null, bestWert = -1;
+      for (const [x, y] of kandidaten) {
+        const wert = Math.min(abstand(gleiche, x, y), abstand(alle, x, y) * 2.2);
+        if (wert > bestWert) { bestWert = wert; beste = [x, y]; }
+      }
+      if (!beste) continue;
+      const titel = Array.isArray(name) ? name[k % name.length]
+        : bau === BAU.TANKSTELLE || bau === BAU.WAFFEN ? name
+        : eindeutig(`${name} ${himmel(beste[0], beste[1])}`);
+      wunsch.push({ bau, name: titel, nah: beste });
+    }
+  }
+
+  const belegt = new Set();                    // ein Haus, ein Wahrzeichen
   for (const w of wunsch) {
-    const treffer = hausSuchen(w.nah[0], w.nah[1], w.bau === BAU.STADION ? 40 : 22);
+    const treffer = hausSuchen(w.nah[0], w.nah[1], w.bau === BAU.STADION ? s(40) : s(22), belegt);
     if (!treffer) continue;
+    belegt.add(treffer.nr);
     const { nr, x0, y0, x1, y1 } = treffer;
     const h = w.bau === BAU.STADION ? 100
             : w.bau === BAU.TANKSTELLE ? 30
@@ -654,12 +730,13 @@ function wahrzeichenSetzen() {
 }
 
 /* Haus in der Nähe eines Punktes finden, das groß genug ist */
-function hausSuchen(nahX, nahY, radius) {
+function hausSuchen(nahX, nahY, radius, belegt = null) {
   let beste = null;
   for (let ty = Math.max(1, nahY - radius); ty < Math.min(HOEHE - 1, nahY + radius); ty++) {
     for (let tx = Math.max(1, nahX - radius); tx < Math.min(BREITE - 1, nahX + radius); tx++) {
       const nr = felder.haus[i(tx, ty)];
       if (!nr || felder.art[i(tx, ty)] !== ART.GEBAEUDE) continue;
+      if (belegt && belegt.has(nr)) continue;
       if (beste && beste.nr === nr) continue;
       /* Ausdehnung dieses Hauses bestimmen */
       let x0 = tx, x1 = tx, y0 = ty, y1 = ty;
@@ -805,7 +882,7 @@ export function startSuchen() {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const tx = 112 + dx, ty = 84 + dy;
+        const tx = s(112) + dx, ty = s(84) + dy;
         if (art(tx, ty) !== ART.GEHWEG) continue;
         const amRand = [[1, 0], [-1, 0], [0, 1], [0, -1]]
           .some(([ax, ay]) => art(tx + ax, ty + ay) === ART.STRASSE);
@@ -813,5 +890,5 @@ export function startSuchen() {
       }
     }
   }
-  return { x: 112 * KACHEL, y: 84 * KACHEL };
+  return { x: s(112) * KACHEL, y: s(84) * KACHEL };
 }

@@ -19,10 +19,12 @@
 import * as Tex from "./texturen.js";
 import * as Plan from "./stadtplan.js";
 import { bild as sprite } from "./bilder.js";
+import { HAUSMASS } from "./hausmass.js";
 
 export const KACHEL = Plan.KACHEL;
 export const BREITE = Plan.BREITE;
 export const HOEHE = Plan.HOEHE;
+export const S = Plan.S;                     // Maßstab der Stadt
 export const ART = Plan.ART;
 export const BAU = Plan.BAU;
 export const BEZIRK = Plan.BEZIRK;
@@ -142,6 +144,19 @@ function bodenMalen(ctx, name, px, py, g) {
   return true;
 }
 
+/* Bodenkachel in Vierteldrehungen — für Pfeile, Haltelinien, Zebra */
+function bodenGedreht(ctx, name, px, py, g, dreh) {
+  const b = sprite("boden_" + name);
+  if (!b) return false;
+  if (!dreh) { ctx.drawImage(b, px, py, g + 1, g + 1); return true; }
+  ctx.save();
+  ctx.translate(px + g / 2, py + g / 2);
+  ctx.rotate(dreh);
+  ctx.drawImage(b, -g / 2 - 0.5, -g / 2 - 0.5, g + 1, g + 1);
+  ctx.restore();
+  return true;
+}
+
 /* Deko mittig auf die Kachel, in ihrer echten Größe.
    vx/vy verschieben innerhalb der Kachel (0…1), dreh in Radiant. */
 function dekoMalen(ctx, name, px, py, g, vx = 0.5, vy = 0.5, dreh = 0) {
@@ -201,27 +216,48 @@ const DACH = {
    Das Bild wird auf die Grundfläche gezogen und quer gelegt, wenn
    das Haus hochkant steht. Fehlt ein Bild, bleibt das alte gemalte
    Dach stehen. */
+/* Zweite Runde (23.09.2026): Jede besondere Bauart hat jetzt mehrere
+   Modelle — vorher sah jede Tankstelle und jeder Club gleich aus, und
+   Tankstellen hatten gar kein Bild. Welches Modell ein Haus bekommt,
+   entscheidet weiter hausWaehlen() nach Größe und Seitenverhältnis. */
+const WOHNEN2 = ["haus_pastell", "haus_flachpool", "haus_stadt", "haus_innenhof",
+                 "haus_laubengang", "haus_stelzen", "haus_schmetterling", "haus_anlage",
+                 "haus_anwesen", "haus_motelzeile", "haus_garage", "haus_veranda"];
+const CLUBS = ["bau_club", "club_neon", "club_lila", "club_terrasse", "club_deco",
+               "club_strand", "club_wuerfel", "club_halle", "club_herz", "club_pool",
+               "club_kneipe", "club_kabarett", "club_heli"];
+const TANKEN = ["tanke_klein", "tanke_gross", "tanke_alt", "tanke_wasch", "tanke_rot",
+                "tanke_ecke", "tanke_solar", "tanke_werkstatt", "tanke_schild", "tanke_neon",
+                "tanke_markt", "tanke_verlassen"];
+const SPORT = ["sport_fussball", "sport_stadion", "sport_baseball", "sport_arena",
+               "sport_tennis", "sport_skate", "sport_amphi", "sport_bahn", "sport_bad",
+               "sport_boxen", "sport_kart", "sport_golf"];
+
 const HAUSBILD = {
   [Plan.BAU.WOHNHAUS]: ["haus_klein", "haus_bungalow", "haus_stuck", "haus_strand",
                         "haus_reihe", "haus_hof", "haus_modern", "haus_villa",
-                        "haus_block2", "haus_alt"],
+                        "haus_block2", "haus_alt", ...WOHNEN2],
   [Plan.BAU.HOCHHAUS]: ["turm_buero", "turm_glas", "turm_deco", "turm_antennen",
                         "turm_bau", "turm_pool", "turm_helipad", "haus_block_lang"],
-  [Plan.BAU.HOTEL]: ["turm_pool", "turm_bar", "haus_motel", "turm_helipad"],
+  [Plan.BAU.HOTEL]: ["turm_pool", "turm_bar", "haus_motel", "turm_helipad", "haus_motelzeile"],
   [Plan.BAU.LAGER]: ["bau_lager", "turm_tank"],
   [Plan.BAU.LADEN]: ["bau_laden", "bau_diner", "haus_block2"],
-  [Plan.BAU.CLUB]: ["bau_club"],
+  [Plan.BAU.CLUB]: CLUBS,
   [Plan.BAU.BANK]: ["bau_bank", "turm_bank"],
-  [Plan.BAU.POLIZEI]: ["bau_polizei"],
-  [Plan.BAU.FEUERWEHR]: ["bau_feuerwehr"],
-  [Plan.BAU.KRANKENHAUS]: ["bau_klinik"],
+  [Plan.BAU.POLIZEI]: ["bau_polizei", "dienst_polizei1", "dienst_polizei2", "dienst_polizei3"],
+  [Plan.BAU.FEUERWEHR]: ["bau_feuerwehr", "dienst_feuer1", "dienst_feuer2", "dienst_feuer3"],
+  [Plan.BAU.KRANKENHAUS]: ["bau_klinik", "dienst_klinik1", "dienst_klinik2", "dienst_klinik3"],
   [Plan.BAU.KIRCHE]: ["bau_kirche"],
   [Plan.BAU.SCHULE]: ["bau_schule"],
-  [Plan.BAU.STADION]: ["bau_schule"],
+  [Plan.BAU.STADION]: SPORT,
+  [Plan.BAU.TANKSTELLE]: TANKEN,
   [Plan.BAU.KAUFHAUS]: ["turm_mall", "bau_markt", "turm_parkhaus"],
   [Plan.BAU.WERK]: ["bau_lager", "turm_tank"],
-  [Plan.BAU.WAFFEN]: ["bau_waffen"]
+  [Plan.BAU.WAFFEN]: ["bau_waffen", "dienst_waffen1", "dienst_waffen2", "dienst_waffen3"]
 };
+
+/* Alle Gebäudebilder — spiel.js lädt sie vor */
+export const GEBAEUDEBILDER = [...new Set(Object.values(HAUSBILD).flat())];
 
 /* Die Bilder liegen mit 32 Bildpunkten je Meter im Ordner — daraus
    ergibt sich, wie groß ein Gebäude gedacht ist. */
@@ -244,7 +280,9 @@ function hausWaehlen(h) {
   for (let k = 0; k < liste.length; k++) {
     const b = sprite(liste[k]);
     if (!b) continue;
-    const lang = Math.max(b.width, b.height) / HAUS_PX;
+    /* Gedachte Größe aus der Tabelle — die großen Bilder sind
+       verkleinert und verraten ihre Größe nicht mehr selbst */
+    const lang = HAUSMASS[liste[k]] || Math.max(b.width, b.height) / HAUS_PX;
     const seite = Math.max(b.width, b.height) / Math.min(b.width, b.height);
     const wert = Math.abs(Math.log(lang / langM))
                + Math.abs(Math.log(seite / (langM / kurzM))) * 0.7
@@ -363,6 +401,7 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
   if (!kachel || !bodenMalen(ctx, kachel, px, py, g)) {
     Tex.malen(ctx, "asphalt", streu(tx, ty, 101), px, py, g);
   }
+  if (a === ART.STRASSE && strassenMarke(ctx, tx, ty, px, py, g)) return;
 
   if (a === ART.KREUZUNG) {
     /* Fußgängerüberweg: breite Balken über die ganze Kachel, dort wo die
@@ -372,6 +411,14 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
     const randUnten = art(tx, ty + 1) !== ART.KREUZUNG && befahrbar(art(tx, ty + 1));
     const randLinks = art(tx - 1, ty) !== ART.KREUZUNG && befahrbar(art(tx - 1, ty));
     const randRechts = art(tx + 1, ty) !== ART.KREUZUNG && befahrbar(art(tx + 1, ty));
+    /* Gelbes Sperrfeld mitten in manchen großen Kreuzungen */
+    if (!randOben && !randUnten && !randLinks && !randRechts) {
+      if (streu(tx, ty, 173) > 0.92) bodenMalen(ctx, "mark_sperr", px, py, g);
+      return;
+    }
+    /* Überweg als echtes Bild: Balken laufen längs zur Straße */
+    if (bodenGedreht(ctx, "mark_zebra", px, py, g,
+                     randOben || randUnten ? 0 : Math.PI / 2)) return;
     ctx.fillStyle = "rgba(240,238,230,.72)";
     const balken = 5, dick = g * 0.12, lang = g * 0.5;
     for (let k = 0; k < balken; k++) {
@@ -438,6 +485,50 @@ function strasseMalen(ctx, tx, ty, px, py, g, a) {
   }
 }
 
+/* ── Bodenmarken auf der Fahrbahn ──
+   Auf der Spur, die in eine Kreuzung hineinführt: Haltelinie oder
+   Richtungspfeil. Sonst ab und zu ein Gullydeckel, ein Flicken, ein
+   Ölfleck oder ein Radweg-Symbol. Gibt true zurück, wenn gemalt wurde —
+   dann fallen Mittel- und Spurlinien auf dieser Kachel weg. */
+function strassenMarke(ctx, tx, ty, px, py, g) {
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    if (art(tx + dx, ty + dy) !== ART.KREUZUNG) continue;
+    /* Nur die Spur, die auf die Kreuzung zufährt (Rechtsverkehr) */
+    const senkrecht = dy !== 0;
+    const band = bandGrenzen(tx, ty, senkrecht);
+    const eigen = senkrecht ? tx : ty;
+    const mitte = (band.von + band.bis) / 2;
+    const zufahrt = senkrecht ? (dy < 0 ? eigen > mitte : eigen < mitte)
+                              : (dx > 0 ? eigen > mitte : eigen < mitte);
+    if (!zufahrt || band.breite < 2) return false;
+    const r = streu(tx, ty, 177);
+    const quer = senkrecht ? 0 : Math.PI / 2;               // Haltelinie quer
+    const pfeil = Math.atan2(dy, dx) + Math.PI / 2;         // Pfeil zur Kreuzung
+    if (r < 0.55) return bodenGedreht(ctx, "mark_halt", px, py, g, quer);
+    if (r < 0.75) return bodenGedreht(ctx, "mark_gerade", px, py, g, pfeil);
+    if (r < 0.88) return bodenGedreht(ctx, "mark_rechts", px, py, g, pfeil);
+    return bodenGedreht(ctx, "mark_links", px, py, g, pfeil);
+  }
+  const z = streu(tx, ty, 179);
+  const dreh = Math.floor(streu(tx, ty, 181) * 4) * (Math.PI / 2);
+  if (z < 0.025) return bodenGedreht(ctx, "mark_gully", px, py, g, dreh);
+  if (z < 0.04) return bodenGedreht(ctx, "mark_flicken", px, py, g, dreh);
+  if (z < 0.052) return bodenGedreht(ctx, "mark_oel", px, py, g, dreh);
+  /* Rinne und Radweg nur am Fahrbahnrand */
+  const amRand = !befahrbar(art(tx - 1, ty)) || !befahrbar(art(tx + 1, ty)) ||
+                 !befahrbar(art(tx, ty - 1)) || !befahrbar(art(tx, ty + 1));
+  if (!amRand) return false;
+  if (z < 0.075) {
+    /* Die Rinne liegt im Bild rechts — zum Bordstein drehen */
+    const zumBord = !befahrbar(art(tx + 1, ty)) ? 0 : !befahrbar(art(tx - 1, ty)) ? Math.PI
+                  : !befahrbar(art(tx, ty + 1)) ? Math.PI / 2 : -Math.PI / 2;
+    return bodenGedreht(ctx, "mark_rinne", px, py, g, zumBord);
+  }
+  if (z < 0.085) return bodenGedreht(ctx, "mark_rad", px, py, g,
+    befahrbar(art(tx, ty - 1)) && befahrbar(art(tx, ty + 1)) ? 0 : Math.PI / 2);
+  return false;
+}
+
 /* ── Gehweg mit Bäumen, Laternen, Hydranten ─────────────── */
 function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
   ctx.fillStyle = FARBE.gehweg;
@@ -468,6 +559,21 @@ function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
   const l = streu(tx, ty, 13);
   const dreh = streu(tx, ty, 133) * Math.PI * 2;
   const palmen = bez === Plan.BEZIRK.STRAND ? 0.7 : 0.9;
+
+  /* An Kreuzungsecken ohne Ampel steht ein Stoppschild oder ein
+     Straßenschild (die Ampeln selbst malt ampelnMalen, sie leuchten) */
+  const ecke = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dx, dy]) =>
+    art(tx + dx, ty + dy) === ART.KREUZUNG);
+  if (ecke && streu(tx, ty, 71) > 0.5) {
+    const [dx, dy] = ecke;
+    if (streu(tx, ty, 183) < 0.55) {
+      dekoMalen(ctx, "stopp", px, py, g, 0.5 + dx * 0.3, 0.5 + dy * 0.3);
+    } else {
+      dekoMalen(ctx, "strassenschild", px, py, g, 0.5 + dx * 0.3, 0.5 + dy * 0.3);
+    }
+    return;
+  }
+
   if (l > palmen) {
     dekoMalen(ctx, bez === Plan.BEZIRK.STRAND ? "palme" : "baum", px, py, g);
   } else if (l > 0.84) {
@@ -488,6 +594,18 @@ function gehwegMalen(ctx, tx, ty, px, py, g, bez) {
     dekoMalen(ctx, "marktstand", px, py, g);
   } else if (l < 0.04) {
     dekoMalen(ctx, "hydrant", px, py, g, 0.5, 0.5);
+  } else if (l < 0.055) {
+    dekoMalen(ctx, "stromkasten", px, py, g);
+  } else if (l < 0.07 && bez === Plan.BEZIRK.INNENSTADT) {
+    dekoMalen(ctx, "kuebel", px, py, g);
+  } else if (l < 0.08 && bez === Plan.BEZIRK.INNENSTADT) {
+    dekoMalen(ctx, "radstaender", px, py, g, 0.5, 0.5,
+              Math.round(dreh / (Math.PI / 2)) * (Math.PI / 2));
+  } else if (l < 0.09) {
+    dekoMalen(ctx, "parkuhr", px, py, g);
+  } else if (l < 0.095 && bez !== Plan.BEZIRK.WOHNEN) {
+    dekoMalen(ctx, "plakatwand", px, py, g, 0.5, 0.5,
+              Math.round(dreh / (Math.PI / 2)) * (Math.PI / 2));
   }
 }
 
@@ -718,19 +836,27 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
       }
       break;
     }
-    case ART.PARKPLATZ:
+    case ART.PARKPLATZ: {
       ctx.fillStyle = FARBE.parkplatz;
       ctx.fillRect(px, py, g + 1, g + 1);
-      if (!bodenMalen(ctx, "parkplatz", px, py, g)) {
+      /* Parkbuchten und Fahrgassen — dieselbe Einteilung wie beim
+         Abstellen der Wagen in fahrzeug.js: Reihen quer zur langen
+         Seite, jede dritte Reihe bleibt Gasse. So stehen die Autos auch
+         wirklich in den gemalten Buchten. */
+      const zaehlen = (dx, dy) => {
+        let n = 0;
+        while (n < 10 && art(tx + dx * (n + 1), ty + dy * (n + 1)) === ART.PARKPLATZ) n++;
+        return n;
+      };
+      const reihenQuer = zaehlen(1, 0) + zaehlen(-1, 0) >= zaehlen(0, 1) + zaehlen(0, -1);
+      const gasse = reihenQuer ? ty % 3 === 1 : tx % 3 === 1;
+      const gemalt = !gasse &&
+        bodenGedreht(ctx, "mark_bucht", px, py, g, reihenQuer ? 0 : Math.PI / 2);
+      if (!gemalt && !bodenMalen(ctx, "parkplatz", px, py, g)) {
         Tex.malen(ctx, "beton", streu(tx, ty, 121), px, py, g);
       }
-      ctx.strokeStyle = "rgba(230,230,210,.22)";
-      ctx.lineWidth = Math.max(1, g * 0.03);
-      ctx.beginPath();
-      ctx.moveTo(px + g * 0.5, py + g * 0.12);
-      ctx.lineTo(px + g * 0.5, py + g * 0.88);
-      ctx.stroke();
       break;
+    }
     case ART.HAFEN: {
       ctx.fillStyle = FARBE.hafen;
       ctx.fillRect(px, py, g + 1, g + 1);
@@ -819,8 +945,12 @@ function ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM
       const phase = ampelPhase(tx, ty, zeit);
       const gruen = senkrecht ? phase === "ns" : phase === "ow";
       const gelb = senkrecht ? phase === "ns-gelb" : phase === "ow-gelb";
-      const name = gruen ? "ampel_gruen" : gelb ? "ampel_gelb" : "ampel_rot";
-      const b = sprite(name);
+      /* Neue Ampeln aus dem Bogen (23.09.2026), von oben gesehen: Mast
+         rechts, Lampenkopf ragt nach links. Gedreht wird so, dass der
+         Kopf über die Fahrbahn zeigt. Die alten Blender-Ampeln bleiben
+         als Ersatz, falls ein Bild fehlt. */
+      const farbe = gruen ? "ampel_gruen" : gelb ? "ampel_gelb" : "ampel_rot";
+      const b = sprite("deko_" + farbe) || sprite(farbe);
       const g = KACHEL * kamera.zoom;
       const px = (inMeter(tx) - linksM) * kamera.zoom;
       const py = (inMeter(ty) - obenM) * kamera.zoom;
@@ -829,24 +959,21 @@ function ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM
         ctx.fillRect(px + g * 0.38, py + g * 0.38, g * 0.24, g * 0.24);
         continue;
       }
-      /* Höhe vorgeben, nicht Breite: die Ampel ist ein hohes, schmales
-         Bild. Sie war mit anderthalb Kacheln — sechs Metern — viel zu
-         groß und lag wie ein Klotz auf der Straße; jetzt sind es knapp
-         drei Meter, und sie steht an der Bordsteinkante. */
-      const h = g * 0.72, w = (b.width / b.height) * h;
+      const skala = (g / (KACHEL * 64)) * 1.25;       // echte Größe, etwas betont
+      const w = b.width * skala, h = b.height * skala;
       ctx.save();
-      ctx.translate(px + g / 2 + dx * g * 0.3, py + g / 2 + dy * g * 0.3);
-      ctx.rotate(Math.atan2(dy, dx) + Math.PI / 2);
+      ctx.translate(px + g / 2 + dx * g * 0.28, py + g / 2 + dy * g * 0.28);
+      ctx.rotate(Math.atan2(-dy, -dx));
       ctx.drawImage(b, -w / 2, -h / 2, w, h);
-      /* Leuchten: kleiner Schein in der Ampelfarbe, damit man sie auch
-         bei kleiner Darstellung erkennt */
+      /* Leuchten: kleiner Schein in der Ampelfarbe über dem Lampenkopf */
       const licht = gruen ? "rgba(70,240,130," : gelb ? "rgba(255,200,60," : "rgba(255,70,90,";
-      const schein = ctx.createRadialGradient(0, -h * 0.26, 0, 0, -h * 0.26, w * 0.6);
-      schein.addColorStop(0, licht + "0.7)");
+      const kopfX = gruen ? -w * 0.06 : gelb ? -w * 0.2 : -w * 0.34, kopfY = -h * 0.22;
+      const schein = ctx.createRadialGradient(kopfX, kopfY, 0, kopfX, kopfY, h * 0.35);
+      schein.addColorStop(0, licht + "0.55)");
       schein.addColorStop(1, licht + "0)");
       ctx.fillStyle = schein;
       ctx.beginPath();
-      ctx.arc(0, -h * 0.26, w * 0.6, 0, Math.PI * 2);
+      ctx.arc(kopfX, kopfY, h * 0.35, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

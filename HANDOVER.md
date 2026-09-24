@@ -921,6 +921,57 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   das Spiel ohne Bild weiter, damit lassen sich 15 Spielminuten in
   Sekunden durchrechnen. Danach: 10 Minuten Dauerverfolgung mit vier
   Streifen, kein Fehler mehr.
+- **Große Bildrunde (23.09.2026, zwölf Bögen):**
+
+  | Bogen | Inhalt | Ergebnis |
+  |---|---|---|
+  | `jason4`, `lucia4` | neue Heldenbögen, 4 Ansichten × 4 Posen | alte gesichert in `_backup/figuren_alt/` |
+  | `clubs`, `tanken`, `dienste`, `stadien`, `wohnen2` | je 12 Gebäude | 60 neue Modelle, `HAUSBILD` in `karte.js` |
+  | `einsatz` | 12 Einsatzfahrzeuge | **Nase zeigte nach unten** → `drehen=180` im Bogen |
+  | `strassenkram` | Ampeln, Schilder, Poller … | schon freigestellt geliefert (`hintergrund="keiner"`) |
+  | `markierungen` | 12 Bodenmarken | wie Bodenkacheln strikt nach Raster |
+  | Ammu-Vice Verkaufsraum, Schießstand | Innenräume | `innen_ammu_laden`, `innen_ammu_stand` |
+
+  Tankstellen hatten vorher gar kein Bild, Stadien benutzten das
+  Schulbild. Jetzt hat jede besondere Bauart mehrere Modelle.
+- **Gebäudegröße getrennt vom Bild:** Die großen Sportanlagen wären mit
+  32 px/m über 2000 Punkte breit gewesen — zusammen 9 MB Download und
+  Hunderte MB Speicher. Deshalb werden Gebäudebilder auf **höchstens
+  768 Punkte** verkleinert, und die gedachte Größe steht in
+  `assets/js/spiel/hausmass.js`. `hausWaehlen` liest dort. Das
+  Schneidewerkzeug trägt neue Häuser dort selbst ein.
+- **Stadt um den Faktor 1,3 größer:** `stadtplan.js` hat jetzt `S = 1.3`
+  und `s(v)`. Alle festen Orte (Küste, Kanal, Fluss, Hafen, Seepark,
+  Autobahnring, Hauptachsen, Diagonalen, Kreisverkehre, Bezirke,
+  Startplatz, Wahrzeichen) werden damit gestreckt; **Straßenbreiten und
+  Blockabstände bleiben** — dadurch entstehen mehr Blöcke statt größerer
+  Häuser. Ergebnis: 312 × 286 Kacheln (1248 × 1144 m statt 960 × 880),
+  **1232 Häuser statt 588**, ein zusammenhängendes Straßennetz, Aufbau in
+  0,4 s. Die A*-Suche darf dafür 140 000 statt 60 000 Schritte.
+  **Fallstrick:** Wer neue feste Koordinaten einträgt, muss sie in `s()`
+  packen. Auch `ortsname()` in `spiel.js` rechnet mit `Karte.S`.
+- **Mehr Wahrzeichen, gleichmäßig verteilt:** Zusätzlich zu den festen
+  16 werden weitere Wachen, Kliniken, Tankstellen, Clubs, Ammu-Vice und
+  Sportparks gesetzt — jeweils an der Stelle, die am weitesten von allen
+  gleichartigen entfernt ist. Jetzt 36: 4 Polizei, 4 Feuerwehr,
+  3 Kliniken, 7 Tankstellen, 6 Clubs, 5 Ammu-Vice, 3 Sportanlagen.
+  `belegt` verhindert, dass zwei Wahrzeichen dasselbe Haus nehmen.
+- **Ammu-Vice von innen:** Wie der Club — Tür vor dem Laden, E geht
+  hinein. Im Verkaufsraum öffnet E an der Theke das bisherige
+  Ladenfenster (Waffen, Munition, Weste). Hinten rechts geht es in den
+  Schießstand: vier Bahnen, eine Runde Training kostet $10, jede Runde
+  macht etwas treffsicherer, der Bestwert wird gemerkt. Die Clubmusik
+  läuft nur in Räumen mit `musik: true`.
+- **Straße:** Überwege sind jetzt das Zebra-Bild, auf den Zufahrtsspuren
+  liegen Haltelinien und Abbiegepfeile, verstreut Gullydeckel, Flicken,
+  Ölflecken, Rinnen und Radwegsymbole, in manchen Kreuzungen ein gelbes
+  Sperrfeld. Parkplätze haben Buchten genau dort, wo die Wagen stehen.
+  An Ecken ohne Ampel steht ein Stopp- oder Straßenschild; die Ampeln
+  sind die neuen Bilder (Mast am Bordstein, Kopf über der Fahrbahn).
+- **Einsatzfahrzeuge:** Sechs Polizeiwagen (`POLIZEIWAGEN` in
+  `fahrzeug.js`), jede Streife würfelt ihr Modell. Rettung, Feuerwehr,
+  Abschlepper und Regierungswagen fahren im normalen Verkehr mit.
+  Polizeiwagen stehen nicht geparkt herum.
 - **Abhängen geht jetzt wirklich (23.09.2026):** Die Fahndung schickte
   ununterbrochen Nachschub an die **aktuelle** Position — egal, ob dich
   jemand sah. Man konnte minutenlang weg sein und hatte trotzdem Streifen

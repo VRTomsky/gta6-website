@@ -22,6 +22,7 @@ const LAUF_POSEN = [1, 2, 3, 2];
 /* Kasten: [x, y, breite, höhe] in Metern, Ursprung oben links im Bild */
 export const RAEUME = {
   eingang: {
+    musik: true,
     bild: "innen_eingang", breite: 15, hoehe: 10, wand: 0.9,
     name: ["Eingang", "Entrance"],
     sperren: [[2.4, 4.6, 3.2, 2.6], [9.4, 1.4, 3.6, 1.8], [12.6, 5.6, 1.6, 2.2]],
@@ -33,6 +34,7 @@ export const RAEUME = {
     leute: []
   },
   haupt: {
+    musik: true,
     bild: "innen_haupt", breite: 24, hoehe: 16, wand: 1.0,
     name: ["Tanzfläche", "Dance floor"],
     sperren: [[5.0, 0.8, 12.4, 4.0], [0.9, 1.0, 3.0, 14.0], [19.0, 5.0, 3.0, 8.0]],
@@ -50,6 +52,7 @@ export const RAEUME = {
     ]
   },
   bar: {
+    musik: true,
     bild: "innen_bar", breite: 18, hoehe: 12, wand: 1.0,
     name: ["Bar", "Bar"],
     sperren: [[3.6, 0.9, 9.4, 2.6], [0.9, 7.0, 3.2, 4.0], [14.0, 3.4, 3.1, 7.6],
@@ -65,6 +68,7 @@ export const RAEUME = {
     leute: [{ art: "tanz5", x: 8.0, y: 7.5 }]
   },
   vip: {
+    musik: true,
     bild: "innen_vip", breite: 18, hoehe: 12, wand: 1.0,
     name: ["VIP-Raum", "VIP room"],
     sperren: [[3.0, 1.8, 7.0, 6.6], [11.8, 0.9, 4.6, 4.4], [14.4, 5.2, 2.2, 2.4],
@@ -74,6 +78,7 @@ export const RAEUME = {
     leute: [{ art: "tanz6", x: 14.1, y: 3.0, buehne: true }]
   },
   garderobe: {
+    musik: true,
     bild: "innen_garderobe", breite: 18, hoehe: 12, wand: 1.0,
     name: ["Garderobe", "Dressing room"],
     sperren: [[2.4, 0.9, 10.6, 1.8], [13.4, 0.9, 3.6, 3.0], [13.4, 4.6, 2.4, 3.0],
@@ -86,12 +91,61 @@ export const RAEUME = {
     leute: [{ art: "tanz7", x: 6.5, y: 4.0 }, { art: "tanz8", x: 11.5, y: 4.5 }]
   },
   buero: {
+    musik: true,
     bild: "innen_buero", breite: 15, hoehe: 10, wand: 0.9,
     name: ["Büro", "Office"],
     sperren: [[4.4, 3.2, 6.2, 2.8], [11.4, 0.9, 2.6, 2.8], [0.9, 0.9, 2.2, 2.8],
               [0.9, 6.4, 3.2, 2.6], [4.0, 0.9, 6.4, 1.2]],
     tueren: [{ x: 0.0, y: 3.4, b: 1.0, h: 2.2, ziel: "garderobe" }],
     aktionen: [],
+    leute: []
+  },
+
+  /* ── Ammu-Vice: Verkaufsraum und Schießstand (23.09.2026) ──
+     Die untere Wand ist hier gut anderthalb Meter dick, deshalb stehen
+     ihre beiden Stücke links und rechts der Tür als eigene Sperren. */
+  ammu_laden: {
+    bild: "innen_ammu_laden", breite: 18, hoehe: 12, wand: 0.6,
+    name: ["Ammu-Vice", "Ammu-Vice"],
+    sperren: [
+      [0.4, 1.2, 2.1, 8.8],                    // Gewehrregal links
+      [0.4, 0.4, 17.2, 1.2],                   // Regale an der Rückwand
+      [3.5, 2.2, 11.0, 1.8],                   // Glastheke
+      [6.9, 5.3, 4.2, 2.0],                    // Munitionstisch
+      [12.3, 5.5, 3.0, 2.5],                   // Westenständer
+      [3.9, 5.4, 1.8, 2.2],                    // Drehständer
+      [16.2, 4.8, 1.4, 3.2],                   // Regal rechts
+      [7.3, 8.5, 3.4, 0.8],                    // Bank
+      [14.9, 8.1, 2.3, 2.6],                   // Vitrine unten rechts
+      [2.3, 8.6, 1.3, 1.6],                    // Kisten unten links
+      [0, 10.4, 7.2, 1.6], [10.8, 10.4, 7.2, 1.6]   // dicke Außenwand
+    ],
+    tueren: [
+      { x: 7.4, y: 10.8, b: 3.2, h: 1.2, ziel: "raus" },
+      { x: 17.0, y: 2.8, b: 1.0, h: 1.8, ziel: "ammu_stand" }
+    ],
+    aktionen: [{ art: "laden", x: 9.0, y: 4.6 }],
+    leute: []
+  },
+  ammu_stand: {
+    bild: "innen_ammu_stand", breite: 18, hoehe: 12, wand: 0.6,
+    name: ["Schießstand", "Shooting range"],
+    sperren: [
+      [3.8, 0.4, 12.5, 7.4],                   // Schießbahnen
+      [3.8, 7.8, 12.5, 1.1],                   // Schützentische
+      [1.7, 3.9, 0.8, 3.1],                    // Pult neben der Tür
+      [1.4, 1.0, 1.3, 1.6],                    // Kisten oben links
+      [1.2, 8.8, 1.0, 1.3],                    // Kiste unten links
+      [16.6, 4.6, 0.8, 2.2],                   // Kisten rechts
+      [0, 11.2, 18, 0.8]                       // Außenwand unten
+    ],
+    tueren: [{ x: 0.0, y: 4.4, b: 1.0, h: 2.2, ziel: "ammu_laden" }],
+    aktionen: [
+      { art: "schiessen", x: 5.4, y: 9.4, preis: 10 },
+      { art: "schiessen", x: 8.5, y: 9.4, preis: 10 },
+      { art: "schiessen", x: 11.6, y: 9.4, preis: 10 },
+      { art: "schiessen", x: 14.7, y: 9.4, preis: 10 }
+    ],
     leute: []
   }
 };

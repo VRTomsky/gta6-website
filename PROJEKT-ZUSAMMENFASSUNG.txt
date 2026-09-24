@@ -433,6 +433,20 @@ WAS BISHER GEMACHT WURDE
    - Jason und Lucia starten an verschiedenen Orten, und wer gerade
      nicht dran ist, laeuft herum oder sitzt in einem Auto.
 
+28. Spiel, sechzehnter Schritt (23.09.2026) - zwoelf neue Boegen:
+   - Neue Jason- und Lucia-Figuren nach den Vorlagen des Nutzers.
+   - 60 neue Gebaeude: Clubs, Tankstellen, Wachen, Kliniken,
+     Waffenlaeden, Sportanlagen, Wohnhaeuser. Jede Bauart hat
+     mehrere Modelle, jedes Haus dreht die Front zur Strasse.
+   - Die Stadt ist um ein Drittel groesser (1248 x 1144 Meter) und
+     hat doppelt so viele Haeuser. 36 besondere Orte statt 16.
+   - Ammu-Vice von innen: Verkaufsraum mit Theke und ein
+     Schiessstand mit Training.
+   - Neue Ampeln, Stoppschilder, Strassenschilder, Zebrastreifen,
+     Haltelinien, Pfeile, Gullydeckel, Parkbuchten.
+   - Sechs verschiedene Polizeiwagen, dazu Rettung und Feuerwehr im
+     Verkehr.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

@@ -201,8 +201,22 @@ export function laedenSetzen(startX, startY) {
     ? haeuser
     : [{ x: startX + 70, y: startY - 50 }, { x: startX - 110, y: startY + 90 }];
 
+  /* Die Tür liegt auf der nächsten Gehwegkachel am Haus — dort betritt
+     man den Verkaufsraum. */
   return stellen.map(s => {
-    const p = Karte.freierPunkt(s.x, s.y, [Karte.ART.GEHWEG], 26);
-    return { x: p.x, y: p.y, haus: { x: s.x, y: s.y }, name: "Ammu-Vice" };
+    const tx = Karte.inKachel(s.x), ty = Karte.inKachel(s.y);
+    let p = null, bestWeit = Infinity;
+    for (let dy = -9; dy <= 9; dy++) {
+      for (let dx = -9; dx <= 9; dx++) {
+        if (Karte.art(tx + dx, ty + dy) !== Karte.ART.GEHWEG) continue;
+        const weit = Math.hypot(dx, dy);
+        if (weit >= bestWeit) continue;
+        bestWeit = weit;
+        p = { x: Karte.inMeter(tx + dx) + Karte.KACHEL / 2,
+              y: Karte.inMeter(ty + dy) + Karte.KACHEL / 2 };
+      }
+    }
+    if (!p) p = Karte.freierPunkt(s.x, s.y, [Karte.ART.GEHWEG], 26);
+    return { x: p.x, y: p.y, haus: { x: s.x, y: s.y }, name: "Ammu-Vice", start: "ammu_laden" };
   });
 }

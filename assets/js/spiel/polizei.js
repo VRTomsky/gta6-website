@@ -18,6 +18,7 @@
 
 import * as Karte from "./karte.js";
 import { VerkehrsAuto } from "./verkehr.js";
+import { POLIZEIWAGEN } from "./fahrzeug.js";
 import { Figur } from "./wesen.js";
 import { sicht } from "./waffen.js";
 import * as Ton from "./ton.js";
@@ -27,7 +28,8 @@ const SICHT = 95;                     // so weit sieht die Polizei
 
 export class Streife extends VerkehrsAuto {
   constructor(x, y, dx, dy, versatz = 0) {
-    super("streife", x, y, dx, dy);
+    /* Nicht jede Streife gleich: aus sieben Polizeiwagen würfeln */
+    super(POLIZEIWAGEN[Math.floor(Math.random() * POLIZEIWAGEN.length)], x, y, dx, dy);
     this.wunschTempo = 22;                   // deutlich schneller als der Verkehr
     this.blinken = Math.random() * 10;
     this.ziel = null;

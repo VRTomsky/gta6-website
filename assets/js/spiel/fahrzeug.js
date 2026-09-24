@@ -41,8 +41,26 @@ export const TYPEN = {
   abschlepper: { name: "VC Abschlepp",     lang: 6.20, breit: 2.25, kraft: 11.0, spitze: 29, griff: 0.95 },
   muellwagen:  { name: "Vice Sanitation",  lang: 8.00, breit: 2.50, kraft: 8.5,  spitze: 24, griff: 0.96 },
   nachrichten: { name: "Newswire Van",     lang: 5.50, breit: 2.15, kraft: 12.0, spitze: 32, griff: 0.94 },
-  kipper:      { name: "Leonida Kipper",   lang: 7.50, breit: 2.45, kraft: 9.0,  spitze: 26, griff: 0.96 }
+  kipper:      { name: "Leonida Kipper",   lang: 7.50, breit: 2.45, kraft: 9.0,  spitze: 26, griff: 0.96 },
+  /* ── Einsatzfahrzeuge (23.09.2026) ──
+     Sechs Polizeiwagen, damit nicht jede Streife gleich aussieht, dazu
+     Rettung, Feuerwehr, Abschlepper und ein Regierungswagen. */
+  streife_blau:    { name: "VCPD Patrol",       lang: 4.90, breit: 2.00, kraft: 17.0, spitze: 45, griff: 0.93, polizei: true },
+  streife_schwarz: { name: "VCPD Interceptor",  lang: 5.00, breit: 2.00, kraft: 18.0, spitze: 47, griff: 0.93, polizei: true },
+  zivilstreife:    { name: "VCPD Unmarked",     lang: 4.90, breit: 1.98, kraft: 17.5, spitze: 46, griff: 0.92, polizei: true },
+  streife_suv:     { name: "VCPD Ranger",       lang: 5.10, breit: 2.10, kraft: 16.0, spitze: 42, griff: 0.95, polizei: true },
+  polizei_bus:     { name: "VCPD Transporter",  lang: 5.60, breit: 2.20, kraft: 13.0, spitze: 36, griff: 0.95, polizei: true },
+  autobahnpolizei: { name: "Highway Patrol",    lang: 4.90, breit: 2.00, kraft: 19.0, spitze: 50, griff: 0.92, polizei: true },
+  rettungswagen:   { name: "VC Ambulance",      lang: 5.80, breit: 2.25, kraft: 13.0, spitze: 34, griff: 0.94 },
+  notarzt:         { name: "VC Medic",          lang: 4.80, breit: 1.98, kraft: 15.0, spitze: 40, griff: 0.93 },
+  loeschzug:       { name: "VCFD Engine",       lang: 8.00, breit: 2.55, kraft: 10.0, spitze: 28, griff: 0.96 },
+  feuer_pickup:    { name: "VCFD Pickup",       lang: 5.40, breit: 2.10, kraft: 13.0, spitze: 35, griff: 0.94 },
+  abschlepp_gelb:  { name: "Tow Master",        lang: 6.20, breit: 2.25, kraft: 11.0, spitze: 29, griff: 0.95 },
+  regierung:       { name: "Government Sedan",  lang: 5.20, breit: 2.00, kraft: 14.0, spitze: 40, griff: 0.93 }
 };
+
+/* Alle Polizeiwagen — die Fahndung würfelt daraus */
+export const POLIZEIWAGEN = ["streife", ...Object.keys(TYPEN).filter(t => TYPEN[t].polizei)];
 
 export class Fahrzeug {
   constructor(typ, x, y, winkel = 0) {
@@ -196,7 +214,7 @@ export class Fahrzeug {
    Parkplätze zuerst, auf der Straße nur am Fahrbahnrand, immer längs zur
    Straße und nie näher als eine Wagenlänge am nächsten Auto. */
 export function autosVerteilen(anzahl, umX, umY, radius, meiden = []) {
-  const typen = Object.keys(TYPEN).filter(t => t !== "streife");
+  const typen = Object.keys(TYPEN).filter(t => t !== "streife" && !TYPEN[t].polizei);
   const liste = [];
 
   const frei = (x, y) => {

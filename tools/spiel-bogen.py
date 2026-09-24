@@ -81,6 +81,78 @@ for _nr in range(1, 9):
         spalten=4, zeilen=4, hintergrund="gruen", art="richtung",
         figur=f"tanz{_nr}", groesse=1.72)
 
+# ── Zweite Gebäuderunde (23.09.2026): mehrere Modelle je Bauart ──
+#  Maß ist wie bei den Häusern die längere Kante der Grundfläche.
+BOEGEN["clubs"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("club_neon", 18), ("club_lila", 22), ("club_terrasse", 20), ("club_deco", 20),
+        ("club_strand", 20), ("club_wuerfel", 20), ("club_halle", 24), ("club_herz", 20),
+        ("club_pool", 22), ("club_kneipe", 16), ("club_kabarett", 22), ("club_heli", 22),
+    ])
+
+BOEGEN["tanken"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("tanke_klein", 22), ("tanke_gross", 34), ("tanke_alt", 18), ("tanke_wasch", 26),
+        ("tanke_rot", 28), ("tanke_ecke", 16), ("tanke_solar", 24), ("tanke_werkstatt", 26),
+        ("tanke_schild", 26), ("tanke_neon", 24), ("tanke_markt", 26), ("tanke_verlassen", 22),
+    ])
+
+BOEGEN["dienste"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("dienst_polizei1", 26), ("dienst_polizei2", 32), ("dienst_polizei3", 18),
+        ("dienst_feuer1", 26), ("dienst_feuer2", 32), ("dienst_feuer3", 16),
+        ("dienst_klinik1", 34), ("dienst_klinik2", 22), ("dienst_klinik3", 26),
+        ("dienst_waffen1", 18), ("dienst_waffen2", 26), ("dienst_waffen3", 16),
+    ])
+
+BOEGEN["stadien"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("sport_fussball", 50), ("sport_stadion", 72), ("sport_baseball", 54), ("sport_arena", 46),
+        ("sport_tennis", 36), ("sport_skate", 30), ("sport_amphi", 36), ("sport_bahn", 52),
+        ("sport_bad", 36), ("sport_boxen", 20), ("sport_kart", 44), ("sport_golf", 44),
+    ])
+
+BOEGEN["wohnen2"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="haus",
+    zellen=[
+        ("haus_pastell", 14), ("haus_flachpool", 16), ("haus_stadt", 14), ("haus_innenhof", 22),
+        ("haus_laubengang", 22), ("haus_stelzen", 14), ("haus_schmetterling", 16), ("haus_anlage", 20),
+        ("haus_anwesen", 26), ("haus_motelzeile", 22), ("haus_garage", 16), ("haus_veranda", 14),
+    ])
+
+# Einsatzfahrzeuge: die Bild-KI hat die Nase nach UNTEN gemalt, im Spiel
+# zeigen alle Sprites nach oben — deshalb wird jedes Fahrzeug gedreht.
+BOEGEN["einsatz"] = dict(
+    spalten=4, zeilen=3, hintergrund="gruen", art="auto", drehen=180,
+    zellen=[
+        ("streife_blau", 4.90), ("streife_schwarz", 5.00), ("zivilstreife", 4.90), ("streife_suv", 5.10),
+        ("polizei_bus", 5.60), ("autobahnpolizei", 4.90), ("rettungswagen", 5.80), ("notarzt", 4.80),
+        ("loeschzug", 8.00), ("feuer_pickup", 5.40), ("abschlepp_gelb", 6.20), ("regierung", 5.20),
+    ])
+
+# Straßenkram: schon freigestellt geliefert (durchsichtiger Hintergrund).
+# Das Maß ist hier die Höhe im Bild.
+BOEGEN["strassenkram"] = dict(
+    spalten=4, zeilen=3, hintergrund="keiner", art="deko",
+    zellen=[
+        ("ampel_rot", 1.6), ("ampel_gelb", 1.6), ("ampel_gruen", 1.6), ("stopp", 1.4),
+        ("strassenschild", 1.5), ("parkuhr", 1.0), ("radstaender", 1.0), ("kuebel", 1.3),
+        ("plakatwand", 1.5), ("bauzaun", 1.3), ("huetchen", 1.2), ("stromkasten", 1.1),
+    ])
+
+# Bodenmarken: wie die Bodenkacheln strikt nach Raster geschnitten
+BOEGEN["markierungen"] = dict(
+    spalten=4, zeilen=3, hintergrund="keiner", art="boden", kachel=128,
+    zellen=[
+        ("mark_zebra", 0), ("mark_halt", 0), ("mark_gerade", 0), ("mark_links", 0),
+        ("mark_rechts", 0), ("mark_bucht", 0), ("mark_gully", 0), ("mark_rinne", 0),
+        ("mark_flicken", 0), ("mark_oel", 0), ("mark_rad", 0), ("mark_sperr", 0),
+    ])
+
 RICHTUNGEN = ["vorn", "hinten", "links", "rechts"]
 
 # ── Bodenkacheln ──
@@ -297,6 +369,22 @@ def zelle_freistellen(bild, laenge_m, mindest=40, nach_laenge=False):
     return blatt
 
 
+MASS_DATEI = os.path.join(os.path.dirname(__file__), "..", "assets", "js", "spiel", "hausmass.js")
+
+
+def hausmass_eintragen(name, meter):
+    """Größe eines Gebäudes in assets/js/spiel/hausmass.js nachtragen."""
+    import json
+    text = open(MASS_DATEI, encoding="utf-8").read()
+    kopf, rest = text.split("export const HAUSMASS = ", 1)
+    daten = json.loads(rest.rsplit(";", 1)[0])
+    daten[name] = meter
+    daten = dict(sorted(daten.items()))
+    with open(MASS_DATEI, "w", encoding="utf-8", newline="") as f:
+        f.write(kopf + "export const HAUSMASS = " +
+                json.dumps(daten, indent=2, ensure_ascii=False) + ";" + chr(10))
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--bogen", required=True, choices=sorted(BOEGEN))
@@ -363,8 +451,16 @@ def main():
             fertig.save(os.path.join(a.ziel, f"deko_{name}.png"), optimize=True)
             print(f"  deko_{name}.png: {fertig.width}x{fertig.height}")
         elif plan["art"] == "haus":
-            # WebP: Häuser sind großflächig, als PNG wären das zusammen ~60 MB
-            fertig.save(os.path.join(a.ziel, f"{name}.webp"), quality=82, method=6)
+            # Gedachte Größe merken, dann höchstens 768 Punkte breit
+            # speichern — ein 72-Meter-Stadion wäre sonst 2300 Punkte groß
+            # und belegte allein 20 MB Speicher im Browser.
+            hausmass_eintragen(name, round(max(fertig.size) / PX_HAUS, 2))
+            lang = max(fertig.size)
+            if lang > 768:
+                f = 768 / lang
+                fertig = fertig.resize((round(fertig.width * f), round(fertig.height * f)),
+                                       Image.LANCZOS)
+            fertig.save(os.path.join(a.ziel, f"{name}.webp"), quality=70, method=6)
             print(f"  {name}.webp: {fertig.width}x{fertig.height}")
         elif plan["art"] == "ansicht":
             datei = f"{name}_{plan['ansicht']}.png"
@@ -377,6 +473,8 @@ def main():
                 fertig.save(os.path.join(a.ziel, f"{name}_steht.png"), optimize=True)
             print(f"  {datei}: {fertig.width}x{fertig.height}")
         elif plan["art"] == "auto":
+            if plan.get("drehen"):
+                fertig = fertig.rotate(plan["drehen"], expand=True)
             fertig.save(os.path.join(a.ziel, f"auto_{name}.png"), optimize=True)
             print(f"  auto_{name}.png: {fertig.width}x{fertig.height}")
         elif plan["art"] == "held":

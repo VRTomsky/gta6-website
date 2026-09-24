@@ -212,9 +212,6 @@
 /* Panzerung: dieselbe Leiste, blau */
 .shud__panzerreihe{ color:#7ab8ff; }
 .shud__panzer i{ background:linear-gradient(90deg, #4f86d8, #b9dbff); }
-/* Panzerung: dieselbe Leiste, blau */
-.shud__panzerreihe{ color:#7ab8ff; }
-.shud__panzer i{ background:linear-gradient(90deg, #4f86d8, #b9dbff); }
 /* Ausdauer: dieselbe Leiste, nur andere Farben */
 .shud__ausdauerreihe{ color:#ffd24a; }
 .shud__ausdauer i{ background:linear-gradient(90deg, #ffb03a, #ffe79a); }

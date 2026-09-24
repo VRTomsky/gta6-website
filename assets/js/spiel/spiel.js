@@ -156,7 +156,7 @@ addEventListener("keydown", e => {
   if (zustand.fahrt) return;                       // während der Kamerafahrt nichts
   if (!ladenFeld.hidden) {                         // Laden offen
     if (e.code === "Escape" || e.code === "KeyE" || e.code === "KeyF") ladenSchliessen();
-    const nr = "Digit1 Digit2 Digit3 Digit4 Digit5".split(" ").indexOf(e.code);
+    const nr = "Digit1 Digit2 Digit3 Digit4 Digit5 Digit6".split(" ").indexOf(e.code);
     if (nr >= 0) kaufen(nr);
     return;
   }
@@ -363,31 +363,35 @@ function figurenVerteilen() {
    Die Tür liegt auf dem Gehweg vor dem Club: die nächste begehbare
    Kachel am Rand des Grundstücks. Dort steht der Leuchtpunkt, und dort
    steht man auch wieder, wenn man herauskommt. */
-function clubTuerenSuchen() {
-  const tueren = [];
-  for (const club of Karte.wahrzeichen) {
-    if (club.bau !== Karte.BAU.CLUB) continue;
-    const tx = Karte.inKachel(club.x), ty = Karte.inKachel(club.y);
-    let beste = null, bestWeit = Infinity;
-    for (let dy = -9; dy <= 9; dy++) {
-      for (let dx = -9; dx <= 9; dx++) {
-        if (Karte.art(tx + dx, ty + dy) !== Karte.ART.GEHWEG) continue;
-        const weit = Math.hypot(dx, dy);
-        if (weit >= bestWeit) continue;
-        bestWeit = weit;
-        beste = { x: Karte.inMeter(tx + dx) + Karte.KACHEL / 2,
-                  y: Karte.inMeter(ty + dy) + Karte.KACHEL / 2, name: club.name };
-      }
+/* Die nächste Gehwegkachel vor einem Wahrzeichen — dort liegt der
+   Eingang, dort steht man nach dem Verlassen wieder. */
+function tuerVor(ort) {
+  const tx = Karte.inKachel(ort.x), ty = Karte.inKachel(ort.y);
+  let beste = null, bestWeit = Infinity;
+  for (let dy = -9; dy <= 9; dy++) {
+    for (let dx = -9; dx <= 9; dx++) {
+      if (Karte.art(tx + dx, ty + dy) !== Karte.ART.GEHWEG) continue;
+      const weit = Math.hypot(dx, dy);
+      if (weit >= bestWeit) continue;
+      bestWeit = weit;
+      beste = { x: Karte.inMeter(tx + dx) + Karte.KACHEL / 2,
+                y: Karte.inMeter(ty + dy) + Karte.KACHEL / 2, name: ort.name };
     }
-    if (beste) tueren.push(beste);
   }
-  return tueren;
+  return beste;
 }
 
-/* Tür, vor der der Spieler gerade steht */
+function clubTuerenSuchen() {
+  return Karte.wahrzeichen
+    .filter(w => w.bau === Karte.BAU.CLUB)
+    .map(w => { const t = tuerVor(w); if (t) t.start = "eingang"; return t; })
+    .filter(Boolean);
+}
+
+/* Tür, vor der der Spieler gerade steht — Clubs und Ammu-Vice */
 function clubTuerNah(f, weite = 2.6) {
   let beste = null, bestWeit = weite;
-  for (const t of zustand.clubTueren) {
+  for (const t of zustand.clubTueren.concat(zustand.laeden)) {
     const d = Math.hypot(t.x - f.x, t.y - f.y);
     if (d < bestWeit) { bestWeit = d; beste = t; }
   }
@@ -396,7 +400,7 @@ function clubTuerNah(f, weite = 2.6) {
 
 function clubBetreten(tuer) {
   zustand.clubTuer = tuer;
-  Innen.betreten(zustand, "eingang", "raus");
+  Innen.betreten(zustand, tuer.start || "eingang", "raus");
   radar.hidden = true;
   Ton.tuer();
   Ton.anhalten();
@@ -446,6 +450,25 @@ function innenTaste() {
                   : L("Ein Drink aufs Haus-Preis", "One drink, house price"));
     return;
   }
+  if (a.art === "laden") { ladenOeffnen(); return; }
+  if (a.art === "schiessen") {
+    if (zustand.geld < a.preis) {
+      hinweis(L(`Eine Runde kostet $${a.preis}`, `A round costs $${a.preis}`));
+      return;
+    }
+    zustand.geld -= a.preis;
+    /* Kleine Runde: zehn Schuss, Treffer je nach Glück — mit Übung
+       (jede Runde zählt) wird man besser. */
+    zustand.schiessRunden = (zustand.schiessRunden || 0) + 1;
+    const koennen = Math.min(0.85, 0.35 + zustand.schiessRunden * 0.04);
+    let treffer = 0;
+    for (let k = 0; k < 10; k++) if (Math.random() < koennen) treffer++;
+    zustand.schiessBest = Math.max(zustand.schiessBest || 0, treffer);
+    for (let k = 0; k < 4; k++) setTimeout(() => Ton.schuss(0.6), k * 180);
+    hinweis(L(`Schießtraining: ${treffer} von 10 Treffern · Bestwert ${zustand.schiessBest}`,
+              `Target practice: ${treffer} of 10 hits · best ${zustand.schiessBest}`));
+    return;
+  }
   if (a.art === "tanz") {
     if (zustand.geld < a.preis) {
       hinweis(L(`Der VIP-Raum kostet $${a.preis}`, `The VIP room costs $${a.preis}`));
@@ -468,7 +491,7 @@ function einsteigenOderLaden() {
   }
   if (!f.imAuto) {
     const laden = zustand.laeden.find(l => Math.hypot(l.x - f.x, l.y - f.y) < 4);
-    if (laden) { ladenOeffnen(); return; }
+    if (laden) { clubBetreten(laden); return; }
   }
   einUndAussteigen();
 }
@@ -814,7 +837,7 @@ function innenRechnen(dt) {
     innenLetzte = schluessel;
     if (naht) hinweis(innenText(naht));
   }
-  Ton.club(dt);
+  if (Innen.RAEUME[zustand.innen.raum].musik) Ton.club(dt);
   hudFahndung();
   hud.ort.textContent = L(...Innen.raumName(zustand));
   hud.tempo.textContent = "";
@@ -828,6 +851,8 @@ function innenText(a) {
   if (a.art === "drink") return L(`E — Drink kaufen ($${a.preis})`, `E — buy a drink ($${a.preis})`);
   if (a.art === "essen") return L(`E — Essen kaufen ($${a.preis})`, `E — buy food ($${a.preis})`);
   if (a.art === "tanz") return L(`E — Private Dance ($${a.preis})`, `E — private dance ($${a.preis})`);
+  if (a.art === "laden") return L("E — an die Theke: Waffen, Munition, Weste", "E — counter: guns, ammo, armour");
+  if (a.art === "schiessen") return L(`E — Schießtraining ($${a.preis})`, `E — target practice ($${a.preis})`);
   return "";
 }
 
@@ -1050,9 +1075,11 @@ function kameraFolgen(dt) {
 
 /* ── Ortsnamen für die Anzeige ──────────────────────────── */
 function ortsname(x, y) {
-  const tx = Karte.inKachel(x), ty = Karte.inKachel(y);
+  /* Grenzen in Kacheln der ursprünglichen Stadt, mit dem Maßstab gestreckt */
+  const S = Karte.S;
+  const tx = Karte.inKachel(x) / S, ty = Karte.inKachel(y) / S;
   if (tx >= 204) return L("Ocean Drive", "Ocean Drive");
-  if (tx < 26 && ty > Karte.HOEHE - 30) return L("Hafen", "Docks");
+  if (tx < 26 && ty > Karte.HOEHE / S - 30) return L("Hafen", "Docks");
   if (ty < 45) return L("Nord-Vice City", "North Vice City");
   if (ty > 140) return L("Süd-Vice City", "South Vice City");
   if (tx < 60) return L("Westufer", "West Bank");
@@ -1695,7 +1722,7 @@ const ORT_ENGLISCH = {
   "VCPD": "VCPD police station", "Feuerwache": "Fire station", "Klinik": "Hospital",
   "Bank": "Bank", "Stadion": "Stadium", "Kaufhaus": "Mall",
   "Tankstelle": "Gas station", "Kirche": "Church", "Schule": "School",
-  "Ammu-Vice": "Ammu-Vice gun shop"
+  "Ammu-Vice": "Ammu-Vice gun shop", "Sportpark": "Sports park"
 };
 const ORT_ART = {
   [Karte.BAU.POLIZEI]: ["#3f6fd8", "Polizei", "Police"],
@@ -1710,6 +1737,18 @@ const ORT_ART = {
   [Karte.BAU.WAFFEN]: ["#4bd07f", "Waffen", "Guns"],
   [Karte.BAU.CLUB]: ["#e05bc0", "Nachtclub", "Nightclub"]
 };
+
+/* „Feuerwache Nordost 2" → „Fire station Northeast 2" */
+const RICHTUNG_EN = { Nord: "North", Süd: "South", Ost: "East", West: "West",
+  Nordost: "Northeast", Nordwest: "Northwest", Südost: "Southeast", Südwest: "Southwest" };
+function ortEnglisch(name) {
+  if (ORT_ENGLISCH[name]) return ORT_ENGLISCH[name];
+  const teile = name.split(" ");
+  const basis = Object.keys(ORT_ENGLISCH).find(k => name.startsWith(k + " "));
+  if (!basis) return name;
+  const rest = name.slice(basis.length + 1).split(" ").map(t => RICHTUNG_EN[t] || t).join(" ");
+  return `${ORT_ENGLISCH[basis]} ${rest}`;
+}
 
 function orteFuellen() {
   if (!orteFeld) return;
@@ -1727,7 +1766,7 @@ function orteFuellen() {
     const punkt = document.createElement("i");
     punkt.style.background = art[0];
     const name = document.createElement("span");
-    name.textContent = L(w.name, ORT_ENGLISCH[w.name] || w.name);
+    name.textContent = L(w.name, ortEnglisch(w.name));
     const weite = document.createElement("em");
     weite.textContent = `${Math.round(weit)} m`;
 
@@ -1856,12 +1895,18 @@ async function starten() {
   const ampeln = ["ampel_rot", "ampel_gelb", "ampel_gruen"];
   /* Bodenkacheln und Deko aus den Bögen */
   const boden = ["asphalt", "asphalt_riss", "gehweg", "sand", "gras", "parkplatz",
-                 "erde", "platz", "wasser", "hafen", "kies", "nass"].map(n => "boden_" + n);
+                 "erde", "platz", "wasser", "hafen", "kies", "nass",
+                 "mark_zebra", "mark_halt", "mark_gerade", "mark_links", "mark_rechts",
+                 "mark_bucht", "mark_gully", "mark_rinne", "mark_flicken", "mark_oel",
+                 "mark_rad", "mark_sperr"].map(n => "boden_" + n);
   const deko = ["laterne", "bank", "palme", "baum", "hydrant", "muelleimer", "telefon",
                 "haltestelle", "zeitungsbox", "cafetisch", "marktstand",
                 "schirm", "liegen", "turm", "volleyball", "ruderboot",
                 "container", "muellcontainer", "steg", "promenade",
-                "jetski", "boot", "segler"].map(n => "deko_" + n);
+                "jetski", "boot", "segler",
+                "ampel_rot", "ampel_gelb", "ampel_gruen", "stopp", "strassenschild",
+                "parkuhr", "radstaender", "kuebel", "plakatwand", "bauzaun",
+                "huetchen", "stromkasten"].map(n => "deko_" + n);
   /* Hauptfiguren: vier Richtungen mal vier Posen. Alle anderen ein Bild. */
   const figuren = [];
   for (const art of ["lucia", "jason"]) {
@@ -1877,18 +1922,9 @@ async function starten() {
   }
   Tex.bauen();
   Waffenbilder.bauen();
-  /* Gebäude: ein Bild je Haus, auf die Grundfläche gezogen */
-  const haeuser = [
-    "haus_klein", "haus_bungalow", "haus_block2", "haus_block_lang", "haus_stuck",
-    "haus_villa", "haus_alt", "haus_motel", "haus_strand", "haus_reihe",
-    "haus_hof", "haus_modern",
-    "turm_buero", "turm_glas", "turm_pool", "turm_helipad", "turm_bar",
-    "turm_deco", "turm_antennen", "turm_bank", "turm_bau", "turm_parkhaus",
-    "turm_mall", "turm_tank",
-    "bau_bank", "bau_club", "bau_polizei", "bau_feuerwehr", "bau_klinik",
-    "bau_kirche", "bau_schule", "bau_laden", "bau_markt", "bau_waffen",
-    "bau_diner", "bau_lager"
-  ];
+  /* Gebäude: ein Bild je Haus, auf die Grundfläche gezogen. Die Liste
+     führt karte.js — sonst fehlt nach jeder neuen Bogenrunde ein Bild. */
+  const haeuser = Karte.GEBAEUDEBILDER;
   await Bilder.laden([...autos, ...ampeln, ...boden, ...deko, ...haeuser, ...figuren,
                       ...Innen.bildnamen()]);
 

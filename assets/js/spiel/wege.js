@@ -101,7 +101,7 @@ export function route(vonX, vonY, nachX, nachY) {
 
   let gefunden = false;
   let schritte = 0;
-  while (!haufen.leer && schritte++ < 60000) {
+  while (!haufen.leer && schritte++ < 140000) {
     const p = haufen.raus();
     if (p === ziel) { gefunden = true; break; }
     const px = p % B, py = (p / B) | 0;

@@ -260,7 +260,8 @@ export class VerkehrsAuto extends Fahrzeug {
 }
 
 /* ── Verkehr rund um den Spieler ── */
-const TYPEN_LISTE = Object.keys(TYPEN).filter(t => t !== "streife");
+/* Polizeiwagen fahren nur, wenn gefahndet wird — nicht im Verkehr */
+const TYPEN_LISTE = Object.keys(TYPEN).filter(t => t !== "streife" && !TYPEN[t].polizei);
 
 /* Manche Wagen sind seltener als andere */
 const HAEUFIG = {
