@@ -10,6 +10,12 @@
      sammeln    mehrere Punkte in beliebiger Reihenfolge abklappern
      jagen      ein fahrendes Auto einholen
      abhaengen  die Polizei loswerden
+     strecke    Kontrollpunkte in fester Reihenfolge (Rennen)
+     aktion     drinnen etwas tun: Kasse, Schalter, Akte (innen.js)
+     zerstoeren einen abgestellten Wagen kaputt machen (schießen, rammen)
+     ausschalten eine bestimmte Person umhauen
+
+   Aufträge mit `ab` erscheinen erst, wenn so viele andere erledigt sind.
 
    Die Marken liegen an den Wahrzeichen der Stadt, nicht auf irgendeinem
    Parkplatz — ein Überfall vor dem Kaufhaus ergibt mehr Sinn als einer
@@ -17,6 +23,8 @@
    ═══════════════════════════════════════════════════════════ */
 
 import * as Karte from "./karte.js";
+import { Fahrzeug } from "./fahrzeug.js";
+import { Passant } from "./wesen.js";
 
 const L = (de, en) => ((window.LANG || "de").startsWith("en") ? en : de);
 
@@ -34,6 +42,14 @@ function wahrzeichen(bau, ersatzX, ersatzY) {
 
 function wahrzeichenAlle(bau) {
   return Karte.wahrzeichen.filter(w => w.bau === bau);
+}
+
+/* Eingang des nächstgelegenen Hauses einer Bauart */
+function eingangNah(bau, x, y) {
+  const liste = wahrzeichenAlle(bau)
+    .map(w => Karte.eingangVor(w)).filter(Boolean)
+    .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+  return liste[0] || null;
 }
 
 export class Missionen {
@@ -66,6 +82,28 @@ export class Missionen {
     const tanke2 = tanken[1] || { x: s.x - 120, y: s.y - 120 };
     const waffen = wahrzeichenAlle(Karte.BAU.WAFFEN);
     const waffe1 = waffen[0] || { x: s.x + 70, y: s.y - 50 };
+
+    /* Für die zweite Runde */
+    const clubs = wahrzeichenAlle(Karte.BAU.CLUB);
+    const club1 = clubs[0] || { x: s.x + 50, y: s.y + 50 };
+    const club2 = clubs[1] || clubs[0] || { x: s.x - 50, y: s.y + 60 };
+    const wache = wahrzeichen(Karte.BAU.POLIZEI, s.x - 90, s.y - 60);
+    const ersatz = w => ({ x: w.x, y: w.y });
+    const markt = eingangNah(Karte.BAU.TANKSTELLE, s.x + 60, s.y + 40) || ersatz(vor(tanke1));
+    const klinikTuer = eingangNah(Karte.BAU.KRANKENHAUS, s.x, s.y) || ersatz(vor(klinik));
+    const bankTuer = eingangNah(Karte.BAU.BANK, s.x, s.y) || ersatz(vor(bank));
+    const ammuTuer = eingangNah(Karte.BAU.WAFFEN, s.x - 100, s.y + 100) || ersatz(vor(waffe1));
+    const strasse = (dx, dy) => nah(dx, dy, 40, [Karte.ART.STRASSE]);
+    const startlinie = strasse(60, -120);
+    const rennstrecke = [strasse(200, -60), strasse(250, 90), strasse(120, 210),
+                         strasse(-60, 220), strasse(-170, 70), strasse(60, -120)];
+    const hafen = platz(s.x - 150, s.y + 150, 60, [Karte.ART.PARKPLATZ, Karte.ART.GEHWEG]);
+    const kisten = [platz(hafen.x + 16, hafen.y, 20), platz(hafen.x - 20, hafen.y + 12, 20),
+                    platz(hafen.x + 4, hafen.y - 22, 20)];
+    const strandparty = Karte.freierPunkt(s.x + 200, s.y, [Karte.ART.STRAND], 400);
+    const garage = platz(s.x + 120, s.y - 140, 50, [Karte.ART.PARKPLATZ]);
+    const SCHICK = ["limousine", "luxuscabrio", "limo", "oldtimer", "regierung", "cabrio"];
+    const SPORTLICH = ["sport", "supersport", "muscle"];
 
     return [
       {
@@ -206,6 +244,160 @@ export class Missionen {
           { art: "fahren", ziel: vor(klinik), radius: 7, imAuto: true, frist: 85,
             text: L("Fahr ihn in die Klinik — schnell", "Get him to the hospital — fast") }
         ]
+      },
+
+      /* ── Zweite Runde (25.09.2026) ── */
+      {
+        id: "rennen",
+        name: L("Straßenrennen", "Street race"),
+        kurz: L("Rennen", "Race"),
+        lohn: 1800,
+        marke: nah(40, -100, 26),
+        schritte: [
+          { art: "fahren", ziel: startlinie, radius: 6, imAuto: true,
+            text: L("Hol dir einen Wagen und fahr an die Startlinie",
+                    "Get a car and roll up to the start line") },
+          { art: "strecke", imAuto: true, frist: 150, ziele: rennstrecke,
+            text: L("Fahr alle Kontrollpunkte der Reihe nach ab",
+                    "Hit every checkpoint in order") }
+        ]
+      },
+      {
+        id: "taxi",
+        name: L("Taxi-Schicht", "Taxi shift"),
+        kurz: L("Taxi", "Taxi"),
+        lohn: 1000,
+        marke: vor(club1),
+        schritte: [
+          { art: "fahren", ziel: vor(club1), radius: 7, imAuto: true,
+            text: L(`Hol den Fahrgast vorm ${club1.name || "Club"} ab`,
+                    `Pick up the fare outside ${club1.name || "the club"}`) },
+          { art: "warten", ziel: vor(club1), radius: 7, dauer: 3, imAuto: true,
+            text: L("Halt kurz an", "Pull over for a second"),
+            wartenText: L("Der Fahrgast steigt ein …", "The fare gets in …") },
+          { art: "fahren", ziel: vor(stadion), radius: 8, imAuto: true, frist: 95,
+            text: L("Zum Stadion — er hat es eilig", "To the stadium — he's in a hurry") },
+          { art: "fahren", ziel: vor(kirche), radius: 8, imAuto: true, frist: 95,
+            text: L("Nächste Fahrt: eine Dame will zur Kirche", "Next fare: a lady wants the church") }
+        ]
+      },
+      {
+        id: "denkzettel",
+        name: L("Denkzettel", "A little message"),
+        kurz: L("Zerstören", "Wreck it"),
+        lohn: 1500,
+        marke: platz(tanke2.x + 10, tanke2.y + 10, 20),
+        schritte: [
+          { art: "zerstoeren", typ: "luxuscabrio",
+            ziel: platz(tanke2.x, tanke2.y, 30, [Karte.ART.PARKPLATZ, Karte.ART.STRASSE]),
+            text: L("Der Konkurrent parkt an der Tankstelle — mach seinen Wagen kaputt",
+                    "The rival parked at the gas station — wreck his car") },
+          { art: "abhaengen", fahndung: 2, halten: 120,
+            text: L("Das hat jemand gesehen — häng die Polizei ab",
+                    "Someone saw that — lose the cops") }
+        ]
+      },
+      {
+        id: "schulden",
+        name: L("Schulden eintreiben", "Debt collection"),
+        kurz: L("Eintreiben", "Collect"),
+        lohn: 1200,
+        marke: vor(kirche),
+        schritte: [
+          { art: "ausschalten", figur: "mann_anzug", ziel: vor(kaufhaus),
+            text: L("Der Schuldner treibt sich am Kaufhaus rum — schnapp ihn dir",
+                    "The debtor hangs around the department store — get him") },
+          { art: "fahren", ziel: vor(kirche), radius: 6, frist: 120,
+            text: L("Bring das Geld zur Kirche", "Bring the money to the church") }
+        ]
+      },
+      {
+        id: "tankraub",
+        name: L("24/7-Überfall", "24/7 hold-up"),
+        kurz: L("Überfall", "Hold-up"),
+        lohn: 1400,
+        marke: platz(markt.x + 9, markt.y + 4, 14),
+        schritte: [
+          { art: "aktion", aktion: "kasse", ziel: markt, radius: 3,
+            text: L("Rein in den 24/7 und die Kasse leeren", "Get into the 24/7 and empty the till") },
+          { art: "abhaengen", halten: 120,
+            text: L("Raus und die Polizei abhängen", "Get out and lose the cops") }
+        ]
+      },
+      {
+        id: "akte",
+        name: L("Die Krankenakte", "The medical file"),
+        kurz: L("Akte", "File"),
+        lohn: 1100,
+        marke: platz(klinikTuer.x - 9, klinikTuer.y + 4, 14),
+        schritte: [
+          { art: "aktion", aktion: "akte", ziel: klinikTuer, radius: 3,
+            text: L("In der Klinik liegt eine Akte im Aktenschrank — hol sie",
+                    "There's a file in the clinic's filing cabinet — grab it") },
+          { art: "fahren", ziel: vor(wache), radius: 6, frist: 110,
+            text: L("Der Informant wartet vor der Wache", "The informant is waiting outside the station") }
+        ]
+      },
+      {
+        id: "schmuggel",
+        name: L("Kisten vom Hafen", "Crates from the docks"),
+        kurz: L("Schmuggel", "Smuggling"),
+        lohn: 1700,
+        marke: nah(-120, 120, 26),
+        schritte: [
+          { art: "sammeln", frist: 130, ziele: kisten,
+            text: L("Sammle die drei Kisten am Hafen ein", "Collect the three crates at the docks") },
+          { art: "fahren", ziel: ammuTuer, radius: 5, frist: 120,
+            text: L("Ab damit zu Ammu-Vice", "Take them to Ammu-Vice") }
+        ]
+      },
+      {
+        id: "vip",
+        name: L("VIP-Chauffeur", "VIP chauffeur"),
+        kurz: L("Chauffeur", "Chauffeur"),
+        lohn: 1100,
+        marke: vor(club2),
+        schritte: [
+          { art: "fahren", ziel: vor(club2), radius: 7, imAuto: true, typen: SCHICK,
+            text: L(`Fahr mit etwas Schickem vor den ${club2.name || "Club"} — Limousine, Cabrio, Oldtimer`,
+                    `Pull up at ${club2.name || "the club"} in something classy — limo, convertible, classic`) },
+          { art: "warten", ziel: vor(club2), radius: 7, dauer: 3, imAuto: true,
+            text: L("Warte auf den Star", "Wait for the star"),
+            wartenText: L("Der Star steigt ein …", "The star gets in …") },
+          { art: "fahren", ziel: strandparty, radius: 9, imAuto: true, frist: 110,
+            text: L("Zur Party am Strand", "To the beach party") }
+        ]
+      },
+      {
+        id: "sportwagen",
+        name: L("Bestellung: Sportwagen", "Order: sports car"),
+        kurz: L("Sportwagen", "Sports car"),
+        lohn: 1300,
+        marke: nah(100, 40, 26),
+        schritte: [
+          { art: "fahren", ziel: garage, radius: 7, imAuto: true, typen: SPORTLICH,
+            text: L("Besorg einen Sportwagen (Sunset GT, Sunset Wedge, Leonida Muscle) und ab in die Garage",
+                    "Get a sports car (Sunset GT, Sunset Wedge, Leonida Muscle) into the garage") }
+        ]
+      },
+      {
+        id: "coup",
+        name: L("Der große Coup", "The big score"),
+        kurz: L("Coup", "Score"),
+        lohn: 6000,
+        ab: 8,
+        marke: platz(bankTuer.x + 10, bankTuer.y + 6, 16),
+        schritte: [
+          { art: "fahren", ziel: ammuTuer, radius: 5,
+            text: L("Erst zu Ammu-Vice — deck dich ein", "Hit Ammu-Vice first — stock up") },
+          { art: "aktion", aktion: "schalter", ziel: bankTuer, radius: 3,
+            text: L("Jetzt die Bank: rein und den Schalter ausräumen",
+                    "Now the bank: get in and clean out the counter") },
+          { art: "abhaengen", fahndung: 4, halten: 170,
+            text: L("Vier Sterne — häng sie ab", "Four stars — shake them") },
+          { art: "fahren", ziel: vor(kirche), radius: 7,
+            text: L("Versteck die Beute bei der Kirche", "Stash the loot at the church") }
+        ]
       }
     ];
   }
@@ -221,18 +413,76 @@ export class Missionen {
     this.schritt = 0;
     this.zeit = 0;
     this.stand = {};                 // Zustand des laufenden Schritts
-    const s = this.aktuellerSchritt();
-    if (s && s.fahndung && s.art !== "drinnen") zustand.fahndung.melden(s.fahndung);
-    if (s && s.art === "sammeln") this.stand.offen = s.ziele.map(() => true);
-    if (s && s.art === "jagen") this.fluechtigenWaehlen(zustand);
+    this.schrittBeginnen(zustand);
     this.meldung = m.name;
   }
 
+  /* Was ein Schritt beim Beginn braucht: Sterne, Ziele, Zielauto, Person */
+  schrittBeginnen(zustand) {
+    const s = this.aktuellerSchritt();
+    if (!s) return;
+    if (s.fahndung && s.art !== "drinnen" && s.art !== "abhaengen") zustand.fahndung.melden(s.fahndung);
+    if (s.art === "sammeln") this.stand.offen = s.ziele.map(() => true);
+    if (s.art === "strecke") this.stand.k = 0;
+    if (s.art === "jagen") this.fluechtigenWaehlen(zustand);
+    if (s.art === "zerstoeren") {
+      const a = new Fahrzeug(s.typ || "limo", s.ziel.x, s.ziel.y, Math.random() * Math.PI * 2);
+      a.missionsZiel = true;
+      zustand.autos.push(a);
+      this.zielAuto = a;
+    }
+    if (s.art === "ausschalten") {
+      const p = new Passant(s.figur || "mann_anzug", s.ziel.x, s.ziel.y);
+      p.zielperson = true;
+      zustand.passanten.push(p);
+      this.zielPerson = p;
+    }
+  }
+
+  aufraeumen() {
+    if (this.zielAuto) this.zielAuto.missionsZiel = false;
+    if (this.zielPerson) this.zielPerson.zielperson = false;
+    this.zielAuto = null;
+    this.zielPerson = null;
+    this.fluechtiger = null;
+  }
+
   abbrechen(grund) {
+    this.aufraeumen();
     this.aktiv = null;
     this.stand = {};
-    this.fluechtiger = null;
     this.meldung = grund || "";
+  }
+
+  /* innen.js/spiel.js melden, was drinnen getan wurde */
+  wartetAuf(art) {
+    const s = this.aktuellerSchritt();
+    return !!(s && s.art === "aktion" && s.aktion === art);
+  }
+
+  aktionMelden(art) {
+    if (this.wartetAuf(art)) this.stand.erledigt = true;
+  }
+
+  /* Zusätzliche Ziele für Schüsse: das Auto, das kaputt soll */
+  zusatzZiele() {
+    const a = this.zielAuto;
+    if (!a) return [];
+    if (!this._autoZiel || this._autoZiel.auto !== a) {
+      this._autoZiel = {
+        auto: a, istAuto: true, trefferRadius: 1.9,
+        get x() { return a.x; },
+        get y() { return a.y; },
+        get tot() { return a.schaden >= 110; },
+        treffer(schaden) { a.schaden = Math.min(130, a.schaden + schaden * 0.9); return a.schaden >= 110; }
+      };
+    }
+    return [this._autoZiel];
+  }
+
+  /* Erscheint der Auftrag schon? */
+  offen(m) {
+    return !this.erledigt.has(m.id) && (!m.ab || this.erledigt.size >= m.ab);
   }
 
   fertig(zustand) {
@@ -243,8 +493,8 @@ export class Missionen {
     this.erledigt.add(m.id);
     this.meldung = L("Geschafft: ", "Done: ") + m.name + "  +$" + lohn;
     this.geschafft = 2.4;
+    this.aufraeumen();
     this.aktiv = null;
-    this.fluechtiger = null;
     this.stand = {};
   }
 
@@ -269,7 +519,7 @@ export class Missionen {
 
     if (!this.aktiv) {
       for (const m of this.liste) {
-        if (this.erledigt.has(m.id)) continue;
+        if (!this.offen(m)) continue;
         if (Math.hypot(m.marke.x - pos.x, m.marke.y - pos.y) < 4.5) {
           this.starten(m, zustand);
           break;
@@ -288,7 +538,11 @@ export class Missionen {
 
     switch (s.art) {
       case "drinnen":   this.drinnenRechnen(dt, spieler, zustand, s); break;
-      case "warten":    this.wartenRechnen(dt, pos, zustand, s); break;
+      case "warten":    this.wartenRechnen(dt, pos, zustand, s, spieler); break;
+      case "strecke":   this.streckeRechnen(pos, spieler, zustand, s); break;
+      case "aktion":    if (this.stand.erledigt) this.weiter(zustand); break;
+      case "zerstoeren": this.zerstoerenRechnen(zustand); break;
+      case "ausschalten": this.ausschaltenRechnen(pos, zustand); break;
       case "sammeln":   this.sammelnRechnen(pos, zustand, s); break;
       case "jagen":     this.jagenRechnen(pos, zustand, s); break;
       case "abhaengen": this.abhaengenRechnen(dt, zustand, s); break;
@@ -300,11 +554,49 @@ export class Missionen {
     if (!s.ziel) return;
     if (Math.hypot(s.ziel.x - pos.x, s.ziel.y - pos.y) > s.radius) return;
     if (s.imAuto && !spieler.imAuto) return;
+    if (s.typen && !(spieler.imAuto && s.typen.includes(spieler.imAuto.typ))) {
+      this.stand.falsch = true;                       // Anzeige sagt es dazu
+      return;
+    }
     this.weiter(zustand);
   }
 
-  wartenRechnen(dt, pos, zustand, s) {
-    const nah = Math.hypot(s.ziel.x - pos.x, s.ziel.y - pos.y) < s.radius;
+  /* Rennen: immer nur der nächste Punkt zählt */
+  streckeRechnen(pos, spieler, zustand, s) {
+    if (s.imAuto && !spieler.imAuto) return;
+    const z = s.ziele[this.stand.k || 0];
+    if (!z) { this.weiter(zustand); return; }
+    if (Math.hypot(z.x - pos.x, z.y - pos.y) < 8) {
+      this.stand.k = (this.stand.k || 0) + 1;
+      if (this.stand.k >= s.ziele.length) this.weiter(zustand);
+    }
+  }
+
+  zerstoerenRechnen(zustand) {
+    const a = this.zielAuto;
+    if (!a) { this.weiter(zustand); return; }
+    if (a.schaden >= 110) {
+      a.schrott = true;
+      this.weiter(zustand);
+    }
+  }
+
+  /* Die Zielperson rennt davon, sobald man ihr zu nahe kommt */
+  ausschaltenRechnen(pos, zustand) {
+    const p = this.zielPerson;
+    if (!p) { this.weiter(zustand); return; }
+    if (p.tot || p.ko > 0) { this.weiter(zustand); return; }
+    const d = Math.hypot(p.x - pos.x, p.y - pos.y);
+    if (d < 11 && p.flucht <= 0) {
+      p.ziel = Math.atan2(p.y - pos.y, p.x - pos.x);
+      p.flucht = 2.5;
+      p.kreuzen = null;
+    }
+  }
+
+  wartenRechnen(dt, pos, zustand, s, spieler) {
+    const nah = Math.hypot(s.ziel.x - pos.x, s.ziel.y - pos.y) < s.radius &&
+                (!s.imAuto || (spieler && spieler.imAuto));
     this.stand.gewartet = nah ? (this.stand.gewartet || 0) + dt : 0;
     if (this.stand.gewartet >= s.dauer) this.weiter(zustand);
   }
@@ -364,10 +656,7 @@ export class Missionen {
     this.zeit = 0;
     this.stand = {};
     if (this.schritt >= this.aktiv.schritte.length) { this.fertig(zustand); return; }
-    const s = this.aktuellerSchritt();
-    if (s.fahndung && s.art !== "drinnen") zustand.fahndung.melden(s.fahndung);
-    if (s.art === "sammeln") this.stand.offen = s.ziele.map(() => true);
-    if (s.art === "jagen") this.fluechtigenWaehlen(zustand);
+    this.schrittBeginnen(zustand);
   }
 
   /* Text für die Anzeige */
@@ -384,6 +673,11 @@ export class Missionen {
     if (s.art === "sammeln" && this.stand.offen) {
       const fehlt = this.stand.offen.filter(Boolean).length;
       text += L(`  · noch ${fehlt}`, `  · ${fehlt} left`);
+    }
+    if (s.art === "strecke") text += `  · ${(this.stand.k || 0) + 1}/${s.ziele.length}`;
+    if (this.stand.falsch) text += L("  · falscher Wagen!", "  · wrong car!");
+    if (s.art === "zerstoeren" && this.zielAuto) {
+      text += `  · ${Math.min(100, Math.round(this.zielAuto.schaden / 1.1))}%`;
     }
     if (s.frist) text += `  ⏱ ${Math.max(0, Math.ceil(s.frist - this.zeit))}s`;
     if (s.art === "abhaengen" && zustand) {
@@ -406,6 +700,12 @@ export class Missionen {
       return this.fluechtiger ? [{ x: this.fluechtiger.x, y: this.fluechtiger.y, r: 5 }] : [];
     }
     if (s.art === "abhaengen") return [];
+    if (s.art === "strecke") {
+      const z = s.ziele[this.stand.k || 0];
+      return z ? [{ x: z.x, y: z.y, r: 8 }] : [];
+    }
+    if (s.art === "zerstoeren" && this.zielAuto) return [{ x: this.zielAuto.x, y: this.zielAuto.y, r: 4 }];
+    if (s.art === "ausschalten" && this.zielPerson) return [{ x: this.zielPerson.x, y: this.zielPerson.y, r: 2.4 }];
     return s.ziel ? [{ x: s.ziel.x, y: s.ziel.y, r: s.radius || 5 }] : [];
   }
 
@@ -413,7 +713,7 @@ export class Missionen {
   zeichnen(ctx, kamera, zeit) {
     const punkte = this.aktiv
       ? this.zielPunkte().map(p => ({ ...p, farbe: "#39d4ff" }))
-      : this.liste.filter(m => !this.erledigt.has(m.id))
+      : this.liste.filter(m => this.offen(m))
           .map(m => ({ x: m.marke.x, y: m.marke.y, r: 2.6, farbe: "#ffd24a" }));
 
     for (const p of punkte) {
@@ -447,7 +747,7 @@ export class Missionen {
       }));
     }
     return this.liste
-      .filter(m => !this.erledigt.has(m.id))
+      .filter(m => this.offen(m))
       .map(m => ({
         x: m.marke.x, y: m.marke.y, farbe: "#ffd24a", art: "auftrag",
         name: m.name + " · $" + m.lohn

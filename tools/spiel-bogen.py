@@ -81,6 +81,17 @@ for _nr in range(1, 9):
         spalten=4, zeilen=4, hintergrund="gruen", art="richtung",
         figur=f"tanz{_nr}", groesse=1.72)
 
+# Passanten mit echtem Laufzyklus (25.09.2026): ein Bogen je Person,
+# Aufbau wie bei Jason und Lucia. Danach den Namen in LAUF_LEUTE in
+# assets/js/spiel/wesen.js eintragen.
+for _name, _groesse in [
+        ("volk_surfer", 1.80), ("volk_skaterin", 1.68), ("volk_lebemann", 1.82),
+        ("volk_oma", 1.60), ("volk_bauarbeiter", 1.84), ("volk_joggerin", 1.70),
+        ("volk_tourist", 1.78), ("volk_trainingsanzug", 1.80)]:
+    BOEGEN[_name] = dict(
+        spalten=4, zeilen=4, hintergrund="gruen", art="richtung",
+        figur=_name, groesse=_groesse)
+
 # ── Zweite Gebäuderunde (23.09.2026): mehrere Modelle je Bauart ──
 #  Maß ist wie bei den Häusern die längere Kante der Grundfläche.
 BOEGEN["clubs"] = dict(

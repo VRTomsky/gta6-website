@@ -76,7 +76,7 @@
   <header class="sseite__kopf">
     <p class="kicker" data-en="Fan-made mini game">Kleines Fan-Spiel</p>
     <h1 class="h-display">Vice City Run</h1>
-    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel, with traffic, pedestrians, cops and ten jobs. Hold Alt to switch between Jason and Lucia. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer, mit Verkehr, Passanten, Polizei und zehn Aufträgen. Mit gehaltener Alt-Taste wechselst du zwischen Jason und Lucia. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
+    <p class="sseite__t" data-en="Roam Vice City from above — on foot or behind the wheel, with traffic, pedestrians, cops, twenty jobs and shops, clinics and a bank to walk into. Hold Alt to switch between Jason and Lucia. Everything here is hand-built for this site; no content from the real game.">Vice City von oben — zu Fuß oder am Steuer, mit Verkehr, Passanten, Polizei, zwanzig Aufträgen und Läden, Kliniken und einer Bank zum Betreten. Mit gehaltener Alt-Taste wechselst du zwischen Jason und Lucia. Alles hier ist für diese Seite selbst gebaut, nichts stammt aus dem echten Spiel.</p>
   </header>
 
   <div class="sbuehne">
@@ -172,14 +172,32 @@
       <canvas class="skarte" id="spielKarte" width="288" height="180"></canvas>
     </div>
 
-    <div class="sstart" id="spielStart" hidden>
+    <!-- Startbild und Ladebildschirm in einem: steht sofort da, der
+         Balken erscheint nach dem Klick. Himmel, Skyline und Palmen sind
+         hier gezeichnet, keine fremden Bilder. -->
+    <div class="sstart" id="spielStart">
+      <div class="sstart__himmel" aria-hidden="true">
+        <span class="sstart__glut"></span>
+        <span class="sstart__sonne"></span>
+        <svg class="sstart__stadt" viewBox="0 0 1600 240" preserveAspectRatio="xMidYMax slice"><rect x="0" y="170" width="46" height="70"/><rect x="46" y="130" width="30" height="110"/><rect x="80" y="180" width="34" height="60"/><rect x="118" y="90" width="42" height="150"/><rect x="160" y="145" width="32" height="95"/><rect x="196" y="112" width="38" height="128"/><rect x="238" y="168" width="32" height="72"/><rect x="270" y="60" width="44" height="180"/><rect x="291" y="34" width="3" height="26"/><rect x="318" y="120" width="30" height="120"/><rect x="352" y="152" width="38" height="88"/><rect x="390" y="100" width="36" height="140"/><rect x="430" y="35" width="42" height="205"/><rect x="450" y="9" width="3" height="26"/><rect x="476" y="122" width="36" height="118"/><rect x="512" y="80" width="40" height="160"/><rect x="556" y="148" width="30" height="92"/><rect x="590" y="110" width="38" height="130"/><rect x="628" y="164" width="28" height="76"/><rect x="660" y="70" width="42" height="170"/><rect x="706" y="128" width="36" height="112"/><rect x="742" y="15" width="46" height="225"/><rect x="764" y="-11" width="3" height="26"/><rect x="792" y="90" width="36" height="150"/><rect x="832" y="142" width="34" height="98"/><rect x="866" y="50" width="42" height="190"/><rect x="886" y="24" width="3" height="26"/><rect x="912" y="116" width="34" height="124"/><rect x="950" y="156" width="34" height="84"/><rect x="984" y="80" width="38" height="160"/><rect x="1026" y="124" width="30" height="116"/><rect x="1060" y="40" width="48" height="200"/><rect x="1083" y="14" width="3" height="26"/><rect x="1108" y="102" width="34" height="138"/><rect x="1146" y="150" width="30" height="90"/><rect x="1180" y="68" width="46" height="172"/><rect x="1202" y="42" width="3" height="26"/><rect x="1226" y="134" width="32" height="106"/><rect x="1262" y="98" width="34" height="142"/><rect x="1300" y="162" width="36" height="78"/><rect x="1336" y="112" width="32" height="128"/><rect x="1372" y="144" width="34" height="96"/><rect x="1410" y="90" width="42" height="150"/><rect x="1452" y="156" width="34" height="84"/><rect x="1490" y="122" width="36" height="118"/><rect x="1530" y="170" width="36" height="70"/><rect x="1566" y="140" width="30" height="100"/></svg>
+        <svg class="sstart__palme sstart__palme--l" viewBox="0 0 220 420"><path d="M104 420C108 330 118 250 112 150h8c8 100 0 180-2 270z"/><path d="M116 150C80 120 40 130 8 170c37-30 72-30 108-14z"/><path d="M116 150c34-32 74-26 98 16-32-26-64-24-98-10z"/><path d="M116 150c-16-50-46-70-76-72 34 18 56 40 72 74z"/><path d="M116 150c16-52 48-74 80-70-32 18-58 40-76 72z"/><path d="M116 152c-24 8-50 38-58 80 20-36 40-56 60-74z"/><path d="M116 152c26 10 52 40 58 84-18-38-38-60-60-78z"/><path d="M116 150c-2-40 4-70 16-92-6 34-8 62-12 94z"/></svg>
+        <svg class="sstart__palme sstart__palme--r" viewBox="0 0 220 420"><path d="M104 420C108 330 118 250 112 150h8c8 100 0 180-2 270z"/><path d="M116 150C80 120 40 130 8 170c37-30 72-30 108-14z"/><path d="M116 150c34-32 74-26 98 16-32-26-64-24-98-10z"/><path d="M116 150c-16-50-46-70-76-72 34 18 56 40 72 74z"/><path d="M116 150c16-52 48-74 80-70-32 18-58 40-76 72z"/><path d="M116 152c-24 8-50 38-58 80 20-36 40-56 60-74z"/><path d="M116 152c26 10 52 40 58 84-18-38-38-60-60-78z"/><path d="M116 150c-2-40 4-70 16-92-6 34-8 62-12 94z"/></svg>
+      </div>
       <div class="sstart__karte">
         <p class="kicker" data-en="Vice City, 1986-ish">Vice City, irgendwann in den Achtzigern</p>
         <h2 class="h-display">Vice City Run</h2>
-        <p data-en="Drive, walk, explore. Traffic, pedestrians, police with a wanted level, ten jobs from courier runs to a bank heist, and a leaderboard.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei mit Fahndungsstufe, zehn Aufträge von der Kurierfahrt bis zum Bankraub und eine Bestenliste.</p>
+        <p class="sstart__text" data-en="Drive, walk, explore. Traffic, pedestrians, police with a wanted level, jobs from courier runs to a bank heist, clubs and shops to walk into, and a leaderboard.">Fahren, laufen, erkunden. Verkehr, Passanten, Polizei mit Fahndungsstufe, Aufträge von der Kurierfahrt bis zum Bankraub, Clubs und Läden zum Betreten und eine Bestenliste.</p>
         <button type="button" class="btn btn--pink btn--lg" id="spielStartKnopf" data-en="Start game">Spiel starten</button>
-        <p class="sstart__klein" data-en="Loads about 10 MB of graphics.">Lädt rund 10 MB Grafik.</p>
+        <p class="sstart__klein" id="spielStartKlein" data-en="Loads about 11 MB of graphics.">Lädt rund 11 MB Grafik.</p>
+        <div class="sstart__lade" id="spielStartLaden" role="progressbar" aria-valuemin="0"
+             aria-valuemax="100" aria-valuenow="0" aria-label="Ladefortschritt"
+             data-en-aria-label="Loading progress" hidden>
+          <p class="sstart__zahl"><b id="spielStartProzent">0</b><span>%</span></p>
+          <div class="sstart__bahn"><i id="spielStartBalken"></i></div>
+          <p class="sstart__schritt" id="spielStartSchritt"></p>
+        </div>
       </div>
+      <p class="sstart__tipp"><b data-en="Tip">Tipp</b><span id="spielStartTipp"></span></p>
     </div>
 
     <!-- Tor: ohne Konto kein Spiel. Geld, erledigte Auftraege und der

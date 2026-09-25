@@ -10,15 +10,34 @@ export const SPRITE_PX = 64;          // Bildpunkte je Meter in den Dateien
 const ORDNER = "assets/img/spiel/";
 
 const bilder = new Map();
+const unterwegs = new Map();          // Name → Versprechen, jedes Bild nur einmal
 
-export function laden(namen) {
-  return Promise.all(namen.map(name => new Promise(fertig => {
-    const b = new Image();
-    b.onload = () => { bilder.set(name, b); fertig(b); };
-    b.onerror = () => { console.warn("[Spiel] Bild fehlt:", name); fertig(null); };
-    /* Alle Sprites liegen als WebP: als PNG wären es zusammen 65 MB,
-       so sind es 4. Nach jedem Bogen tools/spiel-webp.py laufen lassen. */
-    b.src = ORDNER + name + ".webp";
+function einLaden(name) {
+  let p = unterwegs.get(name);
+  if (!p) {
+    p = new Promise(fertig => {
+      const b = new Image();
+      b.onload = () => { bilder.set(name, b); fertig(b); };
+      b.onerror = () => { console.warn("[Spiel] Bild fehlt:", name); fertig(null); };
+      /* Alle Sprites liegen als WebP: als PNG wären es zusammen 65 MB,
+         so sind es 12. Nach jedem Bogen tools/spiel-webp.py laufen lassen. */
+      b.src = ORDNER + name + ".webp";
+    });
+    unterwegs.set(name, p);
+  }
+  return p;
+}
+
+/* Lädt eine Liste. Vorladen und Spielstart dürfen dieselben Namen
+   anfordern — was schon unterwegs ist, wird nicht noch einmal geholt.
+   fortschritt(fertig, gesamt) meldet jedes angekommene Bild. */
+export function laden(namen, fortschritt) {
+  const liste = [...new Set(namen)];
+  let fertig = 0;
+  return Promise.all(liste.map(name => einLaden(name).then(b => {
+    fertig++;
+    if (fortschritt) fortschritt(fertig, liste.length);
+    return b;
   })));
 }
 

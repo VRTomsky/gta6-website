@@ -1331,6 +1331,41 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   ohne anderes Auto), Fahndung 0–5, Sprung zum Wegpunkt. Das Menü pausiert das Spiel;
   `cheatsAnwenden()` läuft vor dem Todescheck.
 - **Belohnungsfaktor** aus der Admin-Seite: `missionen.geldFaktor`, beim Spielstart geladen.
+- **Laden und Startbild (25.09.2026):** Rund 11 MB Grafik, gut 400 Bilder, zwei Drittel
+  Gebäude. Früher war die Bühne schwarz, bis das Konto antwortete (live mit Firebase ein
+  paar Sekunden), und nach dem Klick lud es ohne jede Anzeige. Jetzt:
+  - Startbild steht sofort (`torPruefen` wartet auf `kontoDa`), Sonnenuntergang mit
+    Retro-Sonne, Skyline und Palmen — alles CSS/SVG in `spiel.html`, kein fremdes Bild.
+  - Sobald feststeht, dass jemand spielen darf, lädt `vorladenStarten()` im Hintergrund
+    (nicht bei „Datensparen"). Unter dem Knopf steht der Stand in Prozent.
+  - Nach dem Klick: Ladebalken 0–100 % (Bilder bis 92 %, Stadt bauen den Rest), wechselnde
+    Schritt-Texte und Tipps unten links.
+  - `bilder.js → laden(namen, fortschritt)` holt jedes Bild nur einmal, auch wenn Vorladen
+    und Start es beide anfordern. Innenräume laden erst nach dem Start.
+  - **Fallstrick:** `naechsterFrame()` wartet nie nur auf `requestAnimationFrame` — das
+    steht im Hintergrund-Tab still, das Laden hing dann bei 95 %.
+  - **Fallstrick:** Beim Tabwechsel wurde auch vor dem Start pausiert; die Pause-Ebene lag
+    dann über dem Startbild („schwarzer Bildschirm"). Pausiert wird nur noch, wenn das
+    Spiel läuft.
+  - **Fallstrick:** `kontoAbo()` ruft sofort zurück, wenn das Konto schon da ist — die
+    Konto-Abos stehen deshalb hinter den Lade-Variablen (sonst TDZ-Fehler).
+- **Neue Räume (25.09.2026):** 24/7 an jeder Tankstelle, jede Klinik, jede Wache, die Bank
+  (`BETRETBAR` in `spiel.js`, Türen über `Karte.eingangVor`). Die Räume sind in `innen.js`
+  gemalt (`moebel`-Liste → Bild und Sperren aus derselben Liste, `raumGemalt`). Personal
+  steht mit Standbild (`bild` im Plan). Aktionen: Eistee, Snacks, Kasse ausrauben (★★),
+  behandeln lassen, Blut spenden, Strafe zahlen (Fahndung weg, $300 je Stern), Bankschalter
+  ausrauben (★★★). Ausgeraubte Kassen sind ein paar Minuten leer (`tuer.leerBis`), außer ein
+  Auftrag verlangt sie. `nurMission`-Aktionen erscheinen nur, wenn ein Auftrag darauf wartet.
+- **20 Aufträge** (10 neue): Straßenrennen, Taxi, Denkzettel (Auto zerstören), Schulden
+  eintreiben, 24/7-Überfall, Krankenakte, Kisten vom Hafen, VIP-Chauffeur, Sportwagen,
+  Der große Coup (erst nach 8 erledigten, `ab: 8`). Neue Schrittarten in `missionen.js`:
+  `strecke`, `aktion`, `zerstoeren` (Zielauto auch beschießbar über `zusatzZiele()`),
+  `ausschalten` (Zielperson flieht, wird von `passantenNachziehen` nicht versetzt),
+  `typen` bei `fahren` (bestimmte Wagen).
+- **Laufende Passanten vorbereitet:** `LAUF_LEUTE` in `wesen.js` (noch leer) und acht
+  Bögen `volk_*` in `tools/spiel-bogen.py`. Sobald die Bilder da sind: schneiden, WebP,
+  Namen in `LAUF_LEUTE` eintragen — dann laufen sie mit vier Richtungen und Schrittbildern
+  und kommen doppelt so oft vor wie die alten Standbild-Passanten.
 - Neu erzeugen:
 
 ```bash

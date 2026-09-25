@@ -263,6 +263,12 @@ export class Figur {
    Richtung. Bei 60 Leuten im Bild kostet das kaum Rechenzeit.
    ═══════════════════════════════════════════════════════════ */
 
+/* Passanten mit echtem Laufzyklus: vier Richtungen mal vier Posen wie
+   Jason und Lucia (Bogen „richtung" in tools/spiel-bogen.py). Hier nur
+   eintragen, wenn die Bilder wirklich in assets/img/spiel liegen —
+   sonst lädt das Spiel 17 fehlende Dateien je Name. */
+export const LAUF_LEUTE = [];
+
 /* Alle Passantenarten. Seit dem 22.09.2026 kommen sie aus gezeichneten
    Bögen (tools/spiel-bogen.py) und haben nur ein Standbild — die
    Schrittbewegung entsteht im Spiel. */
@@ -275,8 +281,9 @@ export const PASSANT_ARTEN = [
 ];
 
 /* Jason und Lucia gibt es in vier Richtungen mal vier Posen
-   (`jason_vorn0` … `lucia_rechts3`). Alle anderen haben ein Standbild. */
-const VIER_RICHTUNGEN = new Set(["jason", "lucia"]);
+   (`jason_vorn0` … `lucia_rechts3`), dazu die Laufleute oben. Alle
+   anderen haben drei Standbilder. */
+const VIER_RICHTUNGEN = new Set(["jason", "lucia", ...LAUF_LEUTE]);
 const RICHTUNGEN = ["vorn", "hinten", "links", "rechts"];
 /* Spalte 0 steht, 1–3 laufen: Schritt links, Mitte, Schritt rechts, Mitte */
 const LAUF_POSEN = [1, 2, 3, 2];
@@ -412,13 +419,21 @@ export class Passant extends Figur {
   }
 }
 
+/* Zufällige Art — wer richtig laufen kann, kommt öfter dran */
+function passantArt() {
+  if (LAUF_LEUTE.length && Math.random() < 0.5) {
+    return LAUF_LEUTE[Math.floor(Math.random() * LAUF_LEUTE.length)];
+  }
+  return PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
+}
+
 /* Passanten rund um einen Punkt aufstellen */
 export function passantenVerteilen(anzahl, umX, umY, radius = 110) {
   const liste = [];
   for (let i = 0; i < anzahl; i++) {
     const p = Karte.freierPunkt(umX + (Math.random() - 0.5) * radius,
                                 umY + (Math.random() - 0.5) * radius, GEHBAR, 40);
-    const art = PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
+    const art = passantArt();
     const passant = new Passant(art, p.x, p.y);
     /* Blickrichtung streuen — sonst schaut beim Start die halbe Stadt
        gleichzeitig nach Norden */
@@ -444,6 +459,7 @@ export function panik(liste, x, y, radius = 26) {
    Erschossene bleiben eine Weile liegen und werden dann ersetzt. */
 export function passantenNachziehen(liste, x, y, weite = 150) {
   for (const p of liste) {
+    if (p.zielperson) continue;                // gehört gerade zu einem Auftrag
     const weg = Math.hypot(p.x - x, p.y - y) > weite;
     const alt = p.tot && p.totZeit > 16;
     if (!weg && !alt) continue;
@@ -459,6 +475,6 @@ export function passantenNachziehen(liste, x, y, weite = 150) {
     p.leben = 100;
     p.ko = 0;
     p.flucht = 0;
-    p.art = PASSANT_ARTEN[Math.floor(Math.random() * PASSANT_ARTEN.length)];
+    p.art = passantArt();
   }
 }

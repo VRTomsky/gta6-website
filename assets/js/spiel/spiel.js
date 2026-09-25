@@ -22,7 +22,7 @@
 import * as Karte from "./karte.js";
 import * as Bilder from "./bilder.js";
 import * as Tex from "./texturen.js";
-import { Figur, passantenVerteilen, passantenNachziehen, panik, PASSANT_ARTEN } from "./wesen.js";
+import { Figur, passantenVerteilen, passantenNachziehen, panik, PASSANT_ARTEN, LAUF_LEUTE } from "./wesen.js";
 import { Fahrzeug, autosVerteilen, TYPEN } from "./fahrzeug.js";
 import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
@@ -113,6 +113,7 @@ const zustand = {
   geld: 0,
   innen: null,                // Zustand im Gebäude (innen.js)
   clubTueren: [],             // Eingänge der drei Nachtclubs
+  tueren: [],                 // 24/7, Klinik, Wache, Bank (seit 25.09.2026)
   fehler: [],                 // letzte Aussetzer, auch in localStorage
   /* Schalter aus dem Entwicklermenü (nur Admins) */
   cheats: { leben: false, panzer: false, ausdauer: false, polizei: false, nacht: false },
@@ -311,6 +312,7 @@ function weltBauen() {
   zustand.passanten = passantenVerteilen(75, Karte.START.x, Karte.START.y);
   zustand.laeden = laedenSetzen(Karte.START.x, Karte.START.y);
   zustand.clubTueren = clubTuerenSuchen();
+  zustand.tueren = tuerenSuchen();
   figurenVerteilen();
   /* Ein Wagen steht auf der Straße neben dem Start: die nächste
      Straßenkachel im Umkreis, mindestens 3,5 m entfernt. */
@@ -376,21 +378,7 @@ function figurenVerteilen() {
    steht man auch wieder, wenn man herauskommt. */
 /* Die nächste Gehwegkachel vor einem Wahrzeichen — dort liegt der
    Eingang, dort steht man nach dem Verlassen wieder. */
-function tuerVor(ort) {
-  const tx = Karte.inKachel(ort.x), ty = Karte.inKachel(ort.y);
-  let beste = null, bestWeit = Infinity;
-  for (let dy = -9; dy <= 9; dy++) {
-    for (let dx = -9; dx <= 9; dx++) {
-      if (Karte.art(tx + dx, ty + dy) !== Karte.ART.GEHWEG) continue;
-      const weit = Math.hypot(dx, dy);
-      if (weit >= bestWeit) continue;
-      bestWeit = weit;
-      beste = { x: Karte.inMeter(tx + dx) + Karte.KACHEL / 2,
-                y: Karte.inMeter(ty + dy) + Karte.KACHEL / 2, name: ort.name };
-    }
-  }
-  return beste;
-}
+const tuerVor = ort => Karte.eingangVor(ort);
 
 function clubTuerenSuchen() {
   return Karte.wahrzeichen
@@ -399,10 +387,34 @@ function clubTuerenSuchen() {
     .filter(Boolean);
 }
 
+/* Weitere Häuser zum Betreten: an jeder Tankstelle ein 24/7, dazu jede
+   Klinik, jede Wache und die Bank. Farbe = Leuchtpunkt vor der Tür. */
+const BETRETBAR = [
+  { bau: Karte.BAU.TANKSTELLE, raum: "markt", farbe: "255,170,70", name: "24/7" },
+  { bau: Karte.BAU.KRANKENHAUS, raum: "klinik", farbe: "255,110,125" },
+  { bau: Karte.BAU.POLIZEI, raum: "polizei", farbe: "90,170,255" },
+  { bau: Karte.BAU.BANK, raum: "bank", farbe: "255,210,74" }
+];
+
+function tuerenSuchen() {
+  const liste = [];
+  for (const art of BETRETBAR) {
+    for (const w of Karte.wahrzeichen.filter(o => o.bau === art.bau)) {
+      const t = tuerVor(w);
+      if (!t) continue;
+      t.start = art.raum;
+      t.farbe = art.farbe;
+      if (art.name) t.name = `${art.name} · ${w.name}`;
+      liste.push(t);
+    }
+  }
+  return liste;
+}
+
 /* Tür, vor der der Spieler gerade steht — Clubs und Ammu-Vice */
 function clubTuerNah(f, weite = 2.6) {
   let beste = null, bestWeit = weite;
-  for (const t of zustand.clubTueren.concat(zustand.laeden)) {
+  for (const t of zustand.clubTueren.concat(zustand.laeden, zustand.tueren)) {
     const d = Math.hypot(t.x - f.x, t.y - f.y);
     if (d < bestWeit) { bestWeit = d; beste = t; }
   }
@@ -489,6 +501,108 @@ function innenTaste() {
     zustand.schwarz = { rest: 4.2, dauer: 4.2 };
     Ton.kasse();
     return;
+  }
+  neueRaumAktion(a);
+}
+
+/* ── 24/7, Klinik, Wache, Bank ──────────────────────────────
+   Kaufen, heilen, Strafe zahlen — oder ausrauben. Eine ausgeräumte
+   Kasse bleibt ein paar Minuten leer, außer ein Auftrag verlangt sie. */
+function bezahlen(preis) {
+  if (zustand.geld < preis) {
+    hinweis(L(`Zu wenig Geld ($${preis})`, `Not enough money ($${preis})`));
+    return false;
+  }
+  zustand.geld -= preis;
+  Ton.kasse();
+  return true;
+}
+
+function ausrauben(von, bis, sterne, pause) {
+  const tuer = zustand.clubTuer || {};
+  const auftrag = zustand.missionen.wartetAuf(tuer.start === "bank" ? "schalter" : "kasse");
+  if (!auftrag && tuer.leerBis && zustand.zeit < tuer.leerBis) {
+    hinweis(L("Hier ist gerade nichts zu holen — komm später wieder",
+              "Nothing left to take — come back later"));
+    return 0;
+  }
+  const beute = Math.round(von + Math.random() * (bis - von));
+  zustand.geld += beute;
+  tuer.leerBis = zustand.zeit + pause;
+  mindestens(sterne);
+  hudFahndung();
+  Ton.kasse();
+  return beute;
+}
+
+function neueRaumAktion(a) {
+  const m = zustand.missionen;
+  switch (a.art) {
+    case "getraenk":
+      if (!bezahlen(a.preis)) return;
+      zustand.ausdauer = Math.min(100, zustand.ausdauer + 45);
+      zustand.leben = Math.min(100, zustand.leben + 5);
+      hinweis(L("Eistee aus dem Kühlregal — kalt und süß", "Iced tea from the fridge — cold and sweet"));
+      return;
+    case "snack":
+      if (!bezahlen(a.preis)) return;
+      zustand.leben = Math.min(100, zustand.leben + 25);
+      hinweis(L("Chips und ein Schokoriegel", "Chips and a candy bar"));
+      return;
+    case "kasse": {
+      const beute = ausrauben(150, 450, 2, 240);
+      if (!beute) return;
+      m.aktionMelden("kasse");
+      hinweis(L(`Kasse geleert: +$${beute} — der Kassierer drückt den Alarm`,
+                `Till emptied: +$${beute} — the clerk hits the alarm`));
+      return;
+    }
+    case "schalter": {
+      const beute = ausrauben(600, 1200, 3, 300);
+      if (!beute) return;
+      m.aktionMelden("schalter");
+      hinweis(L(`Schalter ausgeräumt: +$${beute} — stiller Alarm!`,
+                `Counter cleaned out: +$${beute} — silent alarm!`));
+      return;
+    }
+    case "heilen":
+      if (zustand.leben >= 100) {
+        hinweis(L("Der Arzt findet nichts — du bist kerngesund", "The doctor finds nothing — you're fine"));
+        return;
+      }
+      if (!bezahlen(a.preis)) return;
+      zustand.leben = 100;
+      hinweis(L("Zusammengeflickt — Leben voll", "Patched up — full health"));
+      return;
+    case "spenden":
+      if (zustand.leben < 60) {
+        hinweis(L("Zu schwach zum Blutspenden", "Too weak to give blood"));
+        return;
+      }
+      zustand.leben -= 30;
+      zustand.geld += 60;
+      Ton.kasse();
+      hinweis(L("Blut gespendet: +$60 und ein Keks", "Blood donated: +$60 and a cookie"));
+      return;
+    case "akte":
+      m.aktionMelden("akte");
+      Ton.tuer();
+      hinweis(L("Akte eingesteckt — nichts wie raus", "File pocketed — get out of here"));
+      return;
+    case "strafe": {
+      const stufe = zustand.fahndung.stufe;
+      if (!stufe) {
+        hinweis(L("Gegen dich liegt nichts vor", "There's nothing on you"));
+        return;
+      }
+      const preis = 300 * stufe;
+      if (!bezahlen(preis)) return;
+      zustand.fahndung.loeschen();
+      hudFahndung();
+      hinweis(L(`Strafe bezahlt ($${preis}) — Fahndung gelöscht`,
+                `Fine paid ($${preis}) — wanted level cleared`));
+      return;
+    }
   }
 }
 
@@ -611,7 +725,7 @@ function angreifen() {
 
   const richtung = zielRichtung(f);
   f.winkel = richtung;
-  const ziele = zustand.passanten.concat(zustand.fahndung.ziele());
+  const ziele = zustand.passanten.concat(zustand.fahndung.ziele(), zustand.missionen.zusatzZiele());
   const nah = a.waffe.art === "nah";
   if (nah) f.ausholen();
   const ergebnis = feuern(a, f, richtung, ziele);
@@ -634,6 +748,7 @@ function angreifen() {
 
   for (const z of ergebnis.treffer) {
     if (!z.tot) continue;
+    if (z.istAuto) { mindestens(1); continue; }
     if (zustand.fahndung.polizisten.includes(z)) {
       mindestens(zustand.fahndung.stufe + 1);
       hinweis(L("Polizist ausgeschaltet", "Officer down"));
@@ -864,6 +979,18 @@ function innenText(a) {
   if (a.art === "tanz") return L(`E — Private Dance ($${a.preis})`, `E — private dance ($${a.preis})`);
   if (a.art === "laden") return L("E — an die Theke: Waffen, Munition, Weste", "E — counter: guns, ammo, armour");
   if (a.art === "schiessen") return L(`E — Schießtraining ($${a.preis})`, `E — target practice ($${a.preis})`);
+  if (a.art === "getraenk") return L(`E — Eistee kaufen ($${a.preis})`, `E — buy iced tea ($${a.preis})`);
+  if (a.art === "snack") return L(`E — Snacks kaufen ($${a.preis})`, `E — buy snacks ($${a.preis})`);
+  if (a.art === "kasse") return L("E — Kasse ausrauben (★★)", "E — rob the till (★★)");
+  if (a.art === "schalter") return L("E — Schalter ausrauben (★★★)", "E — rob the counter (★★★)");
+  if (a.art === "heilen") return L(`E — behandeln lassen ($${a.preis})`, `E — get treated ($${a.preis})`);
+  if (a.art === "spenden") return L("E — Blut spenden (+$60)", "E — give blood (+$60)");
+  if (a.art === "akte") return L("E — Akte einstecken", "E — take the file");
+  if (a.art === "strafe") {
+    const n = zustand.fahndung.stufe;
+    return n ? L(`E — Strafe zahlen ($${300 * n}), Fahndung weg`, `E — pay the fine ($${300 * n}), clear wanted level`)
+             : L("E — Tresen", "E — front desk");
+  }
   return "";
 }
 
@@ -1385,6 +1512,27 @@ function zeichnen() {
     if (kamera.zoom > 16) {
       ctx.fillStyle = "rgba(255,230,245,.9)";
       ctx.font = `700 ${Math.round(kamera.zoom * 0.34)}px "Barlow Condensed", system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(tuer.name, px, py - kamera.zoom * 0.9);
+      ctx.textAlign = "start";
+    }
+  }
+
+  /* 24/7, Klinik, Wache, Bank: farbiger Punkt mit Namen */
+  for (const tuer of zustand.tueren) {
+    if (!sichtbar(tuer)) continue;
+    const [px, py] = aufBild(tuer.x, tuer.y);
+    const r = kamera.zoom * 1.1;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, `rgba(${tuer.farbe},.75)`);
+    g.addColorStop(1, `rgba(${tuer.farbe},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (kamera.zoom > 16) {
+      ctx.fillStyle = "rgba(255,248,235,.9)";
+      ctx.font = `700 ${Math.round(kamera.zoom * 0.32)}px "Barlow Condensed", system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(tuer.name, px, py - kamera.zoom * 0.9);
       ctx.textAlign = "start";
@@ -2123,27 +2271,31 @@ function pauseUmschalten(an) {
   pauseFeld.hidden = !zustand.pause;
   if (!zustand.pause) letzte = performance.now();
 }
-document.addEventListener("visibilitychange", () => { if (document.hidden) pauseUmschalten(true); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && zustand.laeuft) pauseUmschalten(true);
+});
 pauseFeld.addEventListener("click", () => pauseUmschalten(false));
 
 /* ── Zugang ──
    Das Spiel merkt sich Geld, erledigte Aufträge und den Bestwert im
    Konto — deshalb geht es nur angemeldet. Ist gar kein Konto-Backend
    eingerichtet (etwa lokal ohne Firebase), bleibt die Tür offen, sonst
-   könnte niemand spielen. */
+   könnte niemand spielen.
+
+   Bis das Konto antwortet (live mit Firebase ein paar Sekunden), steht
+   schon das Startbild da — vorher war die Bühne so lange schwarz. */
 let torOffen = false;
+let kontoDa = false;                            // Konto hat geantwortet (oder Frist um)
 
 function torPruefen() {
+  if (!kontoDa && !konto.geladen) return;       // noch keine Antwort: Startbild bleibt
   torOffen = !konto.backend || !!konto.nutzer;
   if (zustand.laeuft) { torFeld.hidden = true; return; }
   torFeld.hidden = torOffen;
   start.hidden = !torOffen;
+  if (torOffen) vorladenStarten();
 }
 
-kontoBereit.then(torPruefen);
-kontoAbo(torPruefen);
-/* Falls das Konto-Modul hängt, nach ein paar Sekunden trotzdem entscheiden */
-setTimeout(torPruefen, 4000);
 
 torFeld.addEventListener("click", e => {
   const k = e.target.closest("[data-tor]");
@@ -2151,16 +2303,20 @@ torFeld.addEventListener("click", e => {
   dialogOeffnen(k.dataset.tor === "neu" ? "registrieren" : "anmelden");
 });
 
-async function starten() {
-  if (!torOffen) { torPruefen(); return; }
-  start.classList.add("is-laden");
+/* ── Laden ──────────────────────────────────────────────────
+   Rund 12 MB Grafik, zwei Drittel davon Gebäude. Geladen wird schon,
+   sobald feststeht, dass jemand spielen darf — beim Klick auf „Spiel
+   starten" ist dann meist ein guter Teil da. Innenräume kommen erst nach
+   dem Start im Hintergrund. Der Balken zeigt Bilder bis 92 %, den Rest
+   das Bauen der Stadt. */
+function bildListe() {
   const autos = Object.keys(TYPEN).map(t => "auto_" + t);
   const ampeln = ["ampel_rot", "ampel_gelb", "ampel_gruen"];
   /* Bodenkacheln und Deko aus den Bögen */
   const boden = ["asphalt", "asphalt_riss", "gehweg", "sand", "gras", "parkplatz",
                  "erde", "platz", "wasser", "hafen", "kies", "nass",
                  "mark_zebra", "mark_halt", "mark_gerade", "mark_links", "mark_rechts",
-                 "mark_bucht", "mark_gully", "mark_rinne", "mark_flicken", "mark_oel",
+                 "mark_bucht", "mark_gully", "mark_flicken", "mark_oel",
                  "mark_rad", "mark_sperr"].map(n => "boden_" + n);
   const deko = ["laterne", "bank", "palme", "baum", "hydrant", "muelleimer", "telefon",
                 "haltestelle", "zeitungsbox", "cafetisch", "marktstand",
@@ -2170,9 +2326,9 @@ async function starten() {
                 "ampel_rot", "ampel_gelb", "ampel_gruen", "stopp", "strassenschild",
                 "parkuhr", "radstaender", "kuebel", "plakatwand", "bauzaun",
                 "huetchen", "stromkasten"].map(n => "deko_" + n);
-  /* Hauptfiguren: vier Richtungen mal vier Posen. Alle anderen ein Bild. */
+  /* Hauptfiguren und Laufleute: vier Richtungen mal vier Posen */
   const figuren = [];
-  for (const art of ["lucia", "jason"]) {
+  for (const art of ["lucia", "jason", ...LAUF_LEUTE]) {
     figuren.push(`${art}_steht`);
     for (const r of ["vorn", "hinten", "links", "rechts"]) {
       for (let i = 0; i < 4; i++) figuren.push(`${art}_${r}${i}`);
@@ -2183,18 +2339,146 @@ async function starten() {
                      "polizist_sommer", "sanitaeterin", "feuerwehr_mann"]) {
     figuren.push(`${art}_steht`, `${art}_hinten`, `${art}_links`);
   }
+  /* Kleines zuerst, damit Straße und Figuren früh da sind. Gebäude: ein
+     Bild je Haus — die Liste führt karte.js, sonst fehlt nach jeder
+     neuen Bogenrunde eins. */
+  return [...boden, ...autos, ...ampeln, ...deko, ...figuren, ...Karte.GEBAEUDEBILDER];
+}
+
+const ladeStand = { fertig: 0, gesamt: 0, klick: false };
+let vorladen = null;
+
+function vorladenStarten() {
+  if (vorladen) return vorladen;
+  /* Wer Datensparen eingeschaltet hat, lädt erst beim Klick */
+  const sparen = navigator.connection && navigator.connection.saveData;
+  if (sparen && !ladeStand.klick) return null;
+  vorladen = Bilder.laden(bildListe(), (fertig, gesamt) => {
+    ladeStand.fertig = fertig;
+    ladeStand.gesamt = gesamt;
+    ladeAnzeigen();
+  });
+  return vorladen;
+}
+
+const ladeFeld = document.getElementById("spielStartLaden");
+const ladeProzent = document.getElementById("spielStartProzent");
+const ladeBalken = document.getElementById("spielStartBalken");
+const ladeSchritt = document.getElementById("spielStartSchritt");
+const ladeTipp = document.getElementById("spielStartTipp");
+const ladeKlein = document.getElementById("spielStartKlein");
+let ladeBau = 0;                                   // 0–8 %: Stadt bauen
+
+function ladeAnzeigen(schrittText) {
+  const anteil = ladeStand.gesamt ? ladeStand.fertig / ladeStand.gesamt : 0;
+  const prozent = Math.min(100, Math.floor(anteil * 92 + ladeBau));
+  if (ladeKlein && !ladeStand.klick) {
+    ladeKlein.textContent = anteil >= 1
+      ? L("Grafik ist geladen — los geht's.", "Graphics loaded — ready to go.")
+      : L(`Grafik wird schon geladen · ${prozent} %`, `Loading graphics · ${prozent} %`);
+  }
+  if (!ladeStand.klick) return;
+  ladeProzent.textContent = prozent;
+  ladeBalken.style.transform = `scaleX(${prozent / 100})`;
+  ladeFeld.setAttribute("aria-valuenow", prozent);
+  ladeSchritt.textContent = schrittText || (
+    anteil < 0.12 ? L("Straßen werden asphaltiert …", "Paving the streets …")
+    : anteil < 0.2 ? L("Autos rollen an …", "Cars rolling in …")
+    : anteil < 0.3 ? L("Palmen werden gepflanzt …", "Planting palm trees …")
+    : anteil < 0.38 ? L("Leute kommen auf die Straße …", "People hit the streets …")
+    : anteil < 0.7 ? L("Häuser werden hochgezogen …", "Putting up buildings …")
+    : anteil < 1 ? L("Stadien und Tankstellen …", "Stadiums and gas stations …")
+    : L("Vice City wird aufgebaut …", "Building Vice City …"));
+}
+
+/* Tipps wie auf einem echten Ladebildschirm, alle paar Sekunden neu */
+const TIPPS = [
+  ["Mit M öffnest du die große Karte — ein Klick setzt einen Wegpunkt.",
+   "Press M for the big map — one click sets a waypoint."],
+  ["Alt halten und die Maus nach links oder rechts: Wechsel zwischen Jason und Lucia.",
+   "Hold Alt and move the mouse left or right to switch between Jason and Lucia."],
+  ["Bei Ammu-Vice gibt es Waffen, Westen und einen Schießstand.",
+   "Ammu-Vice sells weapons and vests — and has a shooting range."],
+  ["Die Polizei verliert dich, wenn sie dich eine Weile nicht mehr sieht.",
+   "The police lose you once they haven't seen you for a while."],
+  ["Mit E steigst du ein und betrittst Clubs und Läden.",
+   "Press E to get in cars and to enter clubs and shops."],
+  ["Umschalt halten zum Rennen — das kostet Ausdauer.",
+   "Hold shift to run — it costs stamina."],
+  ["An der Bar im Pink Flamingo füllen Drinks dein Leben wieder auf.",
+   "Drinks at the Pink Flamingo bar refill your health."],
+  ["Dein Geld und deine Waffen bleiben im Konto gespeichert.",
+   "Your money and weapons are saved in your account."],
+  ["Im 24/7 an der Tankstelle gibt es Snacks — oder die Kasse.",
+   "The 24/7 at the gas station sells snacks — or you take the till."],
+  ["In der Klinik wirst du gegen Geld wieder zusammengeflickt.",
+   "The clinic patches you up — for a price."]
+];
+let tippNr = Math.floor(Math.random() * TIPPS.length);
+let tippUhr = 0;
+function tippZeigen() {
+  tippNr = (tippNr + 1) % TIPPS.length;
+  ladeTipp.classList.remove("is-an");
+  setTimeout(() => {
+    ladeTipp.textContent = L(TIPPS[tippNr][0], TIPPS[tippNr][1]);
+    ladeTipp.classList.add("is-an");
+  }, 220);
+}
+
+/* Kurz Luft lassen, damit der Balken gemalt wird. Nicht nur auf
+   requestAnimationFrame warten: das steht still, solange der Tab im
+   Hintergrund ist — dann bliebe das Laden bei 95 % hängen. */
+const naechsterFrame = () => new Promise(r => {
+  let fertig = false;
+  const los = () => { if (!fertig) { fertig = true; r(); } };
+  requestAnimationFrame(() => setTimeout(los, 0));
+  setTimeout(los, 60);
+});
+let startLaeuft = false;
+
+/* Erst hier, weil torPruefen das Vorladen anstößt und abonnieren sofort
+   aufruft, wenn das Konto schon da ist */
+kontoBereit.then(() => { kontoDa = true; torPruefen(); });
+kontoAbo(torPruefen);
+/* Falls das Konto-Modul hängt, nach ein paar Sekunden trotzdem entscheiden */
+setTimeout(() => { kontoDa = true; torPruefen(); }, 6000);
+
+async function starten() {
+  if (startLaeuft || zustand.laeuft) return;
+  if (!kontoDa && !konto.geladen) {
+    ladeKlein.textContent = L("Konto wird geprüft …", "Checking your account …");
+    await Promise.race([kontoBereit, new Promise(r => setTimeout(r, 6000))]);
+    kontoDa = true;
+  }
+  torPruefen();
+  if (!torOffen) return;
+  startLaeuft = true;
+  Ton.bereit();                                   // noch im Klick, sonst bleibt der Ton stumm
+
+  ladeStand.klick = true;
+  start.classList.add("is-laden");
+  ladeFeld.hidden = false;
+  tippZeigen();
+  tippUhr = setInterval(tippZeigen, 4800);
+  ladeAnzeigen();
+  await vorladenStarten();
+
+  ladeBau = 3;
+  ladeAnzeigen(L("Texturen werden gemalt …", "Painting textures …"));
+  await naechsterFrame();
   Tex.bauen();
   Waffenbilder.bauen();
-  /* Gebäude: ein Bild je Haus, auf die Grundfläche gezogen. Die Liste
-     führt karte.js — sonst fehlt nach jeder neuen Bogenrunde ein Bild. */
-  const haeuser = Karte.GEBAEUDEBILDER;
-  await Bilder.laden([...autos, ...ampeln, ...boden, ...deko, ...haeuser, ...figuren,
-                      ...Innen.bildnamen()]);
-
-  Ton.bereit();
+  ladeBau = 6;
+  ladeAnzeigen(L("Verkehr und Passanten …", "Traffic and pedestrians …"));
+  await naechsterFrame();
   touchEinrichten();
   weltBauen();
   groesseAnpassen();
+  ladeBau = 8;
+  ladeAnzeigen(L("Fertig!", "Done!"));
+  await naechsterFrame();
+
+  clearInterval(tippUhr);
   start.hidden = true;
   leinwand.focus();
   zustand.laeuft = true;
@@ -2211,6 +2495,8 @@ async function starten() {
             "E to get in and enter clubs · shift to run · mouse to fight · M for the map"));
   letzte = performance.now();
   requestAnimationFrame(schleife);
+  /* Innenräume und Tänzerinnen erst jetzt, im Hintergrund */
+  Bilder.laden(Innen.bildnamen());
 }
 
 wechselFeld.addEventListener("click", e => {

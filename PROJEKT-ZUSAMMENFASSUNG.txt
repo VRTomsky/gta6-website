@@ -462,6 +462,20 @@ WAS BISHER GEMACHT WURDE
    - Neue firestore.rules - muessen in der Firebase-Konsole
      veroeffentlicht werden.
 
+30. Spiel (25.09.2026) - Ladebildschirm, Raeume, Auftraege:
+   - Kein schwarzer Bildschirm mehr vor dem Start. Das Startbild
+     (Sonnenuntergang, Skyline, Palmen) steht sofort da, die Grafik
+     laedt schon im Hintergrund, nach dem Klick zeigt ein Balken
+     0 bis 100 Prozent mit Tipps.
+   - Vier neue Raeume zum Betreten: 24/7 an jeder Tankstelle,
+     Klinik, Polizeiwache, Bank. Einkaufen, heilen, Strafe zahlen,
+     Kassen und Bankschalter ausrauben.
+   - Zehn neue Auftraege, jetzt zwanzig: Rennen, Taxi, Auto
+     zerstoeren, Schulden eintreiben, Ueberfaelle, Schmuggel,
+     VIP-Fahrt, Sportwagen und der grosse Coup.
+   - Laufende Passanten sind vorbereitet - es fehlen noch die
+     Bilder aus der Bild-KI.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

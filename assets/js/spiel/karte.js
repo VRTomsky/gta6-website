@@ -1267,6 +1267,25 @@ export function zeichnen(ctx, kamera, zeit) {
   if (kamera.zoom > 14) ampelnMalen(ctx, kamera, zeit, tx0, ty0, spalten, zeilen, linksM, obenM);
 }
 
+/* ── Eingang eines Hauses ──────────────────────────────────
+   Die nächste Gehwegkachel vor einem Wahrzeichen — dort liegt die Tür,
+   dort steht man nach dem Verlassen wieder. Gebraucht von spiel.js
+   (Türen) und missionen.js (Ziele, die man drinnen erledigt). */
+export function eingangVor(ort) {
+  const tx = inKachel(ort.x), ty = inKachel(ort.y);
+  let beste = null, bestWeit = Infinity;
+  for (let dy = -9; dy <= 9; dy++) {
+    for (let dx = -9; dx <= 9; dx++) {
+      if (art(tx + dx, ty + dy) !== ART.GEHWEG) continue;
+      const weit = Math.hypot(dx, dy);
+      if (weit >= bestWeit) continue;
+      bestWeit = weit;
+      beste = { x: inMeter(tx + dx) + KACHEL / 2, y: inMeter(ty + dy) + KACHEL / 2, name: ort.name };
+    }
+  }
+  return beste;
+}
+
 /* ── Freien Platz suchen ────────────────────────────────── */
 export function freierPunkt(nahX, nahY, arten, radius = 40) {
   for (let versuch = 0; versuch < 500; versuch++) {
