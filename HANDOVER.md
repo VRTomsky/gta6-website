@@ -1371,46 +1371,23 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   (`schrittweite` 0,26 m je Bild statt 0,55 m), sonst rutschen die Beine; Oma und Joggerin
   haben ein eigenes Tempo (`EIGENES_TEMPO`). Neue Laufleute: Bogen eintragen, schneiden,
   `spiel-webp.py`, Namen in `LAUF_LEUTE`.
-- **3D-Ansicht (25.09.2026, `spiel/welt3d.js`, Three.js 0.170 vom jsDelivr-CDN):**
-  Standard ist 3D, umschalten mit T oder dem Knopf „2D/3D" unten rechts; die Wahl steht in
-  `localStorage spiel-3d`. Die Spiellogik ist unverändert — `welt3d.js` zeigt nur denselben
-  Zustand: Weltpunkt (x, y) → Three (x, Höhe, y), Drehung `rotation.y = -winkel`.
-  - **Boden:** `karte.js → bodenStueck3d(cx, cy, pxProMeter)` malt ein 32-m-Stück mit dem
-    2D-Maler, aber ohne Häuser, Wände, stehende Deko und ohne Wasser (dort bleibt ein Loch,
-    `alphaTest`). Schärfe nach Abstand: 16 / 5 / 2 Bildpunkte je Meter (< 80 / < 180 / sonst),
-    Sichtweite 300 m mit Nebel. Gebaut wird nach Aufwand, höchstens rund ein feines Stück je
-    Bild; beim Start nur 110 m im Umkreis.
-  - **Stehende Deko** (`MODELL_3D` in karte.js) wird beim Malen nur gesammelt und in 3D aus
-    Grundformen gebaut (`DEKO` in welt3d.js), je Stück ein Körper mit Scheitelfarben.
-  - **Häuser:** Bildhäuser als Block auf dem Kern, das Dachbild aus einem Atlas (192 px je
-    Bild), Drehung wie in 2D (`haus3d(h)`). Häuser ohne Bild kachelweise. Höhe
-    3,5 m + Stadtplanhöhe × 40 m; Tankstelle 5, Ammu 6, Club 9. Fassade: eine gekachelte
-    Fenstertextur, getönt mit der Mittelfarbe des Dachbildes.
-  - **Wasser:** eine Phong-Fläche 0,55 m tiefer mit wandernder Normalen-Textur; an jeder
-    Kante Kaimauer, an Land Geländer, am Hafen Poller (`uferKoerper`). Boote sind Modelle.
-  - **Ampeln:** Mast mit Ausleger, die Lampe ist ein Instanz-Körper, dessen Farbe jedes Bild
-    aus `ampelPhase` kommt (`ampelOrte3d`).
-  - **Autos:** Kasten mit Kabine (Transporter/Busse hoch), oben das Autobild zugeschnitten,
-    Lackfarbe = Mittel der kräftigen Punkte des Bildes, Lichter, Blaulicht blinkt.
-  - **Figuren:** Aufsteller, die sich zur Kamera drehen. Das Bild richtet sich nach dem
-    Winkel zwischen Blickrichtung der Figur und Kamera (vorn/hinten/links/rechts) — so laufen
-    Jason, Lucia und die `volk_*` mit ihren Vier-Richtungs-Bögen auch in 3D. Alte
-    Passanten: Standbild, Seitenansicht gespiegelt.
-  - **Kamera:** im Auto dahinter, schwenkt nach 1,2 s ohne Mausbewegung wieder ein; zu Fuß
-    über der rechten Schulter. Mausblick mit Pointer-Lock (erster Klick ins Bild fängt die
-    Maus, Esc lässt los). Ohne Maus (Handy) läuft die Kamera der Figur nach. Häuser im Weg
-    ziehen die Kamera heran.
-  - **Steuerung:** zu Fuß gilt W = Blickrichtung der Kamera (`spiel.js`, Zweig `modus3d`),
-    gezielt wird, wohin die Kamera schaut (`zielRichtung`). Autos steuern wie in 2D.
-  - **Leuchtsäulen** statt Punkte: Aufträge gelb, Ziele blau, Wegpunkt lila, Türen in ihrer
-    Farbe.
-  - **Innenräume** bleiben 2D: beim Betreten wird die 3D-Leinwand ausgeblendet.
-  - Die 2D-Leinwand liegt darüber, ist jetzt durchsichtig (`getContext("2d")` ohne
-    `alpha:false`) und zeigt in 3D nur das Fadenkreuz.
-  - Gemessen (Desktop): Rechnen + Zeichnen im Mittel 5–7 ms je Bild, beim Durchfahren mit
-    Nachladen 99 % unter 11 ms.
-  - Datenschutzseite nennt jsDelivr (Three.js wird erst mit dem 3D-Start geladen).
-  - Sicherungen vor dem Umbau: `_backup/karte_vor_3d.js`, `_backup/spiel_vor_3d.js`.
+- **3D-Versuch wieder entfernt (25.09.2026):** Das Spiel lief kurz in 3D (Three.js), der
+  Nutzer fand es hässlich — alles ist zurück auf 2D wie vorher. Der Code liegt nur noch
+  lokal in `_backup/welt3d.js`, `_backup/spiel_mit_3d.js`, `_backup/karte_mit_3d.js`
+  (nicht im Repository). Nicht ohne ausdrücklichen Wunsch wieder einbauen.
+- **Figurenwechsel (25.09.2026):**
+  - Startfigur ist zufällig (`weltBauen`), nicht mehr immer Lucia.
+  - Die Figur, die man nicht spielt, lebt weiter (`selbstLeben` in `spiel.js`): im Auto
+    fährt sie mit dem Verstand eines Verkehrsautos (`verkehr.js → selbstFahren` macht aus
+    jedem Wagen nachträglich ein `VerkehrsAuto`), zu Fuß bummelt sie mit halbem Tempo die
+    Gehwege entlang (`wesen.js → schlendern`: Kachel für Kachel, meist geradeaus, an Ecken
+    abbiegen, ab und zu an der Ampel über die Straße). Kommt der Wagen 20 s nicht weiter,
+    steigt sie aus und geht zu Fuß.
+  - Nach dem Wechsel macht die neue Figur weiter, was sie tat (`zustand.selbst`), bis man
+    eine Steuertaste, die Maustaste, E oder den Finger benutzt (`eingabe()`). Während der
+    Kamerafahrt bewegen sich beide weiter.
+  - Die eigene Steuerung steht jetzt in `steuern(f, dt)`; `f.gang` ist der Tempofaktor
+    (0,5 beim Bummeln, 1 beim Steuern).
 - **Lucia neu (25.09.2026):** neuer Bogen `lucia4` nach Wunsch des Nutzers; die vorherigen
   Bilder liegen in `_backup/lucia_vor_neu/`.
 - Neu erzeugen:

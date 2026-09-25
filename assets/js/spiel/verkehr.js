@@ -259,6 +259,24 @@ export class VerkehrsAuto extends Fahrzeug {
   }
 }
 
+/* Jason oder Lucia fahren selbst, solange man die andere Figur spielt.
+   Der Wagen bekommt dafür den Verstand eines Verkehrsautos — ein
+   geparkter Wagen wird nachträglich zu einem, seine Fahrdaten bleiben.
+   Losgefahren wird in der Achse, in die er gerade zeigt. */
+export function selbstFahren(auto) {
+  if (!(auto instanceof VerkehrsAuto)) Object.setPrototypeOf(auto, VerkehrsAuto.prototype);
+  const c = Math.cos(auto.winkel), s = Math.sin(auto.winkel);
+  if (Math.abs(c) >= Math.abs(s)) { auto.dx = Math.sign(c) || 1; auto.dy = 0; }
+  else { auto.dx = 0; auto.dy = Math.sign(s) || 1; }
+  if (!auto.wunschTempo) auto.wunschTempo = 10 + Math.random() * 6;
+  auto.geduld = 0;
+  auto.drang = 0;
+  auto.abseits = 0;
+  auto.verirrt = false;
+  auto.verlassen = false;
+  auto.zielSuchen();
+}
+
 /* ── Verkehr rund um den Spieler ── */
 /* Polizeiwagen fahren nur, wenn gefahndet wird — nicht im Verkehr */
 const TYPEN_LISTE = Object.keys(TYPEN).filter(t => t !== "streife" && !TYPEN[t].polizei);

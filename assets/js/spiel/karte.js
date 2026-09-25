@@ -160,14 +160,6 @@ function bodenGedreht(ctx, name, px, py, g, dreh) {
 /* Deko mittig auf die Kachel, in ihrer echten Größe.
    vx/vy verschieben innerhalb der Kachel (0…1), dreh in Radiant. */
 function dekoMalen(ctx, name, px, py, g, vx = 0.5, vy = 0.5, dreh = 0) {
-  if (fuer3d && MODELL_3D.has(name)) {
-    fuer3d.deko.push({
-      name, dreh,
-      x: fuer3d.linksM + (px + g * vx) / fuer3d.zoom,
-      y: fuer3d.obenM + (py + g * vy) / fuer3d.zoom
-    });
-    return;
-  }
   const b = sprite("deko_" + name);
   if (!b) return;
   const skala = g / (KACHEL * 64);
@@ -288,7 +280,6 @@ function uferKante(ctx, tx, ty, px, py, g, a) {
     ctx.fillRect(...streifen(0, kante));
     ctx.fillStyle = "rgba(40,36,30,.55)";                  // Außenkante
     ctx.fillRect(...streifen(0, g * 0.025));
-    if (fuer3d) continue;                                  // Geländer baut 3D
     if (a === ART.HAFEN) {                                 // Poller statt Geländer
       ctx.fillStyle = "#2c2f36";
       for (let k = 0.25; k < 1; k += 0.5) {
@@ -958,11 +949,8 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
 
   switch (a) {
     case ART.WASSER: {
-      /* 3D: Wasser ist eine eigene Fläche tiefer — hier bleibt ein Loch */
-      if (!fuer3d) {
-        wasserFlaeche(ctx, tx, ty, px, py, g);
-        wasserUfer(ctx, tx, ty, px, py, g);
-      }
+      wasserFlaeche(ctx, tx, ty, px, py, g);
+      wasserUfer(ctx, tx, ty, px, py, g);
       /* Ein paar Boote draußen — nur, wo kein Ufer angrenzt */
       const f = streu(tx, ty, 151);
       if (f > 0.985) dekoMalen(ctx, "segler", px, py, g, 0.5, 0.5, streu(tx, ty, 153) * 6.28);
@@ -1061,13 +1049,6 @@ function kachelMalen(ctx, tx, ty, px, py, g, zeit) {
     }
     default: {
       const haus = hausVon(tx, ty);
-      if (fuer3d && !hausBild(haus)) {
-        /* 3D: das Haus steht als Block darauf, hier nur der Sockel */
-        ctx.fillStyle = FARBE.gehweg;
-        ctx.fillRect(px, py, g + 1, g + 1);
-        bodenMalen(ctx, "gehweg", px, py, g);
-        break;
-      }
       if (hausBild(haus)) {
         /* Unter dem Gebäudebild liegt Boden — an den Rändern ist es
            durchsichtig, dort soll Gehweg durchscheinen, kein Dach. */
@@ -1238,7 +1219,6 @@ function flaecheMalen(ctx, tx0, ty0, spalten, zeilen, linksM, obenM, zoom, zeit)
                   (inMeter(ty) - obenM) * zoom, g, zeit);
     }
   }
-  if (fuer3d) return;                     // Häuser und Wände baut 3D selbst
   /* Gebäudebilder: jedes Haus einmal, egal wie viele Kacheln es hat.
      Ragt eines über den Rand, malt das Nachbarstück den Rest. */
   const gemalt = new Set();
@@ -1331,65 +1311,4 @@ export function freierPunkt(nahX, nahY, arten, radius = 40) {
     }
   }
   return ersatz || { x: nahX, y: nahY };
-}
-
-/* ═══ Für die 3D-Ansicht (welt3d.js) ═════════════════════════
-   Der Boden kommt aus demselben Maler wie in 2D — Straßen, Markierungen,
-   Zebrastreifen und Gehwege sehen dadurch gleich aus. Häuser, Wände und
-   alles, was steht (Palmen, Laternen, Schilder …), bleiben dabei weg:
-   stehende Deko wird mit Weltposition gesammelt und in 3D gebaut. */
-let fuer3d = null;
-const MODELL_3D = new Set([
-  "boot", "segler", "jetski",
-  "palme", "baum", "laterne", "hydrant", "muelleimer", "telefon", "haltestelle",
-  "container", "muellcontainer", "stopp", "strassenschild", "parkuhr", "plakatwand",
-  "stromkasten", "schirm", "turm", "zeitungsbox", "kuebel", "bank", "marktstand"
-]);
-
-export const STUECK_KACHELN = STUECK;
-export const STUECK_METER = STUECK * KACHEL;
-
-export function bodenStueck3d(cx, cy, pxProMeter) {
-  const seite = Math.round(STUECK * KACHEL * pxProMeter);
-  const leinwand = document.createElement("canvas");
-  leinwand.width = leinwand.height = seite;
-  const c = leinwand.getContext("2d");
-  const linksM = inMeter(cx * STUECK), obenM = inMeter(cy * STUECK);
-  fuer3d = { linksM, obenM, zoom: pxProMeter, deko: [] };
-  let deko;
-  try {
-    flaecheMalen(c, cx * STUECK, cy * STUECK, STUECK, STUECK, linksM, obenM, pxProMeter, 0);
-  } finally {
-    deko = fuer3d.deko;
-    fuer3d = null;
-  }
-  return { leinwand, deko };
-}
-
-/* Haus für 3D: Bildname, Vierteldrehung, Dachfarbe */
-export function haus3d(h) {
-  const b = hausBild(h);
-  if (b && h.dreh === undefined) h.dreh = hausDrehung(h, b);
-  return { bild: b ? h.bild : null, dreh: h.dreh || 0 };
-}
-export const dachFarbe3d = (tx, ty) => dachFarbe(tx, ty);
-export const haeuser = Plan.haeuser;
-
-/* Ampeln eines Stücks: dieselbe Auswahl wie beim Malen in 2D */
-export function ampelOrte3d(cx, cy) {
-  const liste = [];
-  for (let j = 0; j < STUECK; j++) {
-    for (let k = 0; k < STUECK; k++) {
-      const tx = cx * STUECK + k, ty = cy * STUECK + j;
-      if (art(tx, ty) !== ART.GEHWEG) continue;
-      const nachbarn = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-        .filter(([dx, dy]) => art(tx + dx, ty + dy) === ART.KREUZUNG);
-      if (!nachbarn.length || streu(tx, ty, 71) > 0.5) continue;
-      const [dx, dy] = nachbarn[0];
-      liste.push({ tx, ty, dx, dy, senkrecht: dy !== 0,
-                   x: inMeter(tx) + KACHEL / 2 + dx * KACHEL * 0.28,
-                   y: inMeter(ty) + KACHEL / 2 + dy * KACHEL * 0.28 });
-    }
-  }
-  return liste;
 }

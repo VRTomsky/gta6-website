@@ -97,7 +97,7 @@ export class Figur {
     }
     const d = this.daten;
     this.entklemmen();
-    const ziel = (rennen ? d.rennen : d.tempo) * (this.sprung > 0 ? 1.35 : 1);
+    const ziel = (rennen ? d.rennen : d.tempo) * (this.sprung > 0 ? 1.35 : 1) * (this.gang || 1);
     const laenge = Math.hypot(dx, dy);
 
     if (laenge > 0.01) {
@@ -456,6 +456,78 @@ export function passantenVerteilen(anzahl, umX, umY, radius = 110) {
     liste.push(passant);
   }
   return liste;
+}
+
+/* ── Jason oder Lucia laufen von selbst ─────────────────────
+   Wer gerade nicht gespielt wird, bummelt die Gehwege entlang: Kachel
+   für Kachel, meist geradeaus, an Ecken um die Kurve, ab und zu an der
+   Ampel über die Straße (wie die Passanten: los, wenn die Autos Rot
+   haben). Halbes Tempo — gehen, nicht joggen. Mit dem Zufall der
+   Passanten sah das aus wie Herumirren im Kreis. */
+const GEH_ARTEN = [Karte.ART.GEHWEG, Karte.ART.PARK];
+const gehbar = (tx, ty) => GEH_ARTEN.includes(Karte.art(tx, ty));
+
+export function schlendern(f, dt, autos, zeit) {
+  f.gang = 0.5;
+  if (f.tot || f.ko > 0) { f.bewegen(0, 0, false, dt); return; }
+
+  /* Über die Straße: warten, bis die Autos Rot haben, dann rüber */
+  if (f.kreuzen) {
+    const k = f.kreuzen;
+    const zx = k.x - f.x, zy = k.y - f.y, weit = Math.hypot(zx, zy);
+    f.kreuzenZeit += dt;
+    if (weit < 0.7 || f.kreuzenZeit > 22) {
+      f.kreuzen = null;
+      f.weg = null;
+    } else {
+      if (!k.los && !Karte.ampelGruen(k.tx, k.ty, zeit, k.senkrecht)) k.los = true;
+      f.bewegen(k.los ? zx / weit : 0, k.los ? zy / weit : 0, false, dt);
+      return;
+    }
+  }
+
+  const tx = Karte.inKachel(f.x), ty = Karte.inKachel(f.y);
+  /* Nicht auf dem Gehweg (etwa nach dem Aussteigen)? Zum nächsten hin */
+  if (!gehbar(tx, ty)) {
+    const p = Karte.freierPunkt(f.x, f.y, GEH_ARTEN, 12);
+    const dx = p.x - f.x, dy = p.y - f.y, weit = Math.hypot(dx, dy) || 1;
+    f.bewegen(dx / weit, dy / weit, false, dt);
+    f.weg = null;
+    return;
+  }
+
+  if (!f.weg || Math.hypot(f.weg.x - f.x, f.weg.y - f.y) < 0.5) {
+    let [rx, ry] = f.richtung4 || (Math.abs(Math.cos(f.winkel)) > Math.abs(Math.sin(f.winkel))
+      ? [Math.sign(Math.cos(f.winkel)) || 1, 0] : [0, Math.sign(Math.sin(f.winkel)) || 1]);
+    /* An einer Kreuzung manchmal hinüber */
+    const anKreuzung = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      .some(([a, b]) => Karte.art(tx + a, ty + b) === Karte.ART.KREUZUNG);
+    if (anKreuzung && Math.random() < 0.3) {
+      const k = Passant.prototype.kreuzungSuchen.call(f);
+      if (k) { f.kreuzen = k; f.kreuzenZeit = 0; return; }
+    }
+    const gerade = gehbar(tx + rx, ty + ry);
+    const seiten = [[ry, -rx], [-ry, rx]].filter(([a, b]) => gehbar(tx + a, ty + b));
+    if (gerade && (Math.random() < 0.8 || !seiten.length)) {
+      /* weiter geradeaus */
+    } else if (seiten.length) {
+      [rx, ry] = seiten[Math.floor(Math.random() * seiten.length)];
+    } else {
+      [rx, ry] = [-rx, -ry];                       // Sackgasse: umdrehen
+    }
+    f.richtung4 = [rx, ry];
+    f.weg = { x: Karte.inMeter(tx + rx) + Karte.KACHEL / 2, y: Karte.inMeter(ty + ry) + Karte.KACHEL / 2 };
+    f.stau = 0;
+  }
+  const dx = f.weg.x - f.x, dy = f.weg.y - f.y, weit = Math.hypot(dx, dy) || 1;
+  const vorher = f.strecke;
+  f.bewegen(dx / weit, dy / weit, false, dt);
+  /* Hängt die Figur an etwas fest, dreht sie um */
+  f.stau = f.strecke - vorher < 0.01 ? (f.stau || 0) + dt : 0;
+  if (f.stau > 1.5) {
+    f.richtung4 = f.richtung4 ? [-f.richtung4[0], -f.richtung4[1]] : null;
+    f.weg = null;
+  }
 }
 
 /* Alle in der Nähe erschrecken — nach einem Schuss oder einem Schlag */

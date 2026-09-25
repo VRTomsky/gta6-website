@@ -22,9 +22,9 @@
 import * as Karte from "./karte.js";
 import * as Bilder from "./bilder.js";
 import * as Tex from "./texturen.js";
-import { Figur, passantenVerteilen, passantenNachziehen, panik, PASSANT_ARTEN, LAUF_LEUTE } from "./wesen.js";
+import { Figur, passantenVerteilen, passantenNachziehen, panik, PASSANT_ARTEN, LAUF_LEUTE, schlendern } from "./wesen.js";
 import { Fahrzeug, autosVerteilen, TYPEN } from "./fahrzeug.js";
-import { verkehrAufbauen, verkehrNachziehen } from "./verkehr.js";
+import { verkehrAufbauen, verkehrNachziehen, selbstFahren } from "./verkehr.js";
 import { Fahndung, STUFEN } from "./polizei.js";
 import { Missionen } from "./missionen.js";
 import * as Innen from "./innen.js";
@@ -41,9 +41,7 @@ const EN = (window.LANG || document.documentElement.lang || "de").startsWith("en
 const L = (de, en) => (EN ? en : de);
 
 const leinwand = document.getElementById("spielFeld");
-/* Durchsichtig: in 3D liegt diese Leinwand über dem 3D-Bild und zeigt
-   nur das Fadenkreuz */
-const ctx = leinwand.getContext("2d");
+const ctx = leinwand.getContext("2d", { alpha: false });
 const hud = {
   figur: document.querySelector("[data-hud=figur]"),
   tempo: document.querySelector("[data-hud=tempo]"),
@@ -157,73 +155,6 @@ const gedrueckt = liste => liste.some(t => tasten.has(t));
 /* Mausposition auf der Bühne — zu Fuß wird damit gezielt */
 const maus = { x: 0, y: 0, imBild: false, feuer: false };
 
-/* ── 3D (welt3d.js, Three.js) ──
-   Die Spiellogik ist dieselbe, nur das Bild entsteht in 3D. Umschalten
-   mit T oder dem Knopf; die Wahl bleibt im Browser gespeichert. */
-let W3 = null;
-let modus3d = (() => {
-  try {
-    const w = localStorage.getItem("spiel-3d");
-    if (w === "1") return true;
-    if (w === "0") return false;
-  } catch (e) { /* privat */ }
-  return true;
-})();
-let letzteDt = 1 / 60;
-const knopf3d = document.getElementById("spiel3dKnopf");
-
-function knopf3dZeigen() {
-  if (!knopf3d) return;
-  knopf3d.textContent = modus3d ? "2D" : "3D";
-  knopf3d.title = modus3d ? L("Zur 2D-Ansicht (T)", "Switch to 2D (T)") : L("Zur 3D-Ansicht (T)", "Switch to 3D (T)");
-}
-
-async function dreiDLaden() {
-  if (W3) return true;
-  try {
-    const modul = await import("./welt3d.js");
-    modul.einrichten(buehne, leinwand);
-    modul.groesse(leinwand.clientWidth, leinwand.clientHeight);
-    W3 = modul;
-    return true;
-  } catch (fehler) {
-    console.warn("[Spiel] 3D nicht verfügbar", fehler);
-    return false;
-  }
-}
-
-async function dreiDUmschalten() {
-  const neu = !modus3d;
-  if (neu) {
-    hinweis(L("3D wird geladen …", "Loading 3D …"));
-    if (!(await dreiDLaden())) {
-      hinweis(L("3D geht auf diesem Gerät nicht", "3D doesn't work on this device"));
-      return;
-    }
-    W3.kameraSetzen(spieler());
-  } else if (document.pointerLockElement === leinwand) {
-    document.exitPointerLock();
-  }
-  modus3d = neu;
-  try { localStorage.setItem("spiel-3d", modus3d ? "1" : "0"); } catch (e) { /* privat */ }
-  if (W3) W3.sichtbar(modus3d);
-  knopf3dZeigen();
-  hinweis(modus3d ? L("3D — Klick ins Bild, dann lenkt die Maus die Kamera", "3D — click the view to steer the camera with the mouse")
-                  : L("2D-Ansicht", "2D view"));
-}
-if (knopf3d) knopf3d.addEventListener("click", () => dreiDUmschalten());
-knopf3dZeigen();
-
-/* Maus fängt die Kamera: nach einem Klick ins Bild (nur 3D, nur mit Maus) */
-document.addEventListener("mousemove", e => {
-  if (!modus3d || !W3 || zustand.wahl) return;
-  if (document.pointerLockElement !== leinwand) return;
-  W3.drehen(e.movementX || 0, e.movementY || 0);
-});
-document.addEventListener("pointerlockchange", () => {
-  if (W3) W3.kam.gefangen = document.pointerLockElement === leinwand;
-});
-
 addEventListener("keydown", e => {
   if (!zustand.laeuft) return;
   /* Pfeiltasten, Leertaste und Alt sollen die Seite nicht bedienen */
@@ -251,7 +182,6 @@ addEventListener("keydown", e => {
   if (e.code === "KeyE" || e.code === "KeyF") einsteigenOderLaden();
   if (e.code === "Space" && !spieler().imAuto && spieler().springen()) Ton.sprung();
   if (e.code === "KeyV") vollbildUmschalten();
-  if (e.code === "KeyT") dreiDUmschalten();
   if (e.code === "KeyM") karteUmschalten();
   if (e.code === "KeyN") tonUmschalten();
   if (e.code === "KeyQ") waffeWechseln(1);
@@ -274,18 +204,10 @@ leinwand.addEventListener("mousemove", e => {
   maus.y = e.clientY - k.top;
   maus.imBild = true;
 });
-leinwand.addEventListener("mouseleave", () => {
-  if (document.pointerLockElement === leinwand) return;
-  maus.imBild = false;
-  maus.feuer = false;
-});
+leinwand.addEventListener("mouseleave", () => { maus.imBild = false; maus.feuer = false; });
 leinwand.addEventListener("mousedown", e => {
   if (e.button !== 0 || !zustand.laeuft) return;
   leinwand.focus();
-  if (modus3d && W3 && !istTouch && document.pointerLockElement !== leinwand && !zustand.innen) {
-    leinwand.requestPointerLock();
-    return;                                        // erster Klick fängt nur die Maus
-  }
   maus.feuer = true;
 });
 addEventListener("mouseup", e => { if (e.button === 0) maus.feuer = false; });
@@ -384,6 +306,9 @@ function touchModus(imAuto) {
 
 /* ── Spielwelt aufbauen ──────────────────────────────────── */
 function weltBauen() {
+  /* Wen man spielt, entscheidet der Zufall — nicht immer Lucia */
+  zustand.aktiv = Math.random() < 0.5 ? "lucia" : "jason";
+  zustand.selbst = false;
   zustand.verkehr = verkehrAufbauen(70, Karte.START.x, Karte.START.y);
   /* Parkende Autos zum Schluss und mit Abstand zum fahrenden Verkehr —
      sonst stehen am Start zehn Wagen ineinander. */
@@ -687,6 +612,7 @@ function neueRaumAktion(a) {
 
 /* ── Ein- und Aussteigen, Laden betreten ─────────────────── */
 function einsteigenOderLaden() {
+  zustand.selbst = false;
   const f = spieler();
   if (zustand.innen) { innenTaste(); return; }
   if (!f.imAuto) {
@@ -725,8 +651,7 @@ function einUndAussteigen() {
   }
 }
 
-function aussteigen() {
-  const f = spieler();
+function aussteigen(f = spieler()) {
   const auto = f.imAuto;
   if (!auto) return;
   const seite = { x: -Math.sin(auto.winkel), y: Math.cos(auto.winkel) };
@@ -741,7 +666,7 @@ function aussteigen() {
      Er rollt aus, bleibt stehen und wird später weit weg neu eingesetzt. */
   auto.verlassen = true;
   f.entklemmen();
-  Ton.tuer();
+  if (f === spieler()) Ton.tuer();
 }
 
 /* ── Waffen ──────────────────────────────────────────────── */
@@ -778,7 +703,6 @@ function waffeZeigen() {
 
 /* Richtung, in die der Spieler zielt: zur Maus, sonst nach vorn */
 function zielRichtung(f) {
-  if (modus3d && W3) return W3.gier();
   if (!maus.imBild) return f.winkel;
   const zx = kamera.x + (maus.x - kamera.breite / 2) / kamera.zoom;
   const zy = kamera.y + (maus.y - kamera.hoehe / 2) / kamera.zoom;
@@ -887,6 +811,9 @@ function figurWechseln(ziel) {
   const neu = zustand.figuren[ziel];
   if (!neu || neu === alt) return;
   tasten.clear();
+  /* Die Figur, zu der man wechselt, läuft oder fährt weiter, bis man
+     selbst steuert — die verlassene macht ab jetzt von selbst weiter */
+  zustand.selbst = true;
 
   if (ruhig) {                                     // ohne Bewegungseffekte
     zustand.aktiv = ziel;
@@ -905,7 +832,8 @@ function figurWechseln(ziel) {
 function nachWechsel() {
   const f = spieler();
   hud.figur.textContent = f.daten.name;
-  hinweis(L("Jetzt spielst du ", "Now playing as ") + f.daten.name);
+  hinweis(L(`Jetzt spielst du ${f.daten.name} — macht weiter, bis du steuerst`,
+            `Now playing as ${f.daten.name} — keeps going until you take over`));
 }
 
 /* Die Kamerafahrt selbst: hoch, hinüber, wieder herunter */
@@ -971,38 +899,6 @@ function schadenNehmen(menge) {
 /* ── Die zweite Figur ──
    Sie stand bisher regungslos herum, bis man zu ihr wechselte. Jetzt
    schlendert sie über den Gehweg oder sitzt in ihrem Wagen. */
-function zweitLeben(figur, dt) {
-  if (figur.imAuto) {
-    figur.imAuto.fahren(0, 0, false, dt);
-    figur.x = figur.imAuto.x;
-    figur.y = figur.imAuto.y;
-    return;
-  }
-  figur.streifzugZeit = (figur.streifzugZeit || 0) - dt;
-  if (!figur.streifzug || figur.streifzugZeit <= 0) {
-    /* Selbst würfeln statt Karte.freierPunkt: das liefert bei gleichem
-       Start immer denselben Punkt — und der lag direkt vor den Füßen,
-       weshalb die zweite Figur sich keinen Meter bewegt hat. */
-    figur.streifzug = null;
-    for (let k = 0; k < 24 && !figur.streifzug; k++) {
-      const w = Math.random() * Math.PI * 2;
-      const r = 8 + Math.random() * 16;
-      const x = figur.x + Math.cos(w) * r, y = figur.y + Math.sin(w) * r;
-      const a = Karte.art(Karte.inKachel(x), Karte.inKachel(y));
-      if (a === Karte.ART.GEHWEG || a === Karte.ART.PARK) figur.streifzug = { x, y };
-    }
-    figur.streifzugZeit = 6 + Math.random() * 8;
-  }
-  const dx = figur.streifzug ? figur.streifzug.x - figur.x : 0;
-  const dy = figur.streifzug ? figur.streifzug.y - figur.y : 0;
-  const weit = Math.hypot(dx, dy);
-  if (!figur.streifzug || weit < 0.8) {
-    figur.streifzug = null;
-    figur.bewegen(0, 0, false, dt);
-    return;
-  }
-  figur.bewegen((dx / weit) * 0.5, (dy / weit) * 0.5, false, dt);
-}
 
 /* ── Ausdauer ──
    Rennen kostet, Stehen füllt langsam wieder auf. Essen und Getränke im
@@ -1280,7 +1176,6 @@ function groesseAnpassen() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   kamera.breite = b;
   kamera.hoehe = h;
-  if (W3) W3.groesse(b, h);
 }
 addEventListener("resize", groesseAnpassen);
 
@@ -1355,7 +1250,6 @@ function sicher(was, name) {
    Damit lässt sich eine Viertelstunde Spiel in Sekunden durchrechnen. */
 window.__schritt = (dt = 1 / 60, male = false) => {
   zustand.zeit += dt;
-  letzteDt = dt;
   rechnen(dt);
   if (male) zeichnen();
 };
@@ -1369,7 +1263,6 @@ function schleife(jetzt) {
   if (zustand.pause) return;
 
   zustand.zeit += dt;
-  letzteDt = dt;
   if (sicher(() => rechnen(dt), "rechnen")) sicher(zeichnen, "zeichnen");
 }
 
@@ -1386,10 +1279,7 @@ setInterval(() => {
 function rechnen(dt) {
   if (zustand.fahrt) {
     fahrtRechnen(dt);
-    for (const name of Object.keys(zustand.figuren)) {
-      const a = zustand.figuren[name];
-      if (a.imAuto) { a.imAuto.fahren(0, 0, false, dt); a.x = a.imAuto.x; a.y = a.imAuto.y; }
-    }
+    for (const name of Object.keys(zustand.figuren)) selbstLeben(zustand.figuren[name], dt);
     return;
   }
   if (zustand.wahl) return;                        // Auswahl offen: Spiel wartet
@@ -1414,37 +1304,11 @@ function rechnen(dt) {
   if (zustand.innen) { innenRechnen(dt); return; }
 
   touchModus(!!f.imAuto);
-  let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
-  let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
-  if (f.imAuto && istTouch) {
-    /* Lenken über das Band, Gas und Bremse über die Knöpfe */
-    if (finger.aktiv) quer = finger.x;
-    if (finger.gas) vor = 1;
-    else if (finger.bremse) vor = -1;
-  } else if (finger.aktiv) {                        // zu Fuß: Finger hat Vorrang
-    quer = finger.x;
-    vor = -finger.y;
-  }
-  const bremse = (tasten.has("Space") && f.imAuto) || finger.hand;
-
-  if (f.imAuto) {
-    f.imAuto.fahren(vor, quer, bremse, dt);
-    f.x = f.imAuto.x;
-    f.y = f.imAuto.y;
-    f.winkel = f.imAuto.winkel;
-  } else {
-    const willRennen = tasten.has("ShiftLeft") || tasten.has("ShiftRight");
-    const rennt = willRennen && zustand.ausdauer > 1 && (quer !== 0 || vor !== 0);
-    ausdauerRechnen(dt, rennt);
-    if (modus3d && W3) {
-      /* W geht dahin, wohin die Kamera schaut */
-      const g = W3.gier();
-      const vx = Math.cos(g), vy = Math.sin(g);
-      f.bewegen(vx * vor - vy * quer, vy * vor + vx * quer, rennt, dt);
-    } else {
-      f.bewegen(quer, -vor, rennt, dt);
-    }
-  }
+  /* Nach einem Wechsel läuft oder fährt die Figur weiter, bis man eine
+     Taste drückt oder den Finger aufs Steuer legt */
+  if (zustand.selbst && eingabe()) zustand.selbst = false;
+  if (zustand.selbst) selbstLeben(f, dt);
+  else steuern(f, dt);
 
   /* Schlagen und schießen. Die getragene Waffe wird jedes Bild
      abgeglichen — dann stimmt sie auch, wenn eine Mission oder der
@@ -1464,10 +1328,10 @@ function rechnen(dt) {
     if (zustand.strahlen[k].t <= 0) zustand.strahlen.splice(k, 1);
   }
 
-  /* Die zweite Figur bleibt stehen, rollt aber im Auto aus */
+  /* Die zweite Figur lebt weiter: läuft herum oder fährt durch die Stadt */
   for (const name of Object.keys(zustand.figuren)) {
     if (name === zustand.aktiv) continue;
-    zweitLeben(zustand.figuren[name], dt);
+    selbstLeben(zustand.figuren[name], dt);
   }
 
   /* Verkehr: fahren lassen, was in der Nähe ist */
@@ -1565,6 +1429,77 @@ function rechnen(dt) {
   hud.ort.textContent = ortsname(f.x, f.y);
 }
 
+/* ── Selbst steuern: Tastatur, Maus, Finger ── */
+function steuern(f, dt) {
+  let vor = (gedrueckt(TASTE.hoch) ? 1 : 0) - (gedrueckt(TASTE.runter) ? 1 : 0);
+  let quer = (gedrueckt(TASTE.rechts) ? 1 : 0) - (gedrueckt(TASTE.links) ? 1 : 0);
+  if (f.imAuto && istTouch) {
+    /* Lenken über das Band, Gas und Bremse über die Knöpfe */
+    if (finger.aktiv) quer = finger.x;
+    if (finger.gas) vor = 1;
+    else if (finger.bremse) vor = -1;
+  } else if (finger.aktiv) {                        // zu Fuß: Finger hat Vorrang
+    quer = finger.x;
+    vor = -finger.y;
+  }
+  const bremse = (tasten.has("Space") && f.imAuto) || finger.hand;
+
+  if (f.imAuto) {
+    f.imAuto.selbst = false;                       // Selbstfahren setzt danach neu an
+    f.imAuto.fahren(vor, quer, bremse, dt);
+    f.x = f.imAuto.x;
+    f.y = f.imAuto.y;
+    f.winkel = f.imAuto.winkel;
+  } else {
+    const willRennen = tasten.has("ShiftLeft") || tasten.has("ShiftRight");
+    const rennt = willRennen && zustand.ausdauer > 1 && (quer !== 0 || vor !== 0);
+    ausdauerRechnen(dt, rennt);
+    f.gang = 1;                                    // selbst gesteuert: volles Tempo
+    f.kreuzen = null;
+    f.weg = null;
+    f.bewegen(quer, -vor, rennt, dt);
+  }
+}
+
+/* Drückt der Spieler gerade etwas, das die Figur bewegt? */
+const STEUERTASTEN = [...TASTE.hoch, ...TASTE.runter, ...TASTE.links, ...TASTE.rechts,
+                      "Space", "ShiftLeft", "ShiftRight"];
+function eingabe() {
+  return STEUERTASTEN.some(t => tasten.has(t)) || maus.feuer ||
+         finger.aktiv || finger.gas || finger.bremse || finger.hand;
+}
+
+/* ── Von selbst: die Figur, die man gerade nicht steuert ──
+   Im Auto fährt sie mit dem Verstand eines Verkehrsautos durch die
+   Stadt, zu Fuß läuft sie die Gehwege entlang wie ein Passant — nur
+   ohne stehen zu bleiben. Kommt der Wagen nicht mehr weiter, steigt sie
+   aus und geht zu Fuß weiter. */
+function selbstLeben(figur, dt) {
+  if (figur.tot) return;
+  const alle = zustand.autos.concat(zustand.verkehr);
+  if (figur.imAuto) {
+    const a = figur.imAuto;
+    if (!a.selbst) {
+      selbstFahren(a);
+      a.selbst = true;
+      figur.haengt = 0;
+    }
+    a.denken(dt, zustand.zeit * 1000, alle, zustand.passanten);
+    figur.x = a.x;
+    figur.y = a.y;
+    figur.winkel = a.winkel;
+    figur.haengt = a.tempo < 0.5 ? (figur.haengt || 0) + dt : 0;
+    if (a.verirrt || figur.haengt > 20) {
+      a.selbst = false;
+      aussteigen(figur);
+    }
+    return;
+  }
+  const nahe = alle.filter(a => Math.abs(a.x - figur.x) < 40 && Math.abs(a.y - figur.y) < 40 &&
+                                Math.hypot(a.vx, a.vy) > 3);
+  schlendern(figur, dt, nahe, zustand.zeit * 1000);
+}
+
 /* Wohin die Route führt: eigener Wegpunkt zuerst, sonst das Auftragsziel */
 function routenZiel() {
   if (zustand.wegpunkt) return zustand.wegpunkt;
@@ -1574,19 +1509,7 @@ function routenZiel() {
 }
 
 function zeichnen() {
-  if (zustand.innen) {
-    if (W3) W3.sichtbar(false);
-    innenZeichnen();
-    return;
-  }
-  if (modus3d && W3) {
-    W3.sichtbar(true);
-    Minikarte.zeichnen(radar, zustand, spieler());
-    W3.zeichnen(zustand, spieler(), letzteDt);
-    ueber3dZeichnen();
-    return;
-  }
-  if (W3) W3.sichtbar(false);
+  if (zustand.innen) { innenZeichnen(); return; }
   Minikarte.zeichnen(radar, zustand, spieler());
   ctx.fillStyle = "#0b1124";
   ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
@@ -1753,23 +1676,6 @@ function zeichnen() {
     }
   }
   if (zustand.cheats.nacht) nachtMalen();
-}
-
-/* Über dem 3D-Bild: nur ein Fadenkreuz zu Fuß */
-function ueber3dZeichnen() {
-  ctx.clearRect(0, 0, kamera.breite, kamera.hoehe);
-  const f = spieler();
-  if (f.imAuto || zustand.drinnen) return;
-  const mx = kamera.breite / 2 + Math.min(40, kamera.breite * 0.03), my = kamera.hoehe / 2 - 20;
-  ctx.save();
-  ctx.strokeStyle = "rgba(255,255,255,.85)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(mx, my, 5, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,120,168,.95)";
-  ctx.fillRect(mx - 1, my - 1, 2, 2);
-  ctx.restore();
 }
 
 /* Nacht: dunkelblauer Schleier, um den Spieler ein Lichtkegel —
@@ -2634,17 +2540,6 @@ async function starten() {
   touchEinrichten();
   weltBauen();
   groesseAnpassen();
-  if (modus3d) {
-    ladeBau = 7;
-    ladeAnzeigen(L("3D-Welt wird gebaut …", "Building the 3D world …"));
-    await naechsterFrame();
-    if (await dreiDLaden()) {
-      W3.kameraSetzen(spieler());
-    } else {
-      modus3d = false;
-      knopf3dZeigen();
-    }
-  }
   ladeBau = 8;
   ladeAnzeigen(L("Fertig!", "Done!"));
   await naechsterFrame();
