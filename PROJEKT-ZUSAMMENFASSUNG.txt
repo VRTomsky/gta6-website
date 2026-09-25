@@ -478,6 +478,15 @@ WAS BISHER GEMACHT WURDE
      Joggerin, Tourist, Trainingsanzug. Dazu eine neue Lucia.
    - Entwicklermenue: Auto reparieren, unzerstoerbar, Turbo.
 
+31. Spiel in 3D (25.09.2026):
+   - Vice City Run laeuft jetzt in echtem 3D (Three.js): Haeuser mit
+     Hoehe und Fenstern, Palmen, Laternen, Ampeln, Wasser mit Wellen
+     und Kaimauern, Boote, Autos als 3D-Karosserien.
+   - Kamera hinter dem Auto oder ueber der Schulter, Maus zum
+     Umsehen. Figuren laufen mit ihren Richtungsbildern.
+   - Mit T oder dem Knopf 2D/3D laesst sich zur alten Ansicht
+     zurueckwechseln. Innenraeume sind noch 2D.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

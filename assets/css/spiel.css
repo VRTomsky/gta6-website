@@ -410,6 +410,19 @@
 }
 .skarteknopf:hover{ background:var(--pink); color:var(--ink); border-color:var(--pink); }
 
+/* ── 3D-Ansicht (welt3d.js) und ihr Umschalter ── */
+.spiel3d{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.spiel3d[hidden]{ display:none; }
+.s3dknopf{
+  position:absolute; right:calc(clamp(10px, 1.6vw, 18px) + 144px); bottom:clamp(10px, 1.6vw, 18px);
+  z-index:3; height:40px; min-width:40px; padding:0 8px; display:grid; place-items:center;
+  border-radius:12px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(8,13,29,.6); color:var(--cream); cursor:pointer;
+  font:800 .78rem/1 var(--f-label); letter-spacing:.06em;
+  backdrop-filter:blur(6px);
+}
+.s3dknopf:hover{ background:var(--pink); color:var(--ink); border-color:var(--pink); }
+
 /* ── Steuerung für Handys und Tablets ── */
 .stouch{ position:absolute; inset:0; z-index:2; pointer-events:none; }
 .stouch[hidden]{ display:none; }
@@ -496,6 +509,7 @@
   .svoll{ right:auto; bottom:auto; left:10px; top:96px; width:34px; height:34px; border-radius:10px; }
   .ston{ right:auto; bottom:auto; left:52px; top:96px; width:34px; height:34px; border-radius:10px; }
   .skarteknopf{ right:auto; bottom:auto; left:94px; top:96px; width:34px; height:34px; border-radius:10px; }
+  .s3dknopf{ right:auto; bottom:auto; left:136px; top:96px; height:34px; min-width:34px; border-radius:10px; }
   .svoll svg, .ston svg, .skarteknopf svg{ width:16px; height:16px; }
   .stouch__stick{ width:104px; height:104px; left:12px; bottom:12px; }
   .stouch__stick i{ width:42px; height:42px; margin:-21px 0 0 -21px; }
@@ -586,7 +600,7 @@
 .sdev__schalter input:checked + span{ color:#fff; }
 .sdev__hinweis{ margin:6px 0 0; font-size:.76rem; color:var(--fg-dim); }
 .sdevknopf{
-  position:absolute; right:calc(clamp(10px, 1.6vw, 18px) + 144px); bottom:clamp(10px, 1.6vw, 18px);
+  position:absolute; right:calc(clamp(10px, 1.6vw, 18px) + 192px); bottom:clamp(10px, 1.6vw, 18px);
   z-index:3; height:40px; padding:0 10px; display:grid; place-items:center;
   border-radius:12px; border:1px solid rgba(255,70,80,.6);
   background:rgba(40,6,14,.75); color:#ff8a94; cursor:pointer;

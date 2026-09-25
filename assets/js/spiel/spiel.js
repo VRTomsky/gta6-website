@@ -41,7 +41,9 @@ const EN = (window.LANG || document.documentElement.lang || "de").startsWith("en
 const L = (de, en) => (EN ? en : de);
 
 const leinwand = document.getElementById("spielFeld");
-const ctx = leinwand.getContext("2d", { alpha: false });
+/* Durchsichtig: in 3D liegt diese Leinwand über dem 3D-Bild und zeigt
+   nur das Fadenkreuz */
+const ctx = leinwand.getContext("2d");
 const hud = {
   figur: document.querySelector("[data-hud=figur]"),
   tempo: document.querySelector("[data-hud=tempo]"),
@@ -155,6 +157,73 @@ const gedrueckt = liste => liste.some(t => tasten.has(t));
 /* Mausposition auf der Bühne — zu Fuß wird damit gezielt */
 const maus = { x: 0, y: 0, imBild: false, feuer: false };
 
+/* ── 3D (welt3d.js, Three.js) ──
+   Die Spiellogik ist dieselbe, nur das Bild entsteht in 3D. Umschalten
+   mit T oder dem Knopf; die Wahl bleibt im Browser gespeichert. */
+let W3 = null;
+let modus3d = (() => {
+  try {
+    const w = localStorage.getItem("spiel-3d");
+    if (w === "1") return true;
+    if (w === "0") return false;
+  } catch (e) { /* privat */ }
+  return true;
+})();
+let letzteDt = 1 / 60;
+const knopf3d = document.getElementById("spiel3dKnopf");
+
+function knopf3dZeigen() {
+  if (!knopf3d) return;
+  knopf3d.textContent = modus3d ? "2D" : "3D";
+  knopf3d.title = modus3d ? L("Zur 2D-Ansicht (T)", "Switch to 2D (T)") : L("Zur 3D-Ansicht (T)", "Switch to 3D (T)");
+}
+
+async function dreiDLaden() {
+  if (W3) return true;
+  try {
+    const modul = await import("./welt3d.js");
+    modul.einrichten(buehne, leinwand);
+    modul.groesse(leinwand.clientWidth, leinwand.clientHeight);
+    W3 = modul;
+    return true;
+  } catch (fehler) {
+    console.warn("[Spiel] 3D nicht verfügbar", fehler);
+    return false;
+  }
+}
+
+async function dreiDUmschalten() {
+  const neu = !modus3d;
+  if (neu) {
+    hinweis(L("3D wird geladen …", "Loading 3D …"));
+    if (!(await dreiDLaden())) {
+      hinweis(L("3D geht auf diesem Gerät nicht", "3D doesn't work on this device"));
+      return;
+    }
+    W3.kameraSetzen(spieler());
+  } else if (document.pointerLockElement === leinwand) {
+    document.exitPointerLock();
+  }
+  modus3d = neu;
+  try { localStorage.setItem("spiel-3d", modus3d ? "1" : "0"); } catch (e) { /* privat */ }
+  if (W3) W3.sichtbar(modus3d);
+  knopf3dZeigen();
+  hinweis(modus3d ? L("3D — Klick ins Bild, dann lenkt die Maus die Kamera", "3D — click the view to steer the camera with the mouse")
+                  : L("2D-Ansicht", "2D view"));
+}
+if (knopf3d) knopf3d.addEventListener("click", () => dreiDUmschalten());
+knopf3dZeigen();
+
+/* Maus fängt die Kamera: nach einem Klick ins Bild (nur 3D, nur mit Maus) */
+document.addEventListener("mousemove", e => {
+  if (!modus3d || !W3 || zustand.wahl) return;
+  if (document.pointerLockElement !== leinwand) return;
+  W3.drehen(e.movementX || 0, e.movementY || 0);
+});
+document.addEventListener("pointerlockchange", () => {
+  if (W3) W3.kam.gefangen = document.pointerLockElement === leinwand;
+});
+
 addEventListener("keydown", e => {
   if (!zustand.laeuft) return;
   /* Pfeiltasten, Leertaste und Alt sollen die Seite nicht bedienen */
@@ -182,6 +251,7 @@ addEventListener("keydown", e => {
   if (e.code === "KeyE" || e.code === "KeyF") einsteigenOderLaden();
   if (e.code === "Space" && !spieler().imAuto && spieler().springen()) Ton.sprung();
   if (e.code === "KeyV") vollbildUmschalten();
+  if (e.code === "KeyT") dreiDUmschalten();
   if (e.code === "KeyM") karteUmschalten();
   if (e.code === "KeyN") tonUmschalten();
   if (e.code === "KeyQ") waffeWechseln(1);
@@ -204,10 +274,18 @@ leinwand.addEventListener("mousemove", e => {
   maus.y = e.clientY - k.top;
   maus.imBild = true;
 });
-leinwand.addEventListener("mouseleave", () => { maus.imBild = false; maus.feuer = false; });
+leinwand.addEventListener("mouseleave", () => {
+  if (document.pointerLockElement === leinwand) return;
+  maus.imBild = false;
+  maus.feuer = false;
+});
 leinwand.addEventListener("mousedown", e => {
   if (e.button !== 0 || !zustand.laeuft) return;
   leinwand.focus();
+  if (modus3d && W3 && !istTouch && document.pointerLockElement !== leinwand && !zustand.innen) {
+    leinwand.requestPointerLock();
+    return;                                        // erster Klick fängt nur die Maus
+  }
   maus.feuer = true;
 });
 addEventListener("mouseup", e => { if (e.button === 0) maus.feuer = false; });
@@ -700,6 +778,7 @@ function waffeZeigen() {
 
 /* Richtung, in die der Spieler zielt: zur Maus, sonst nach vorn */
 function zielRichtung(f) {
+  if (modus3d && W3) return W3.gier();
   if (!maus.imBild) return f.winkel;
   const zx = kamera.x + (maus.x - kamera.breite / 2) / kamera.zoom;
   const zy = kamera.y + (maus.y - kamera.hoehe / 2) / kamera.zoom;
@@ -1201,6 +1280,7 @@ function groesseAnpassen() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   kamera.breite = b;
   kamera.hoehe = h;
+  if (W3) W3.groesse(b, h);
 }
 addEventListener("resize", groesseAnpassen);
 
@@ -1275,6 +1355,7 @@ function sicher(was, name) {
    Damit lässt sich eine Viertelstunde Spiel in Sekunden durchrechnen. */
 window.__schritt = (dt = 1 / 60, male = false) => {
   zustand.zeit += dt;
+  letzteDt = dt;
   rechnen(dt);
   if (male) zeichnen();
 };
@@ -1288,6 +1369,7 @@ function schleife(jetzt) {
   if (zustand.pause) return;
 
   zustand.zeit += dt;
+  letzteDt = dt;
   if (sicher(() => rechnen(dt), "rechnen")) sicher(zeichnen, "zeichnen");
 }
 
@@ -1354,7 +1436,14 @@ function rechnen(dt) {
     const willRennen = tasten.has("ShiftLeft") || tasten.has("ShiftRight");
     const rennt = willRennen && zustand.ausdauer > 1 && (quer !== 0 || vor !== 0);
     ausdauerRechnen(dt, rennt);
-    f.bewegen(quer, -vor, rennt, dt);
+    if (modus3d && W3) {
+      /* W geht dahin, wohin die Kamera schaut */
+      const g = W3.gier();
+      const vx = Math.cos(g), vy = Math.sin(g);
+      f.bewegen(vx * vor - vy * quer, vy * vor + vx * quer, rennt, dt);
+    } else {
+      f.bewegen(quer, -vor, rennt, dt);
+    }
   }
 
   /* Schlagen und schießen. Die getragene Waffe wird jedes Bild
@@ -1485,7 +1574,19 @@ function routenZiel() {
 }
 
 function zeichnen() {
-  if (zustand.innen) { innenZeichnen(); return; }
+  if (zustand.innen) {
+    if (W3) W3.sichtbar(false);
+    innenZeichnen();
+    return;
+  }
+  if (modus3d && W3) {
+    W3.sichtbar(true);
+    Minikarte.zeichnen(radar, zustand, spieler());
+    W3.zeichnen(zustand, spieler(), letzteDt);
+    ueber3dZeichnen();
+    return;
+  }
+  if (W3) W3.sichtbar(false);
   Minikarte.zeichnen(radar, zustand, spieler());
   ctx.fillStyle = "#0b1124";
   ctx.fillRect(0, 0, kamera.breite, kamera.hoehe);
@@ -1652,6 +1753,23 @@ function zeichnen() {
     }
   }
   if (zustand.cheats.nacht) nachtMalen();
+}
+
+/* Über dem 3D-Bild: nur ein Fadenkreuz zu Fuß */
+function ueber3dZeichnen() {
+  ctx.clearRect(0, 0, kamera.breite, kamera.hoehe);
+  const f = spieler();
+  if (f.imAuto || zustand.drinnen) return;
+  const mx = kamera.breite / 2 + Math.min(40, kamera.breite * 0.03), my = kamera.hoehe / 2 - 20;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,.85)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(mx, my, 5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,120,168,.95)";
+  ctx.fillRect(mx - 1, my - 1, 2, 2);
+  ctx.restore();
 }
 
 /* Nacht: dunkelblauer Schleier, um den Spieler ein Lichtkegel —
@@ -2516,6 +2634,17 @@ async function starten() {
   touchEinrichten();
   weltBauen();
   groesseAnpassen();
+  if (modus3d) {
+    ladeBau = 7;
+    ladeAnzeigen(L("3D-Welt wird gebaut …", "Building the 3D world …"));
+    await naechsterFrame();
+    if (await dreiDLaden()) {
+      W3.kameraSetzen(spieler());
+    } else {
+      modus3d = false;
+      knopf3dZeigen();
+    }
+  }
   ladeBau = 8;
   ladeAnzeigen(L("Fertig!", "Done!"));
   await naechsterFrame();
