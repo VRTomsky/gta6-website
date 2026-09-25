@@ -1364,10 +1364,15 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
   `strecke`, `aktion`, `zerstoeren` (Zielauto auch beschießbar über `zusatzZiele()`),
   `ausschalten` (Zielperson flieht, wird von `passantenNachziehen` nicht versetzt),
   `typen` bei `fahren` (bestimmte Wagen).
-- **Laufende Passanten vorbereitet:** `LAUF_LEUTE` in `wesen.js` (noch leer) und acht
-  Bögen `volk_*` in `tools/spiel-bogen.py`. Sobald die Bilder da sind: schneiden, WebP,
-  Namen in `LAUF_LEUTE` eintragen — dann laufen sie mit vier Richtungen und Schrittbildern
-  und kommen doppelt so oft vor wie die alten Standbild-Passanten.
+- **Laufende Passanten (25.09.2026):** acht Figuren mit vier Richtungen mal vier Posen
+  (`LAUF_LEUTE` in `wesen.js`, Bögen `volk_*` in `tools/spiel-bogen.py`): Surfer, Skaterin,
+  Lebemann, Oma, Bauarbeiter, Joggerin, Tourist, Trainingsanzug. Sie kommen halb so oft vor
+  wie alle alten Standbild-Passanten zusammen. Passanten machen kürzere Schritte
+  (`schrittweite` 0,26 m je Bild statt 0,55 m), sonst rutschen die Beine; Oma und Joggerin
+  haben ein eigenes Tempo (`EIGENES_TEMPO`). Neue Laufleute: Bogen eintragen, schneiden,
+  `spiel-webp.py`, Namen in `LAUF_LEUTE`.
+- **Lucia neu (25.09.2026):** neuer Bogen `lucia4` nach Wunsch des Nutzers; die vorherigen
+  Bilder liegen in `_backup/lucia_vor_neu/`.
 - Neu erzeugen:
 
 ```bash

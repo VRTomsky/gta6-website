@@ -473,8 +473,10 @@ WAS BISHER GEMACHT WURDE
    - Zehn neue Auftraege, jetzt zwanzig: Rennen, Taxi, Auto
      zerstoeren, Schulden eintreiben, Ueberfaelle, Schmuggel,
      VIP-Fahrt, Sportwagen und der grosse Coup.
-   - Laufende Passanten sind vorbereitet - es fehlen noch die
-     Bilder aus der Bild-KI.
+   - Acht neue Passanten, die richtig laufen (vier Richtungen,
+     Schrittbilder): Surfer, Skaterin, Lebemann, Oma, Bauarbeiter,
+     Joggerin, Tourist, Trainingsanzug. Dazu eine neue Lucia.
+   - Entwicklermenue: Auto reparieren, unzerstoerbar, Turbo.
 
 
 ----------------------------------------------------------------

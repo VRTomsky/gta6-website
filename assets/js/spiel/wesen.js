@@ -149,6 +149,9 @@ export class Figur {
 
   get tempo() { return Math.hypot(this.vx, this.vy); }
 
+  /* Meter je Laufbild — Jason und Lucia sind flott unterwegs */
+  get schrittweite() { return 0.55; }
+
   /* Welche der vier Ansichten passt zur Laufrichtung? */
   get richtung() {
     const s = Math.sin(this.winkel);          // > 0: nach unten, zum Betrachter
@@ -161,7 +164,7 @@ export class Figur {
     const r = this.richtung;
     if (VIER_RICHTUNGEN.has(this.art)) {
       if (this.tempo < 0.35) return `${this.art}_${r}0`;
-      const k = LAUF_POSEN[Math.floor(this.strecke / 0.55) % LAUF_POSEN.length];
+      const k = LAUF_POSEN[Math.floor(this.strecke / this.schrittweite) % LAUF_POSEN.length];
       return `${this.art}_${r}${k}`;
     }
     /* Passanten: drei Bilder, nach rechts wird das linke gespiegelt */
@@ -267,7 +270,16 @@ export class Figur {
    Jason und Lucia (Bogen „richtung" in tools/spiel-bogen.py). Hier nur
    eintragen, wenn die Bilder wirklich in assets/img/spiel liegen —
    sonst lädt das Spiel 17 fehlende Dateien je Name. */
-export const LAUF_LEUTE = [];
+export const LAUF_LEUTE = [
+  "volk_surfer", "volk_skaterin", "volk_lebemann", "volk_oma",
+  "volk_bauarbeiter", "volk_joggerin", "volk_tourist", "volk_trainingsanzug"
+];
+
+/* Wer nicht im Normaltempo schlendert: Oma langsamer, Joggerin flotter */
+const EIGENES_TEMPO = {
+  volk_oma: { name: "", tempo: 1.05, rennen: 3.6, breite: 0.6 },
+  volk_joggerin: { name: "", tempo: 2.5, rennen: 6.2, breite: 0.6 }
+};
 
 /* Alle Passantenarten. Seit dem 22.09.2026 kommen sie aus gezeichneten
    Bögen (tools/spiel-bogen.py) und haben nur ein Standbild — die
@@ -302,8 +314,11 @@ export class Passant extends Figur {
     this.kreuzenZeit = 0;
   }
 
+  /* Passanten schlendern: kürzere Schritte, sonst rutschen die Beine */
+  get schrittweite() { return this.flucht > 0 ? 0.5 : 0.26; }
+
   get daten() {
-    const d = FIGUREN[this.art];
+    const d = FIGUREN[this.art] || EIGENES_TEMPO[this.art];
     return d || { name: "", tempo: 1.5, rennen: 5.2, breite: 0.6 };
   }
 
