@@ -116,7 +116,8 @@ const zustand = {
   tueren: [],                 // 24/7, Klinik, Wache, Bank (seit 25.09.2026)
   fehler: [],                 // letzte Aussetzer, auch in localStorage
   /* Schalter aus dem Entwicklermenü (nur Admins) */
-  cheats: { leben: false, panzer: false, ausdauer: false, polizei: false, nacht: false },
+  cheats: { leben: false, panzer: false, ausdauer: false, polizei: false, nacht: false,
+            auto: false, turbo: false },
   schwarz: null,              // { rest, dauer, text } für die Ausblendung
   clubTuer: null,             // Eingang des Pink Flamingo auf der Straße
   fahndung: new Fahndung(),
@@ -1708,7 +1709,9 @@ function devBauen() {
     ["panzer", L("Panzerung unendlich", "Infinite armour")],
     ["ausdauer", L("Ausdauer unendlich", "Infinite stamina")],
     ["polizei", L("Keine Polizei", "No police")],
-    ["nacht", L("Nacht", "Night")]
+    ["nacht", L("Nacht", "Night")],
+    ["auto", L("Auto unzerstörbar", "Indestructible car")],
+    ["turbo", L("Turbo (Auto +70 %)", "Turbo (car +70%)")]
   ];
   const autos = Object.keys(TYPEN)
     .map(t => `<option value="${t}">${TYPEN[t].name}</option>`).join("");
@@ -1745,6 +1748,11 @@ function devBauen() {
         <select id="devAuto">${autos}</select>
         <button type="button" data-dev="auto">${L("Spawnen und einsteigen", "Spawn and get in")}</button>
       </div>
+      <div class="sdev__reihe">
+        <button type="button" data-dev="reparieren">${L("Auto reparieren", "Repair car")}</button>
+        <button type="button" data-dev="alleReparieren">${L("Alle Autos in der Nähe reparieren", "Repair all nearby cars")}</button>
+        <button type="button" data-dev="stopp">${L("Auto anhalten", "Stop car")}</button>
+      </div>
     </div>
     <div class="sdev__gruppe">
       <h3>${L("Fahndung", "Wanted level")} · ${zustand.fahndung.stufe}</h3>
@@ -1777,6 +1785,35 @@ devFeld.addEventListener("click", e => {
   if (was === "waffe") zustand.arsenal.geben(wert, 300);
   if (was === "munition") zustand.arsenal.nachladen(999);
   if (was === "heilen") { zustand.leben = 100; zustand.panzerung = 100; zustand.ausdauer = 100; }
+  if (was === "reparieren") {
+    /* Das eigene Auto, sonst das nächste in Reichweite */
+    let a = f.imAuto;
+    if (!a) {
+      let beste = 9;
+      for (const b of zustand.autos.concat(zustand.verkehr)) {
+        const d = Math.hypot(b.x - f.x, b.y - f.y);
+        if (d < beste) { beste = d; a = b; }
+      }
+    }
+    if (a) {
+      a.schaden = 0;
+      a.schrott = false;
+      hinweis(L(`${a.daten.name} repariert`, `${a.daten.name} repaired`));
+    } else {
+      hinweis(L("Kein Auto in der Nähe", "No car nearby"));
+    }
+  }
+  if (was === "alleReparieren") {
+    let n = 0;
+    for (const b of zustand.autos.concat(zustand.verkehr)) {
+      if (Math.hypot(b.x - f.x, b.y - f.y) > 80 || (!b.schaden && !b.schrott)) continue;
+      b.schaden = 0;
+      b.schrott = false;
+      n++;
+    }
+    hinweis(L(`${n} Autos repariert`, `${n} cars repaired`));
+  }
+  if (was === "stopp" && f.imAuto) { f.imAuto.vx = 0; f.imAuto.vy = 0; }
   if (was === "sterne") {
     const n = parseInt(wert, 10);
     if (n === 0) zustand.fahndung.loeschen();
@@ -1833,6 +1870,11 @@ function cheatsAnwenden() {
   if (c.panzer) zustand.panzerung = 100;
   if (c.ausdauer) zustand.ausdauer = 100;
   if (c.polizei && zustand.fahndung.stufe > 0) zustand.fahndung.loeschen();
+  const wagen = spieler().imAuto;
+  if (wagen) {
+    if (c.auto) { wagen.schaden = 0; wagen.schrott = false; }
+    wagen.turbo = c.turbo ? 1.7 : 1;
+  }
 }
 
 /* ── Punkte und Bestenliste ──

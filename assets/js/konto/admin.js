@@ -147,6 +147,7 @@ async function adminBauen(z) {
           <li>${L("Leben, Panzerung, Ausdauer unendlich", "Infinite health, armour, stamina")}</li>
           <li>${L("Alle Waffen oder einzelne, Munition voll", "All weapons or single ones, full ammo")}</li>
           <li>${L("Jedes Fahrzeug spawnen und direkt einsteigen", "Spawn any vehicle and get straight in")}</li>
+          <li>${L("Auto reparieren, unzerstörbar, Turbo", "Repair car, indestructible, turbo")}</li>
           <li>${L("Fahndung 0–5 Sterne, Polizei aus", "Wanted level 0–5, police off")}</li>
           <li>${L("Tag und Nacht, Sprung zum Wegpunkt", "Day and night, jump to waypoint")}</li>
         </ul>

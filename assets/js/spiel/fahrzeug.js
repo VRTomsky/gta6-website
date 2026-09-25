@@ -90,9 +90,11 @@ export class Fahrzeug {
     /* Ein zerbeulter Wagen zieht schlechter und läuft nicht mehr voll —
        hinausgeworfen wird aber niemand mehr, das war das Nervigste am
        Fahren. */
+    /* Turbo aus dem Entwicklermenü — nur solange der Spieler fährt */
+    const t = (this.fahrer && this.turbo) || 1;
     const d = this.schrott
-      ? { ...d0, kraft: d0.kraft * 0.55, spitze: d0.spitze * 0.6 }
-      : d0;
+      ? { ...d0, kraft: d0.kraft * 0.55 * t, spitze: d0.spitze * 0.6 * t }
+      : t !== 1 ? { ...d0, kraft: d0.kraft * t, spitze: d0.spitze * t } : d0;
     this.entklemmen();
     const vor = { x: Math.cos(this.winkel), y: Math.sin(this.winkel) };
     const quer = { x: -vor.y, y: vor.x };

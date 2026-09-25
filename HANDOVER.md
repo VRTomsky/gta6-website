@@ -1328,7 +1328,9 @@ spiel/spiel.js      Eingabe, Kamera, Schleife, Anzeige, Punkte
 - **Entwicklermenü (F8 oder DEV-Knopf, nur Admins):** Geld setzen/dazu, Leben, Panzerung,
   Ausdauer unendlich, keine Polizei, Nacht, alle oder einzelne Waffen, Munition voll,
   heilen, jedes Fahrzeug spawnen und einsteigen (`devStellplatz` sucht ein Straßenfeld
-  ohne anderes Auto), Fahndung 0–5, Sprung zum Wegpunkt. Das Menü pausiert das Spiel;
+  ohne anderes Auto), Auto reparieren (eigenes oder nächstes), alle in der Nähe reparieren,
+  anhalten, Schalter „Auto unzerstörbar" und „Turbo" (`fahrzeug.turbo`, wirkt nur, solange
+  der Spieler fährt), Fahndung 0–5, Sprung zum Wegpunkt. Das Menü pausiert das Spiel;
   `cheatsAnwenden()` läuft vor dem Todescheck.
 - **Belohnungsfaktor** aus der Admin-Seite: `missionen.geldFaktor`, beim Spielstart geladen.
 - **Laden und Startbild (25.09.2026):** Rund 11 MB Grafik, gut 400 Bilder, zwei Drittel
