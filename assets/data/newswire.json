@@ -1,14 +1,28 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-10-08T15:32:39.681Z",
+  "aktualisiert": "2026-10-08T20:48:19.899Z",
   "meldungen": [
+    {
+      "id": "759875393o5253",
+      "url": "https://www.rockstargames.com/newswire/article/759875393o5253/grand-theft-auto-vi-collection-now-at-the-rockstar-store",
+      "datum": "2026-10-08T16:00",
+      "titel": {
+        "en": "Grand Theft Auto VI Collection Now at the Rockstar Store",
+        "de": "Die „Grand Theft Auto VI“-Kollektion – jetzt im Rockstar Store"
+      },
+      "datumText": {
+        "en": "October 8, 2026",
+        "de": "8. Oktober 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/759875393o5253/999a13ef806098304feeee0531ad81e817c3030b.jpg"
+    },
     {
       "id": "o3982oa93a23k4",
       "url": "https://www.rockstargames.com/newswire/article/o3982oa93a23k4/the-music-of-grand-theft-auto-vi-in-game-radio-stations",
       "datum": "2026-10-08T14:00",
       "titel": {
         "en": "The Music of Grand Theft Auto VI: In-Game Radio Stations",
-        "de": "The Music of Grand Theft Auto VI: In-Game Radio Stations"
+        "de": "Die Musik von Grand Theft Auto VI: In-Game-Radiosender"
       },
       "datumText": {
         "en": "October 8, 2026",
