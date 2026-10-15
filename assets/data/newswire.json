@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-10-08T20:48:19.899Z",
+  "aktualisiert": "2026-10-15T15:49:32.617Z",
   "meldungen": [
+    {
+      "id": "517572321a549a",
+      "url": "https://www.rockstargames.com/newswire/article/517572321a549a/watch-the-grand-theft-auto-vi-launch-trailer",
+      "datum": "2026-10-15T13:00",
+      "titel": {
+        "en": "Watch the Grand Theft Auto VI Launch Trailer",
+        "de": "Schaut euch den Launch-Trailer für Grand Theft Auto VI an"
+      },
+      "datumText": {
+        "en": "October 15, 2026",
+        "de": "15. Oktober 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/517572321a549a/0637b4bb19438399bc5b3e7bbdfe6936f79cdbf3.jpg"
+    },
     {
       "id": "759875393o5253",
       "url": "https://www.rockstargames.com/newswire/article/759875393o5253/grand-theft-auto-vi-collection-now-at-the-rockstar-store",
@@ -113,20 +127,6 @@
         "de": "2. Mai 2025"
       },
       "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/258aa538o412ok/5690872e70df76d5d63638c12e7eb5b746f83c3a.jpg"
-    },
-    {
-      "id": "8978kok9385a82",
-      "url": "https://www.rockstargames.com/newswire/article/8978kok9385a82/grand-theft-auto-vi-watch-trailer-1-now",
-      "datum": "2023-12-05T13:00",
-      "titel": {
-        "en": "Grand Theft Auto VI - Watch Trailer 1 Now",
-        "de": "Grand Theft Auto VI – jetzt Trailer 1 anschauen"
-      },
-      "datumText": {
-        "en": "December 5, 2023",
-        "de": "5. Dezember 2023"
-      },
-      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/8978kok9385a82/1d6307ffa5adedfba5b1805e7c949fa74816d163.jpg"
     }
   ]
 }
