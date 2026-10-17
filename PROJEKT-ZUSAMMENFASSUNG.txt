@@ -487,6 +487,15 @@ WAS BISHER GEMACHT WURDE
    - Nach dem Wechsel macht die Figur weiter (laufen oder fahren),
      bis man selbst eine Taste drueckt.
 
+32. News-Update (17.10.2026):
+   - Der neue Launch-Trailer (15. Oktober) laeuft direkt auf der
+     Seite: ganz oben, im Trailer-Bereich und als Top-Meldung.
+   - Neue Meldungen: Radiosender, Merch im Rockstar Store,
+     Bloomberg-Reportage ueber die Entstehung, Game Informer,
+     Altersfreigabe ab 18, Vorab-Download ab 12. November.
+   - Leak-Watch aktualisiert (neues Video vom 8. Oktober).
+   - 12 neue offizielle Bilder in Galerie, Orten und Charakterseiten.
+
 
 ----------------------------------------------------------------
 WICHTIG FÜR DIE NÄCHSTE KI

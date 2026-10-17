@@ -23,7 +23,8 @@ const CHARS_EN = {
     sub: "Ex-Army · Leonida Keys",
     bio: [
       "Jason wants a simple life — but nothing ever seems to get simpler. Raised among hustlers and petty criminals, he joined the Army to leave a rough youth behind, then drifted down to the Keys to do what he’s good at: running jobs for the local drug couriers.",
-      "Meeting Lucia may turn out to be the best thing that ever happened to him — or the worst. Jason has a fairly clear idea of how he wants it to go, but for now it’s anyone’s guess. Maybe it’s time for a change."
+      "Meeting Lucia may turn out to be the best thing that ever happened to him — or the worst. Jason has a fairly clear idea of how he wants it to go, but for now it’s anyone’s guess. Maybe it’s time for a change.",
+      "In the October 2026 Launch Trailer he sums that time up himself: “I got in trouble in the army. Didn't leave on the best of terms.”"
     ],
     meta: [["Age", "28–32"], ["Base", "Leonida Keys"], ["Background", "US Army"], ["Relationship", "Lucia Caminos"], ["Role", "Playable"]]
   },
@@ -32,7 +33,8 @@ const CHARS_EN = {
     sub: "Ex-con · Vice City",
     bio: [
       "Lucia’s father taught her to fight as soon as she could walk, and life has been hitting back ever since. Standing up for her family landed her in Leonida Penitentiary; sheer luck got her out. She has learned her lesson — smart moves only from now on.",
-      "Fresh out of prison and determined to tip the odds her way, Lucia is sticking to her plan whatever it costs. A life with Jason could be her way out."
+      "Fresh out of prison and determined to tip the odds her way, Lucia is sticking to her plan whatever it costs. A life with Jason could be her way out.",
+      "She isn’t entirely free yet: in the Launch Trailer she appears to wear an electronic ankle monitor."
     ],
     meta: [["Age", "24–27"], ["Base", "Vice City"], ["Background", "Leonida Penitentiary"], ["Relationship", "Jason Duval"], ["Role", "Playable"]]
   },
@@ -169,6 +171,18 @@ XACCOUNTS.forEach(a => { if (XACCOUNTS_EN[a.h]) a.d = XACCOUNTS_EN[a.h]; });
 
 /* ── Galerie ────────────────────────────────────────────── */
 const GALLERY_EN = {
+  "art/jason_lucia_lock_and_load.jpg": "Jason and Lucia loading their guns by the red convertible — Launch Trailer artwork",
+  "places/vice_city_10.jpg": "Two curving residential towers on the bay, jet skis on the water",
+  "places/vice_city_11.jpg": "A tower in the evening light, a helicopter over the skyline",
+  "places/vice_city_12.jpg": "A gangster with a bandana and an assault rifle",
+  "places/leonida_keys_06.jpg": "An iguana on a rock in the Leonida Keys",
+  "places/port_gellhorn_06.jpg": "Port Gellhorn from above in the evening light",
+  "places/grassrivers_05.jpg": "Stilt houses and a seaplane in the Grassrivers, Vice City behind",
+  "places/grassrivers_06.jpg": "A bearded man in a barn, an alligator on the wall",
+  "places/ambrosia_06.jpg": "A mud party with off-roaders in Ambrosia",
+  "chars/jason_09.jpg": "Jason loading his pistol, the rounds flying",
+  "chars/jason_10.jpg": "Jason in a hood with an assault rifle in a warehouse",
+  "chars/lucia_09.jpg": "Lucia training at the gym",
   "chars/jason_07.jpg": "Jason behind a chain-link fence, police lights at his back",
   "chars/jason_08.jpg": "Jason with a pistol by a boat in the Leonida Keys",
   "chars/lucia_07.jpg": "Lucia with a shotgun during a chase",
@@ -205,7 +219,7 @@ const CHAR_PAGES_EN = {
     kicker: "Protagonist 01",
     lead: "Jason wants a simple life — but it just won’t get any simpler.",
     intro: [
-      "He grew up among hustlers and petty criminals. After a stint in the Army meant to leave that rough youth behind, he ended up in the Keys doing what he does best: working for the local drug couriers.",
+      "He grew up among hustlers and petty criminals. After a stint in the Army meant to leave that rough youth behind, he ended up in the Keys doing what he does best: working for the local drug couriers. About the Army, all he says in the Launch Trailer is: “I got in trouble in the army.”",
       "Maybe it’s time to try something new."
     ],
     introShots: ["Jason by a boat in the Leonida Keys", "Jason and Lucia in a convertible on the coast", "Jason on the porch"],
@@ -221,7 +235,7 @@ const CHAR_PAGES_EN = {
       body: "A simple score goes wrong — and suddenly Jason is caught in a conspiracy that stretches across the whole state. There’s no going back.",
       pink: "He knows how he’d like it to go. Nobody’s asking him right now."
     },
-    gallery: ["Jason Duval — portrait", "Jason on the beach", "Jason at the motel", "Jason at night", "A robbery for two", "Motorcycle chase", "Jason armed in the half-light", "Jason and Lucia at the motel"],
+    gallery: ["Jason Duval — portrait", "Jason on the beach", "Jason at the motel", "Jason loading his pistol", "A robbery for two", "Motorcycle chase", "Jason in a hood with an assault rifle", "Jason and Lucia at the motel"],
     outro: ["Jason and Lucia at the Vice City harbor", "Jason and Lucia in front of a burning wreck"]
   },
 
@@ -235,7 +249,7 @@ const CHAR_PAGES_EN = {
     introShots: ["Lucia in the car, neon light on her face", "Lucia with a shotgun during a chase", "Lucia in Vice City"],
     band: {
       pink: "A life with Jason could be her way out.",
-      body: "Fresh out of prison and determined to turn the odds in her favor, Lucia is sticking to her plan — whatever it takes."
+      body: "Fresh out of prison and determined to turn the odds in her favor, Lucia is sticking to her plan — whatever it takes. She isn’t entirely free though: in the Launch Trailer she appears to still wear an ankle monitor."
     },
     bandShots: ["Lucia outside a currency exchange", "Lucia and Jason in the car by day"],
     fullAlt: "Lucia on a rooftop terrace above the Vice City skyline at night",
@@ -245,7 +259,7 @@ const CHAR_PAGES_EN = {
       body: "More than anything, Lucia wants the good life her mother has talked about since their days in Liberty City. Instead of half-baked fantasies, she takes matters into her own hands.",
       pink: "Only smart moves. From here on."
     },
-    gallery: ["Lucia Caminos — portrait", "Lucia on the beach", "Lucia at the club", "Lucia at night", "Lucia on the street", "Lucia and Jason in the vault", "Lucia in neon light", "Meeting in the back courtyard"],
+    gallery: ["Lucia Caminos — portrait", "Lucia on the beach", "Lucia at the club", "Lucia at night", "Lucia training", "Lucia and Jason in the vault", "Lucia in neon light", "Meeting in the back courtyard"],
     outro: ["Lucia and Jason at sunset", "Lucia and Jason — artwork"]
   },
 

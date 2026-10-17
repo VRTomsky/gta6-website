@@ -21,10 +21,11 @@ const CHARS = [
     sub: "Ex-Army · Leonida Keys",
     bio: [
       "Jason will ein einfaches Leben — nur werden die Dinge einfach nicht einfacher. Aufgewachsen ist er zwischen Trickbetrügern und Kleinkriminellen. Nach einer Zeit bei der Army, mit der er seine schwierige Jugend abschütteln wollte, landete er in den Keys und macht das, was er am besten kann: für die örtlichen Drogenkuriere arbeiten.",
-      "Lucia zu treffen könnte das Beste oder das Schlimmste sein, was ihm je passiert ist. Jason weiß ziemlich genau, wie er es gern hätte — aber im Moment ist schwer zu sagen, wohin das läuft. Vielleicht ist es Zeit, etwas Neues zu probieren."
+      "Lucia zu treffen könnte das Beste oder das Schlimmste sein, was ihm je passiert ist. Jason weiß ziemlich genau, wie er es gern hätte — aber im Moment ist schwer zu sagen, wohin das läuft. Vielleicht ist es Zeit, etwas Neues zu probieren.",
+      "Im Launch-Trailer vom Oktober 2026 sagt er über diese Zeit nur: „I got in trouble in the army. Didn't leave on the best of terms.\u201C"
     ],
     meta: [["Alter", "28–32"], ["Basis", "Leonida Keys"], ["Vorgeschichte", "US Army"], ["Beziehung", "Lucia Caminos"], ["Rolle", "Spielbar"]],
-    shots: ["chars/jason_01.jpg","chars/jason_02.jpg","chars/jason_03.jpg","chars/jason_04.jpg","chars/jason_05.jpg","chars/jason_06.jpg","art/jason_lucia_motel.jpg","art/jason_lucia_01.jpg"]
+    shots: ["chars/jason_09.jpg","chars/jason_10.jpg","chars/jason_01.jpg","chars/jason_02.jpg","chars/jason_03.jpg","chars/jason_04.jpg","chars/jason_05.jpg","chars/jason_06.jpg","art/jason_lucia_motel.jpg","art/jason_lucia_01.jpg"]
   },
   {
     id: "lucia",
@@ -39,10 +40,11 @@ const CHARS = [
     sub: "Ex-Häftling · Vice City",
     bio: [
       "Lucias Vater brachte ihr das Kämpfen bei, sobald sie laufen konnte. Seitdem schlägt das Leben zurück. Weil sie für ihre Familie kämpfte, landete sie im Leonida Penitentiary. Reines Glück holte sie wieder heraus. Lucia hat ihre Lektion gelernt — ab jetzt nur noch kluge Entscheidungen.",
-      "Frisch aus dem Knast und fest entschlossen, die Chancen zu ihren Gunsten zu drehen, hält Lucia an ihrem Plan fest — egal, was es kostet. Ein Leben mit Jason könnte ihr Weg raus sein."
+      "Frisch aus dem Knast und fest entschlossen, die Chancen zu ihren Gunsten zu drehen, hält Lucia an ihrem Plan fest — egal, was es kostet. Ein Leben mit Jason könnte ihr Weg raus sein.",
+      "Ganz frei ist sie noch nicht: Im Launch-Trailer trägt sie offenbar eine elektronische Fußfessel."
     ],
     meta: [["Alter", "24–27"], ["Basis", "Vice City"], ["Vorgeschichte", "Leonida Penitentiary"], ["Beziehung", "Jason Duval"], ["Rolle", "Spielbar"]],
-    shots: ["chars/lucia_01.jpg","chars/lucia_02.jpg","chars/lucia_03.jpg","chars/lucia_04.jpg","chars/lucia_05.jpg","chars/lucia_06.jpg","art/jason_lucia_02.jpg","art/user_lucia_jason.jpg"]
+    shots: ["chars/lucia_09.jpg","chars/lucia_01.jpg","chars/lucia_02.jpg","chars/lucia_03.jpg","chars/lucia_04.jpg","chars/lucia_05.jpg","chars/lucia_06.jpg","art/jason_lucia_02.jpg","art/user_lucia_jason.jpg"]
   },
   {
     id: "cal",
@@ -163,7 +165,7 @@ const PLACES = [
     badge: "Leonida · Küste",
     hero: "assets/img/places/postcard_vice_city.jpg",
     text: "Neongetränkte Boulevards, Art-déco-Fassaden am Strand und dahinter Türme aus Glas und Geld. Vice City verkauft Sonne, Musik und den schnellen Aufstieg — und kassiert dafür alles, was du hast. Wer hier oben ankommt, hat auf dem Weg dorthin selten sauber gespielt.",
-    shots: ["places/vice_city_01.jpg","places/vice_city_02.jpg","places/vice_city_03.jpg","places/vice_city_04.jpg","places/vice_city_05.jpg","places/vice_city_06.jpg","places/vice_city_07.jpg","places/vice_city_08.jpg","places/vice_city_09.jpg"]
+    shots: ["places/vice_city_10.jpg","places/vice_city_11.jpg","places/vice_city_12.jpg","places/vice_city_01.jpg","places/vice_city_02.jpg","places/vice_city_03.jpg","places/vice_city_04.jpg","places/vice_city_05.jpg","places/vice_city_06.jpg","places/vice_city_07.jpg","places/vice_city_08.jpg","places/vice_city_09.jpg"]
   },
   {
     id: "leonida-keys",
@@ -172,7 +174,7 @@ const PLACES = [
     badge: "Süden · Wasser",
     hero: "assets/img/places/postcard_leonida_keys.jpg",
     text: "Eine Kette aus Inseln, verbunden durch eine einzige lange Straße. Bars mit schiefen Dächern, Bootsstege, Sandbänke — und darunter die Schmuggelrouten, auf denen Brian Heder schon seit Jahrzehnten Ware bewegt. Jasons Zuhause und Leonidas Hintertür zugleich.",
-    shots: ["places/leonida_keys_01.jpg","places/leonida_keys_02.jpg","places/leonida_keys_03.jpg","places/leonida_keys_04.jpg","places/leonida_keys_05.jpg"]
+    shots: ["places/leonida_keys_06.jpg","places/leonida_keys_01.jpg","places/leonida_keys_02.jpg","places/leonida_keys_03.jpg","places/leonida_keys_04.jpg","places/leonida_keys_05.jpg"]
   },
   {
     id: "grassrivers",
@@ -181,7 +183,7 @@ const PLACES = [
     badge: "Landesinneres · Wetland",
     hero: "assets/img/places/postcard_grassrivers.jpg",
     text: "Endlose Sägegras-Flächen, Airboats, Alligatoren und ein paar Häuser auf Stelzen. In Grassrivers verschwinden Dinge — Fracht, Fahrzeuge, gelegentlich Menschen. Der Ort, an dem Leonida aufhört, Postkarte zu sein.",
-    shots: ["places/grassrivers_01.jpg","places/grassrivers_02.jpg","places/grassrivers_03.jpg","places/grassrivers_04.jpg"]
+    shots: ["places/grassrivers_05.jpg","places/grassrivers_06.jpg","places/grassrivers_01.jpg","places/grassrivers_02.jpg","places/grassrivers_03.jpg","places/grassrivers_04.jpg"]
   },
   {
     id: "port-gellhorn",
@@ -190,7 +192,7 @@ const PLACES = [
     badge: "Golfküste · Boardwalk",
     hero: "assets/img/places/postcard_port_gellhorn.jpg",
     text: "Ein Badeort, dessen beste Jahre lange vorbei sind: verblichene Motelschilder, ein Boardwalk mit halb funktionierenden Fahrgeschäften, Läden, die seit den Achtzigern nicht renoviert wurden. Genau deshalb ideal für Leute wie Raul Bautista.",
-    shots: ["places/port_gellhorn_01.jpg","places/port_gellhorn_02.jpg","places/port_gellhorn_03.jpg","places/port_gellhorn_04.jpg","places/port_gellhorn_05.jpg"]
+    shots: ["places/port_gellhorn_06.jpg","places/port_gellhorn_01.jpg","places/port_gellhorn_02.jpg","places/port_gellhorn_03.jpg","places/port_gellhorn_04.jpg","places/port_gellhorn_05.jpg"]
   },
   {
     id: "ambrosia",
@@ -199,7 +201,7 @@ const PLACES = [
     badge: "Binnenland · Industrie",
     hero: "assets/img/places/postcard_ambrosia.jpg",
     text: "Silos, Trailer Parks, ein Diner an der Ausfallstraße. Ambrosia lebt von Landwirtschaft und dem, was danach kommt, wenn die Arbeit ausbleibt. Weit genug weg von Vice City, dass keiner hinsieht — und nah genug, dass alles dort landet.",
-    shots: ["places/ambrosia_01.jpg","places/ambrosia_02.jpg","places/ambrosia_03.jpg","places/ambrosia_04.jpg","places/ambrosia_05.jpg"]
+    shots: ["places/ambrosia_06.jpg","places/ambrosia_01.jpg","places/ambrosia_02.jpg","places/ambrosia_03.jpg","places/ambrosia_04.jpg","places/ambrosia_05.jpg"]
   },
   {
     id: "mount-kalaga",
@@ -258,6 +260,7 @@ const GALLERY = (() => {
   });
 
   push("art", [
+    ["art/jason_lucia_lock_and_load.jpg", "Jason und Lucia laden ihre Waffen am roten Cabrio — Artwork zum Launch-Trailer"],
     "art/cover_art.jpg","art/jason_lucia_robbery_logo.jpg","art/jason_lucia_beach_logo.jpg",
     "art/jason_lucia_01_logo.jpg","art/jason_lucia_02_logo.jpg","art/jason_lucia_motel.jpg",
     "art/jason_lucia_robbery.jpg","art/jason_lucia_beach.jpg","art/user_lucia_jason.jpg"
@@ -266,7 +269,11 @@ const GALLERY = (() => {
   push("vice", [
     "places/vice_city_01.jpg","places/vice_city_02.jpg","places/vice_city_03.jpg","places/vice_city_04.jpg",
     "places/vice_city_05.jpg","places/vice_city_06.jpg","places/vice_city_07.jpg","places/vice_city_08.jpg",
-    "places/vice_city_09.jpg","places/user_vice_city_nacht.jpg","places/postcard_vice_city.jpg"
+    "places/vice_city_09.jpg",
+    ["places/vice_city_10.jpg", "Zwei geschwungene Wohntürme an der Bucht, Jetskis im Wasser"],
+    ["places/vice_city_11.jpg", "Hochhaus im Abendlicht, ein Hubschrauber über der Skyline"],
+    ["places/vice_city_12.jpg", "Ein Gangster mit Bandana und Sturmgewehr"],
+    "places/user_vice_city_nacht.jpg","places/postcard_vice_city.jpg"
   ], "Vice City");
 
   push("leonida", [
@@ -278,7 +285,12 @@ const GALLERY = (() => {
     "places/ambrosia_01.jpg","places/ambrosia_02.jpg","places/ambrosia_03.jpg","places/ambrosia_04.jpg","places/ambrosia_05.jpg",
     "places/kalaga_01.jpg","places/kalaga_02.jpg","places/kalaga_03.jpg","places/kalaga_04.jpg","places/kalaga_05.jpg","places/kalaga_06.jpg",
     "places/postcard_leonida_keys.jpg","places/postcard_port_gellhorn.jpg","places/postcard_grassrivers.jpg",
-    "places/postcard_ambrosia.jpg","places/postcard_mount_kalaga.jpg"
+    "places/postcard_ambrosia.jpg","places/postcard_mount_kalaga.jpg",
+    ["places/leonida_keys_06.jpg", "Ein Leguan auf einem Felsen in den Leonida Keys"],
+    ["places/port_gellhorn_06.jpg", "Port Gellhorn von oben im Abendlicht"],
+    ["places/grassrivers_05.jpg", "Pfahlhäuser und ein Wasserflugzeug in den Grassrivers, dahinter Vice City"],
+    ["places/grassrivers_06.jpg", "Ein bärtiger Mann in einer Scheune, an der Wand ein Alligator"],
+    ["places/ambrosia_06.jpg", "Schlammparty mit Geländewagen in Ambrosia"]
   ], "Leonida");
 
   push("chars", [
@@ -296,7 +308,10 @@ const GALLERY = (() => {
     ["chars/jason_08.jpg", "Jason mit Pistole an einem Boot in den Leonida Keys"],
     ["chars/lucia_07.jpg", "Lucia mit Schrotflinte während einer Verfolgungsjagd"],
     ["chars/lucia_08.jpg", "Lucia vor einer Wechselstube in Vice City"],
-    ["chars/lucia_10.jpg", "Lucia im Wagen, Neonlicht auf dem Gesicht"]
+    ["chars/lucia_10.jpg", "Lucia im Wagen, Neonlicht auf dem Gesicht"],
+    ["chars/jason_09.jpg", "Jason lädt seine Pistole, die Patronen fliegen"],
+    ["chars/jason_10.jpg", "Jason mit Kapuze und Sturmgewehr in einer Halle"],
+    ["chars/lucia_09.jpg", "Lucia beim Training im Fitnessstudio"]
   ], "Charakter");
 
   /* Die Szenen mit beiden Protagonisten bekommen einen eigenen Filter —
@@ -363,7 +378,7 @@ const CHAR_PAGES = {
     scrubPoster: "assets/img/art/scrub_poster2.jpg",
     lead: "Jason will ein einfaches Leben — aber es wird einfach nicht einfacher.",
     intro: [
-      "Aufgewachsen ist er zwischen Trickbetrügern und Kleinkriminellen. Nach einer Zeit bei der Army, mit der er seine schwierige Jugend abschütteln wollte, landete er in den Keys und macht das, was er am besten kann: für die örtlichen Drogenkuriere arbeiten.",
+      "Aufgewachsen ist er zwischen Trickbetrügern und Kleinkriminellen. Nach einer Zeit bei der Army, mit der er seine schwierige Jugend abschütteln wollte, landete er in den Keys und macht das, was er am besten kann: für die örtlichen Drogenkuriere arbeiten. Über die Army sagt er im Launch-Trailer nur: „I got in trouble in the army.\u201C",
       "Vielleicht ist es Zeit, etwas Neues zu probieren."
     ],
     introShots: [
@@ -392,10 +407,10 @@ const CHAR_PAGES = {
       ["chars/jason_01.jpg", "Jason Duval — Porträt"],
       ["chars/jason_03.jpg", "Jason am Strand"],
       ["chars/jason_05.jpg", "Jason im Motel"],
-      ["chars/jason_06.jpg", "Jason bei Nacht"],
+      ["chars/jason_09.jpg", "Jason lädt seine Pistole"],
       ["duo/duo_04.jpg", "Überfall zu zweit"],
       ["duo/duo_09.jpg", "Verfolgungsjagd auf dem Motorrad"],
-      ["duo/duo_12.jpg", "Jason bewaffnet im Halbdunkel"],
+      ["chars/jason_10.jpg", "Jason mit Kapuze und Sturmgewehr"],
       ["art/jason_lucia_motel.jpg", "Jason und Lucia im Motel"]
     ],
     outro: [
@@ -422,7 +437,7 @@ const CHAR_PAGES = {
     quote1: "The only thing that matters is<br>who you know and what you got.",
     band: {
       pink: "Ein Leben mit Jason könnte ihr Weg raus sein.",
-      body: "Frisch aus dem Knast und fest entschlossen, die Chancen zu ihren Gunsten zu drehen, hält Lucia an ihrem Plan fest — egal, was es kostet."
+      body: "Frisch aus dem Knast und fest entschlossen, die Chancen zu ihren Gunsten zu drehen, hält Lucia an ihrem Plan fest — egal, was es kostet. Ganz frei ist sie trotzdem nicht: Im Launch-Trailer trägt sie offenbar noch eine Fußfessel."
     },
     bandShots: [
       ["chars/lucia_08.jpg", "Lucia vor einem Wechselstubenladen"],
@@ -441,7 +456,7 @@ const CHAR_PAGES = {
       ["chars/lucia_02.jpg", "Lucia am Strand"],
       ["chars/lucia_04.jpg", "Lucia im Club"],
       ["chars/lucia_05.jpg", "Lucia bei Nacht"],
-      ["chars/lucia_06.jpg", "Lucia auf der Straße"],
+      ["chars/lucia_09.jpg", "Lucia beim Training"],
       ["duo/duo_02.jpg", "Lucia und Jason im Tresorraum"],
       ["duo/duo_07.jpg", "Lucia im Neonlicht"],
       ["duo/duo_05.jpg", "Treffen im Hinterhof"]

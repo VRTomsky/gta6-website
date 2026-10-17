@@ -1439,11 +1439,22 @@ Army-Vorgeschichte, deshalb liegen die Werte hier etwas höher.
 - **Deutsche Fließtexte** sind Übersetzung bzw. Zusammenfassung
 - **Cal Hampton, Boobie Ike, Dre'Quan Priest:** Rockstar veröffentlicht zu diesen dreien keine
   Biografie. Die Texte sind aus dem Trailer-2-Material zusammengefasst — bei Bedarf prüfen
-- **News-Stand: 17. September 2026.** GTA-VI-DualSense-Controller (PlayStation.Blog, 03.09.),
-  Rob-Nelson-Interview „keine Mikrotransaktionen, keine generative KI" (Ende August), Extended
-  Look (27.08.), Leak-Serie „CyberLeek" mit Subpoenas gegen Microsoft, Discord, X und Google,
-  Download ab 12.11. Der Newswire-Artikel „Pre-Order …" vom 24.06. ist dabei rausgeflogen —
-  passt ohnehin nicht zur Regel „kein Pre-Order". **Vor dem Release erneut aktualisieren**
+- **News-Stand: 17. Oktober 2026.** Launch-Trailer vom 15.10. (YouTube `rz1B4B2yBZY`, im Hero,
+  als erste Trailer-Karte und als Aufmacher; Musik „Flower in a Hurricane" von Justice, die auch
+  den Score geschrieben haben), Radiosender und Rockstar-Store-Kollektion (08.10.), Bloomberg-
+  Reportage „Inside the Making of Grand Theft Auto 6" (14.10.: Project Americas, 4.711 Leute in
+  12 Studios, Online-Teil laut Bloomberg 2027), Game-Informer-Titel (29.09.), USK ab 18 (Xbox,
+  13.10.), ESRB M, PEGI 18, Vorab-Download ab 12.11. (laut Rockstar). Leak-Watch: CyberLeek-Video
+  vom 08.10. (rund 25 Minuten, u. a. Ego-Perspektive beim Fahren — nicht bestätigt), Gerichtsstand.
+  Neue offizielle Bilder aus `rockstargames.com/VI/media` (Download vom Nutzer freigegeben):
+  Jason 09/10, Lucia 09, Vice City 10–12, Leonida Keys 06, Port Gellhorn 06, Grassrivers 05/06,
+  Ambrosia 06 und das Artwork „Jason and Lucia Lock and Load" (`art/jason_lucia_lock_and_load.jpg`).
+  Die Bild-Adressen dort: `www.rockstargames.com/VI/_next/static/media/<Name>.<Hash>.jpg?imwidth=3840`
+  (die Liste steht auf den Seiten /VI/media/screenshots und /artwork-wallpapers, per Firecrawl
+  lesbar). Rockstars Newswire-Artikeltext liefert `graph.rockstargames.com` mit
+  `post(id_hash, locale) { tina { payload } }`. „Rund ums Spiel" steht seit diesem Stand als eigenes
+  Raster unter den drei News-Spalten (`.news-mehr`). **Kurz vor dem 19.11. erneut aktualisieren**
+  (Tests, Release).
 
 ## Wünsche des Nutzers, die dauerhaft gelten
 
