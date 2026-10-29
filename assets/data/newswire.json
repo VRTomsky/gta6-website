@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-10-15T15:49:32.617Z",
+  "aktualisiert": "2026-10-29T14:30:13.821Z",
   "meldungen": [
+    {
+      "id": "39ak8a12395591",
+      "url": "https://www.rockstargames.com/newswire/article/39ak8a12395591/grand-theft-auto-vi-original-score-by-justice",
+      "datum": "2026-10-29T14:00",
+      "titel": {
+        "en": "Grand Theft Auto VI: Original Score by Justice",
+        "de": "Grand Theft Auto VI: Original Score by Justice"
+      },
+      "datumText": {
+        "en": "October 29, 2026",
+        "de": "29. Oktober 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/39ak8a12395591/cfc61a2d2e7b8c700e46582dc865e180b6c431d9.jpg"
+    },
     {
       "id": "517572321a549a",
       "url": "https://www.rockstargames.com/newswire/article/517572321a549a/watch-the-grand-theft-auto-vi-launch-trailer",
@@ -113,20 +127,6 @@
         "de": "6. Mai 2025"
       },
       "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/3928aaa9471o3a/87db5089306344e0854cffb1b3bf15e6d71b465b.jpg"
-    },
-    {
-      "id": "258aa538o412ok",
-      "url": "https://www.rockstargames.com/newswire/article/258aa538o412ok/grand-theft-auto-vi-is-now-coming-may-26-2026",
-      "datum": "2025-05-02T11:25",
-      "titel": {
-        "en": "Grand Theft Auto VI is Now Coming May 26, 2026",
-        "de": "Grand Theft Auto VI erscheint jetzt am 26. Mai 2026"
-      },
-      "datumText": {
-        "en": "May 2, 2025",
-        "de": "2. Mai 2025"
-      },
-      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/258aa538o412ok/5690872e70df76d5d63638c12e7eb5b746f83c3a.jpg"
     }
   ]
 }
