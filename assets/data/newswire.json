@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-10-29T14:30:13.821Z",
+  "aktualisiert": "2026-11-03T15:31:23.894Z",
   "meldungen": [
+    {
+      "id": "k4ak9okk485712",
+      "url": "https://www.rockstargames.com/newswire/article/k4ak9okk485712/grand-theft-auto-vi-pre-load-begins-on-november-10",
+      "datum": "2026-11-03T15:00",
+      "titel": {
+        "en": "Grand Theft Auto VI Pre-Load Begins on November 10",
+        "de": "Grand Theft Auto VI Pre-Load Begins on November 10"
+      },
+      "datumText": {
+        "en": "November 3, 2026",
+        "de": "3. November 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/k4ak9okk485712/81e58e08369adca0d68a17dac9b12c3a63848fc3.jpg"
+    },
     {
       "id": "39ak8a12395591",
       "url": "https://www.rockstargames.com/newswire/article/39ak8a12395591/grand-theft-auto-vi-original-score-by-justice",
@@ -113,20 +127,6 @@
         "de": "6. November 2025"
       },
       "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/ak3ak31a49a221/c8c033070a0bfb2e3ec6ae7ff047ebe8ec551326.jpg"
-    },
-    {
-      "id": "3928aaa9471o3a",
-      "url": "https://www.rockstargames.com/newswire/article/3928aaa9471o3a/grand-theft-auto-vi-watch-trailer-2-now",
-      "datum": "2025-05-06T10:00",
-      "titel": {
-        "en": "Grand Theft Auto VI — Watch Trailer 2 Now",
-        "de": "Grand Theft Auto VI – schaut jetzt Trailer 2 an"
-      },
-      "datumText": {
-        "en": "May 6, 2025",
-        "de": "6. Mai 2025"
-      },
-      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/3928aaa9471o3a/87db5089306344e0854cffb1b3bf15e6d71b465b.jpg"
     }
   ]
 }
