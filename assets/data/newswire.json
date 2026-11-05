@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-11-03T21:15:37.294Z",
+  "aktualisiert": "2026-11-05T16:38:58.799Z",
   "meldungen": [
+    {
+      "id": "39ak81277255o9",
+      "url": "https://www.rockstargames.com/newswire/article/39ak81277255o9/explore-the-grand-theft-auto-vi-launch-gallery",
+      "datum": "2026-11-05T15:00",
+      "titel": {
+        "en": "Explore the Grand Theft Auto VI Launch Gallery",
+        "de": "Seht euch die Launch-Galerie von Grand Theft Auto VI an"
+      },
+      "datumText": {
+        "en": "November 5, 2026",
+        "de": "5. November 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/39ak81277255o9/72074994d6364ad0de8872aa971fc47653f644ab.jpg"
+    },
     {
       "id": "k4ak9okk485712",
       "url": "https://www.rockstargames.com/newswire/article/k4ak9okk485712/grand-theft-auto-vi-pre-load-begins-on-november-10",
@@ -113,20 +127,6 @@
         "de": "6. August 2026"
       },
       "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/9k2kaa1o3297k9/4faf2f8d60cd657f09eb55707b31cc44008bfa4c.jpg"
-    },
-    {
-      "id": "ak3ak31a49a221",
-      "url": "https://www.rockstargames.com/newswire/article/ak3ak31a49a221/grand-theft-auto-vi-is-now-set-to-launch-november-19-2026",
-      "datum": "2025-11-06T21:05",
-      "titel": {
-        "en": "Grand Theft Auto VI is Now Set to Launch November 19, 2026",
-        "de": "Grand Theft Auto VI erscheint am 19. November 2026"
-      },
-      "datumText": {
-        "en": "November 6, 2025",
-        "de": "6. November 2025"
-      },
-      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/ak3ak31a49a221/c8c033070a0bfb2e3ec6ae7ff047ebe8ec551326.jpg"
     }
   ]
 }
