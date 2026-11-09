@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-11-05T16:38:58.799Z",
+  "aktualisiert": "2026-11-09T20:03:37.680Z",
   "meldungen": [
+    {
+      "id": "o39o87a435a25a",
+      "url": "https://www.rockstargames.com/newswire/article/o39o87a435a25a/grand-theft-auto-vi-the-festival",
+      "datum": "2026-11-09T14:00",
+      "titel": {
+        "en": "Grand Theft Auto VI: The Festival",
+        "de": "Grand Theft Auto VI: The Festival"
+      },
+      "datumText": {
+        "en": "November 9, 2026",
+        "de": "9. November 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/o39o87a435a25a/f14b9244ed05b99e611d0376ad7e0ec3b4f84aab.jpg"
+    },
     {
       "id": "39ak81277255o9",
       "url": "https://www.rockstargames.com/newswire/article/39ak81277255o9/explore-the-grand-theft-auto-vi-launch-gallery",
