@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-11-10T17:59:14.873Z",
+  "aktualisiert": "2026-11-19T21:47:29.000Z",
   "meldungen": [
+    {
+      "id": "39akk424a9oo53",
+      "url": "https://www.rockstargames.com/newswire/article/39akk424a9oo53/grand-theft-auto-vi-now-available",
+      "datum": "2026-11-19T15:00",
+      "titel": {
+        "en": "Grand Theft Auto VI Now Available",
+        "de": "Grand Theft Auto VI ist jetzt erhältlich"
+      },
+      "datumText": {
+        "en": "November 19, 2026",
+        "de": "19. November 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/39akk424a9oo53/e470e29da13848abd31dfd8ea0e95a0eeffd0511.jpg"
+    },
     {
       "id": "89834o94713o21",
       "url": "https://www.rockstargames.com/newswire/article/89834o94713o21/pre-load-grand-theft-auto-vi-now",
@@ -141,20 +155,6 @@
         "de": "27. August 2026"
       },
       "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/4k138k8okkk483/ffebf733f7e03ff9ec9467471cc25a6c1117c5be.jpg"
-    },
-    {
-      "id": "9k2kaa1o3297k9",
-      "url": "https://www.rockstargames.com/newswire/article/9k2kaa1o3297k9/grand-theft-auto-vi-an-extended-look",
-      "datum": "2026-08-06T08:00",
-      "titel": {
-        "en": "Grand Theft Auto VI: An Extended Look",
-        "de": "Grand Theft Auto VI: Ein ausführlicher Blick"
-      },
-      "datumText": {
-        "en": "August 6, 2026",
-        "de": "6. August 2026"
-      },
-      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/9k2kaa1o3297k9/4faf2f8d60cd657f09eb55707b31cc44008bfa4c.jpg"
     }
   ]
 }
