@@ -1,7 +1,21 @@
 {
   "quelle": "https://www.rockstargames.com/newswire",
-  "aktualisiert": "2026-11-20T18:42:22.522Z",
+  "aktualisiert": "2026-11-23T21:45:18.147Z",
   "meldungen": [
+    {
+      "id": "178ok8411a55o5",
+      "url": "https://www.rockstargames.com/newswire/article/178ok8411a55o5/grand-theft-auto-vi-the-album-deluxe-edition",
+      "datum": "2026-11-23T14:00",
+      "titel": {
+        "en": "Grand Theft Auto VI: The Album (Deluxe Edition)",
+        "de": "Grand Theft Auto VI: The Album (Deluxe Edition)"
+      },
+      "datumText": {
+        "en": "November 23, 2026",
+        "de": "23. November 2026"
+      },
+      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/178ok8411a55o5/e8d6109a3cb7685931b9a96621354d73239b271c.jpg"
+    },
     {
       "id": "k4a8955a93o747",
       "url": "https://www.rockstargames.com/newswire/article/k4a8955a93o747/grand-theft-auto-vi-the-album-now-available",
@@ -141,20 +155,6 @@
         "de": "8. Oktober 2026"
       },
       "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/o3982oa93a23k4/365fb2f8af9e4263284a4dc2c6671e36a2480ba4.jpg"
-    },
-    {
-      "id": "7599a881942544",
-      "url": "https://www.rockstargames.com/newswire/article/7599a881942544/announcing-grand-theft-auto-vi-the-album-coming-november-19",
-      "datum": "2026-09-17T08:00",
-      "titel": {
-        "en": "Announcing Grand Theft Auto VI: The Album, Coming November 19",
-        "de": "Grand Theft Auto VI: The Album – ab 19. November"
-      },
-      "datumText": {
-        "en": "September 17, 2026",
-        "de": "17. September 2026"
-      },
-      "bild": "https://media-rockstargames-com.akamaized.net/tina-uploads/posts/7599a881942544/50105de3da220dff6dd47fad6865b1912e7466ca.jpg"
     }
   ]
 }
